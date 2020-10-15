@@ -46,8 +46,12 @@ PlayerInfo GameState::make_default_player(const PlayerColors color)
 	player.color = color;
 	const unsigned num_planets_per_player = 5;
 	const unsigned default_ships_per_planet = 4;
-	std::vector< std::pair<PlayerColors,unsigned> > default_planets(num_planets_per_player,std::make_pair(player.color,default_ships_per_planet));
-	player.planets = default_planets;
+	//PlanetInfo default_planets(num_planets_per_player,std::make_pair(player.color,default_ships_per_planet));
+	player.planets.resize(num_planets_per_player);
+	for(unsigned i=0; i<player.planets.size(); i++)
+	{
+		player.planets[i].push_back(std::make_pair(player.color,default_ships_per_planet));
+	}
 
 	return player;
 }
@@ -87,7 +91,14 @@ void GameState::dump() const
 		{
 			if(ii != i->planets.begin())
 				std::cout << ",";
-			std::cout << ii->second << "(" << to_string(ii->first) << ")";
+			std::cout << "{";
+			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
+			{
+				if(iii != ii->begin())
+					std::cout << ",";
+				std::cout << iii->second << "(" << to_string(iii->first) << ")";
+			}
+			std::cout << "}";
 		}
 		std::cout << "}\n";
 	}
