@@ -3,6 +3,8 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 #include "TextualCosmic.hpp"
 
@@ -202,7 +204,8 @@ void GameState::shuffle_destiny_deck()
 
 int main()
 {
-    	std::cout << "Textual Cosmic\n";
+	std::srand(unsigned (std::time(0)));
+    	std::cout << "Textual Cosmic\n\n";
     	GameState game(3);
     	game.dump();
 	game.dump_destiny_deck();
