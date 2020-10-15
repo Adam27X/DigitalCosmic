@@ -1,5 +1,7 @@
 TEXTUALCOSMIC := textualcosmic
 
+#CXX := /usr/bin/clang
+
 program_CXX_SRCS := $(wildcard *.cpp)
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_INCLUDE_DIRS := .
