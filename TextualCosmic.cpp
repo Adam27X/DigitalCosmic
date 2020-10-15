@@ -38,51 +38,56 @@ std::string to_string(const PlayerColors &p)
 	return ret;
 }
 
+PlayerInfo GameState::make_default_player(const PlayerColors color)
+{
+	PlayerInfo player;
+	player.score = 0;
+
+	player.color = color;
+	const unsigned num_planets_per_player = 5;
+	const unsigned default_ships_per_planet = 4;
+	std::vector< std::pair<PlayerColors,unsigned> > default_planets(num_planets_per_player,std::make_pair(player.color,default_ships_per_planet));
+	player.planets = default_planets;
+
+	return player;
+}
+
 GameState::GameState(unsigned nplayers) : num_players(nplayers)
 {
 	assert(nplayers > 1 && nplayers < 6 && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
+
 	//For now assign colors in a specific order...TODO: let the user choose colors
-	const unsigned num_planets_per_player = 5;
-	const unsigned default_ships_per_planet = 4;
-	std::vector<unsigned> default_planets(num_planets_per_player,default_ships_per_planet);
-	scores.insert(std::make_pair(PlayerColors::Red,0));
-	planets.insert(std::make_pair(PlayerColors::Red,default_planets));
-	scores.insert(std::make_pair(PlayerColors::Blue,0));
-	planets.insert(std::make_pair(PlayerColors::Blue,default_planets));
-	if(nplayers > 2)
+	players.resize(num_players);
+	players[0] = make_default_player(PlayerColors::Red);
+	players[1] = make_default_player(PlayerColors::Blue);
+
+	if(num_players > 2)
 	{
-		scores.insert(std::make_pair(PlayerColors::Purple,0));
-		planets.insert(std::make_pair(PlayerColors::Purple,default_planets));
+		players[2] = make_default_player(PlayerColors::Purple);
 	}
-	if(nplayers >3)
+	if(num_players > 3)
 	{
-		scores.insert(std::make_pair(PlayerColors::Yellow,0));
-		planets.insert(std::make_pair(PlayerColors::Purple,default_planets));
+		players[3] = make_default_player(PlayerColors::Yellow);
 	}
-	if(nplayers > 4)
+	if(num_players > 4)
 	{
-		scores.insert(std::make_pair(PlayerColors::Green,0));
-		planets.insert(std::make_pair(PlayerColors::Purple,default_planets));
+		players[4] = make_default_player(PlayerColors::Green);
 	}
 }
 
 void GameState::dump() const
 {
 	std::cout << "Current scores:\n";
-	for(auto i=scores.begin(),e=scores.end();i!=e;++i)
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
-		std::cout << to_string(i->first) << " Player: " << i->second << "\n";
-	}
-	std::cout << "\nPlanet status:\n";
-	for(auto i=planets.begin(),e=planets.end();i!=e;++i)
-	{
-		std::cout << to_string(i->first) << " Planets: {";
-		for(auto ii=i->second.begin(),ee=i->second.end();ii!=ee;++ii)
+		std::cout << to_string(i->color) << " Player score: " << i->score << "\n";
+		std::cout << "Planets: {";
+		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
 		{
-			if(ii != i->second.begin())
+			if(ii != i->planets.begin())
 				std::cout << ",";
-			std::cout << *ii;
+			std::cout << ii->second << "(" << to_string(ii->first) << ")";
 		}
 		std::cout << "}\n";
 	}

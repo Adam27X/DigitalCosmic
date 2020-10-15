@@ -1,3 +1,5 @@
+#include <vector>
+
 enum class PlayerColors
 {
 	Red,
@@ -7,14 +9,22 @@ enum class PlayerColors
 	Green
 };
 
+struct PlayerInfo
+{
+	PlayerColors color;
+	unsigned score; //TODO: Provide a function to compute the score from the planet information below?
+	//FIXME: Ships of different colors can reside on a planet, of course!
+	std::vector< std::pair<PlayerColors,unsigned> > planets; //Each planet has some number of ships of each valid player color
+};
+
 class GameState
 {
 public:
 	GameState(unsigned nplayers);
 	void dump() const;
+	PlayerInfo make_default_player(const PlayerColors color);
 private:	
 	unsigned num_players;
-	std::map<PlayerColors,unsigned> scores;
-	std::map<PlayerColors, std::vector<unsigned> > planets; //How many ships on each player's planet? Eventually we'll want a more embellished struct to represent planet information
+	std::vector<PlayerInfo> players;
 };
 
