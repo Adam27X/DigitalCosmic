@@ -98,5 +98,6 @@ void AlienBase::dump() const
 		std::cout << to_string(*i);
 	}
 	std::cout << "}\n";
+	std::cout << "Description: " << description << "\n";
 }
 

@@ -5,7 +5,7 @@
 
 #include "TextualCosmic.hpp"
 #include "AlienBase.hpp"
-#include "TickTock.hpp"
+#include "Aliens.hpp"
 
 int main()
 {
@@ -15,8 +15,17 @@ int main()
     	game.dump();
 	game.dump_destiny_deck();
 
+	
 	std::unique_ptr<AlienBase> alien(new TickTock());
-	alien->dump();
+	game.assign_alien(PlayerColors::Red, alien);
+	std::unique_ptr<AlienBase> alien2(new Human());
+	game.assign_alien(PlayerColors::Blue, alien2);
+	std::unique_ptr<AlienBase> alien3(new Remora());
+	game.assign_alien(PlayerColors::Purple, alien3);
+	std::unique_ptr<AlienBase> alien4(new Trader());
+	game.assign_alien(PlayerColors::Yellow, alien4);
+	std::unique_ptr<AlienBase> alien5(new Sorcerer());
+	game.assign_alien(PlayerColors::Green, alien5);
 
     	return 0;
 }

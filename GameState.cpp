@@ -113,3 +113,15 @@ void GameState::shuffle_destiny_deck()
 	destiny_deck.shuffle();
 }
 
+void GameState::assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien)
+{
+	for(auto& player : players)
+	{
+		if(player.color == color)
+		{
+			player.alien = std::move(alien);
+			break;
+		}
+	}
+}
+

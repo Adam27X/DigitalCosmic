@@ -40,6 +40,7 @@ public:
 	void set_role(const PlayerRole &r) { role = r; }
 	void set_mandatory(bool m) { mandatory = m; }
 	void valid_phases_push_back(const TurnPhase &t) { valid_phases.push_back(t); }
+	void set_description(const std::string &s) { description = s; }
 
 private:
 	std::string name;
@@ -47,4 +48,5 @@ private:
 	PlayerRole role; //Which role the player must have to use the alien power
 	bool mandatory; //Is the Alien power optional or mandatory?
 	std::vector<TurnPhase> valid_phases; //When can/must the player exercise the power?
+	std::string description; //Actual text from Alien card
 };
