@@ -43,6 +43,7 @@ public:
 	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
 	void deal_starting_hands();
 	void dump_player_hands() const;
+	PlayerColors choose_first_player();
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();

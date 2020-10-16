@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "DestinyDeck.hpp"
+#include "GameState.hpp"
 
 std::string to_string(const DestinyCardType &c)
 {
@@ -91,3 +92,39 @@ void DestinyDeck::dump() const
 	}
 }
 
+PlayerColors DestinyDeck::draw_for_first_player_and_shuffle()
+{
+	PlayerColors ret = PlayerColors::Red; //Avoid maybe uninitialized warning
+	for(auto i=deck.begin(),e=deck.end();i!=e;++i)
+	{
+		if(*i == DestinyCardType::Red)
+		{
+			ret = PlayerColors::Red;
+			break;
+		}
+		else if(*i == DestinyCardType::Blue)
+		{
+			ret = PlayerColors::Blue;
+			break;
+		}
+		else if(*i == DestinyCardType::Purple)
+		{
+			ret = PlayerColors::Purple;
+			break;
+		}
+		else if(*i == DestinyCardType::Yellow)
+		{
+			ret = PlayerColors::Yellow;
+			break;
+		}
+		else if(*i == DestinyCardType::Green)
+		{
+			ret = PlayerColors::Green;
+			break;
+		}
+	}
+
+	shuffle();
+
+	return ret;
+}

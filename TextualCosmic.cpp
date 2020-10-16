@@ -27,7 +27,8 @@ int main()
 
 	game.deal_starting_hands();
 	game.dump_player_hands();
-	game.dump_cosmic_deck();
+	PlayerColors first_player = game.choose_first_player();
+	std::cout << "The " << to_string(first_player) << " player will go first.\n";
 
     	return 0;
 }

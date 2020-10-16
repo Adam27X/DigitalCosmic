@@ -169,3 +169,7 @@ void GameState::dump_player_hands() const
 	}
 }
 
+PlayerColors GameState::choose_first_player()
+{
+	return destiny_deck.draw_for_first_player_and_shuffle();
+}
