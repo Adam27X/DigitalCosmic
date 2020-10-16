@@ -125,3 +125,12 @@ void GameState::assign_alien(const PlayerColors color, std::unique_ptr<AlienBase
 	}
 }
 
+void GameState::dump_cosmic_deck() const
+{
+	cosmic_deck.dump();
+}
+
+void GameState::shuffle_cosmic_deck()
+{
+	cosmic_deck.shuffle();
+}

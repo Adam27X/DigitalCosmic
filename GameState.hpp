@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "DestinyDeck.hpp"
+#include "CosmicDeck.hpp"
 #include "AlienBase.hpp"
 
 enum class PlayerColors
@@ -34,11 +35,14 @@ public:
 	void dump() const;
 	PlayerInfo make_default_player(const PlayerColors color);
 	void dump_destiny_deck() const;
+	void dump_cosmic_deck() const;
 	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
 private:	
 	void shuffle_destiny_deck();
+	void shuffle_cosmic_deck();
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
 	DestinyDeck destiny_deck;
+	CosmicDeck cosmic_deck;
 };
 

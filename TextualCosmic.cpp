@@ -13,9 +13,8 @@ int main()
     	std::cout << "Textual Cosmic\n\n";
     	GameState game(5);
     	game.dump();
-	game.dump_destiny_deck();
+	game.dump_cosmic_deck();
 
-	
 	std::unique_ptr<AlienBase> alien(new TickTock());
 	game.assign_alien(PlayerColors::Red, alien);
 	std::unique_ptr<AlienBase> alien2(new Human());
