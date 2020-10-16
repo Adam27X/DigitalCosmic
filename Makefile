@@ -3,8 +3,9 @@ TEXTUALCOSMIC := textualcosmic
 #CXX := /usr/bin/clang
 
 program_CXX_SRCS := $(wildcard *.cpp)
+program_CXX_SRCS += $(wildcard Aliens/*cpp)
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
-program_INCLUDE_DIRS := .
+program_INCLUDE_DIRS := . ./Aliens
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 CXXFLAGS += -g -O3 -std=c++17 -Wall -pedantic
 LDFLAGS := #-L/usr/lib #Boost

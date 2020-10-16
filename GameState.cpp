@@ -47,7 +47,6 @@ PlayerInfo GameState::make_default_player(const PlayerColors color)
 	player.color = color;
 	const unsigned num_planets_per_player = 5;
 	const unsigned default_ships_per_planet = 4;
-	//PlanetInfo default_planets(num_planets_per_player,std::make_pair(player.color,default_ships_per_planet));
 	player.planets.resize(num_planets_per_player);
 	for(unsigned i=0; i<player.planets.size(); i++)
 	{
