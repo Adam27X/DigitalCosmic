@@ -20,12 +20,16 @@ std::string to_string(const PlayerColors &p);
 
 typedef std::vector< std::pair<PlayerColors,unsigned> > PlanetInfo;
 
-struct PlayerInfo
+class PlayerInfo
 {
+public:
 	PlayerColors color;
 	unsigned score; //TODO: Provide a function to compute the score from the planet information below?
 	std::vector<PlanetInfo> planets; //Each planet has some number of ships of each valid player color
 	std::unique_ptr<AlienBase> alien;
+	std::vector<CosmicCardType> hand;
+
+	void dump_hand() const;
 };
 
 class GameState
@@ -37,6 +41,8 @@ public:
 	void dump_destiny_deck() const;
 	void dump_cosmic_deck() const;
 	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
+	void deal_starting_hands();
+	void dump_player_hands() const;
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();

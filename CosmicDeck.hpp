@@ -46,6 +46,8 @@ public:
 	CosmicDeck();
 	void shuffle();
 	void dump() const;
+	std::vector<CosmicCardType>::iterator begin() { return deck.begin(); }
+	std::vector<CosmicCardType>::iterator erase(std::vector<CosmicCardType>::const_iterator position) { return deck.erase(position); }
 private:
 	std::vector<CosmicCardType> deck;
 };

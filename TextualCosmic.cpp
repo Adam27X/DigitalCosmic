@@ -13,7 +13,6 @@ int main()
     	std::cout << "Textual Cosmic\n\n";
     	GameState game(5);
     	game.dump();
-	game.dump_cosmic_deck();
 
 	std::unique_ptr<AlienBase> alien(new TickTock());
 	game.assign_alien(PlayerColors::Red, alien);
@@ -25,6 +24,10 @@ int main()
 	game.assign_alien(PlayerColors::Yellow, alien4);
 	std::unique_ptr<AlienBase> alien5(new Sorcerer());
 	game.assign_alien(PlayerColors::Green, alien5);
+
+	game.deal_starting_hands();
+	game.dump_player_hands();
+	game.dump_cosmic_deck();
 
     	return 0;
 }

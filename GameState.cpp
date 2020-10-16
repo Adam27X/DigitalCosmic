@@ -39,6 +39,15 @@ std::string to_string(const PlayerColors &p)
 	return ret;
 }
 
+void PlayerInfo::dump_hand() const
+{
+	std::cout << "Hand for the " << to_string(color) << " player:\n";
+	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+	{
+		std::cout << to_string(*i) << "\n";
+	}
+}
+
 PlayerInfo GameState::make_default_player(const PlayerColors color)
 {
 	PlayerInfo player;
@@ -134,3 +143,29 @@ void GameState::shuffle_cosmic_deck()
 {
 	cosmic_deck.shuffle();
 }
+
+void GameState::deal_starting_hands()
+{
+	const unsigned starting_hand_size = 8;
+	unsigned total_cards_dealt = players.size()*starting_hand_size;
+	unsigned current_cards_dealt = 0;
+
+	auto iter = cosmic_deck.begin();
+	while(total_cards_dealt > current_cards_dealt)
+	{
+		unsigned player_to_be_dealt_this_card = current_cards_dealt % players.size();
+		players[player_to_be_dealt_this_card].hand.push_back(*iter); //Place the card in the player's hand
+		iter = cosmic_deck.erase(iter); //Remove the card from the deck
+
+		current_cards_dealt++;
+	}
+}
+
+void GameState::dump_player_hands() const
+{
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		i->dump_hand();
+	}
+}
+
