@@ -1,3 +1,3 @@
-*.exe #Executable files
+*.exe
 *.o
-*.swp #Vim files
+*.swp
