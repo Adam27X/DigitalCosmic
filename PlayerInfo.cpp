@@ -13,6 +13,7 @@ void PlayerInfo::dump_hand() const
 	{
 		std::cout << to_string(*i) << "\n";
 	}
+	std::cout << "\n";
 }
 
 bool PlayerInfo::has_encounter_cards_in_hand() const
@@ -31,4 +32,9 @@ bool PlayerInfo::has_encounter_cards_in_hand() const
 bool PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	return alien->can_respond(current_role,t,g,color);
+}
+
+bool PlayerInfo::must_respond(TurnPhase t, GameEvent g)
+{
+	return alien->must_respond(current_role,t,g,color);
 }

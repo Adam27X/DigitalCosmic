@@ -27,6 +27,8 @@ public:
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
 	void resolve_stack();
+	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
+	void dump_current_stack() const;
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();

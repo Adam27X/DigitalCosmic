@@ -8,5 +8,6 @@ class Remora : public AlienBase
 public:
 	Remora();
 	bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const override;
+	bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const override;
 };
 

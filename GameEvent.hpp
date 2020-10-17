@@ -1,12 +1,16 @@
 #pragma once
 
+#include <string>
 #include "PlayerColors.hpp"
 
+//Game actions that go on a stack and can be responded to
 enum class GameEventType
 {
 	DrawCard,
 	AlienPower
 };
+
+std::string to_string(const GameEventType &g);
 
 class GameEvent
 {

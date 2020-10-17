@@ -50,6 +50,7 @@ public:
 	void set_power(const std::string &p) { power = p; }
 	void set_role(const PlayerRole &r) { role = r; }
 	void set_mandatory(bool m) { mandatory = m; }
+	bool get_mandatory() const { return mandatory; }
 	void valid_phases_push_back(const TurnPhase &t) { valid_phases.push_back(t); }
 	void set_description(const std::string &s) { description = s; }
 	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;

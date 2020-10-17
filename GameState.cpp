@@ -68,6 +68,7 @@ void GameState::dump() const
 		}
 		std::cout << "}\n";
 	}
+	std::cout << "\n";
 }
 
 void GameState::dump_destiny_deck() const
@@ -198,9 +199,9 @@ void GameState::execute_turn(PlayerColors off)
 	//Ensure the offense has a valid hand
 	PlayerInfo &offense = get_player(off);
 	offense.current_role = EncounterRole::Offense;
-	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
+	bool offense_needs_discard = offense.has_encounter_cards_in_hand();
 
-	std::cout << "The " << to_string(off) << " Player is now the offense\n";
+	std::cout << "The " << to_string(off) << " Player is now the offense.\n";
 	if(offense_needs_discard)
 	{
 		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
@@ -211,10 +212,36 @@ void GameState::execute_turn(PlayerColors off)
 	}
 }
 
+std::string GameState::prompt_player(PlayerInfo &p, const std::string &prompt) const
+{
+	std::cout << prompt;
+	std::cout << to_string(p.color) << ">>";
+	std::string response;
+	std::cin >> response;
+
+	return response;
+}
+
+void GameState::dump_current_stack() const
+{
+	std::stack<GameEvent> copy_stack = stack;
+
+	std::cout << "Current game stack:\n";
+	while(!copy_stack.empty())
+	{
+		GameEvent g = copy_stack.top();
+		unsigned depth = stack.size()-1;
+		std::cout << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "\n";
+		copy_stack.pop();
+	}
+
+	assert(copy_stack.empty() && "Error printing stack!");
+}
+
 void GameState::resolve_stack()
 {
-	//TODO: Remora is an example of a response to discard_and_draw...how can we detect that Remora could respond? Perhaps in addition to or instead of adding functions we could add more specific actions such as 'player draw'
 	//Peek at the top of the stack and ask players in turn order if they would like to respond or resolve (but only ask if they have a valid response)
+	dump_current_stack();
 	while(!stack.empty())
 	{
 		GameEvent g = stack.top();
@@ -239,16 +266,33 @@ void GameState::resolve_stack()
 				bool can_respond = players[player_index].can_respond(state,g);
 				if(can_respond)
 				{
-					std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
-					//TODO: bool must_respond = players[i].alien.must_respond(players[i].current_role,state);
-					std::string response;
-					std::cout << "Would you like to respond to the card draw with your Alien power?";
-					std::cin >> response;
-					if(response.compare("y") == 0)
+					bool take_action = false;
+					bool must_respond = players[player_index].must_respond(state,g);
+					if(must_respond)
 					{
-						//TODO: Push the Alien power and start over
+						std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the draw action.\n";
+						take_action = true;
+					}
+					else
+					{
+						std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
+						std::string response;
+					       	do
+						{
+							response = prompt_player(players[player_index],"Would you like to respond to the card draw with your Alien power? y/n\n");
+						} while(response.compare("y") != 0 && response.compare("n") != 0);
+						if(response.compare("y") == 0)
+						{
+							take_action = true;
+						}
+					}
+
+					if(take_action)
+					{
+						//TODO:
 					}
 				}
+
 				player_index = (player_index+1) % players.size();
 			} while(player_index != initial_player_index);
 			stack.pop();

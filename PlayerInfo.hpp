@@ -22,5 +22,6 @@ public:
 	void dump_hand() const;
 	bool has_encounter_cards_in_hand() const;
 	bool can_respond(TurnPhase t, GameEvent g);
+	bool must_respond(TurnPhase t, GameEvent g);
 };
 
