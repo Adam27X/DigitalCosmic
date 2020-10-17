@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <memory>
+#include <stack>
+#include <functional>
 
 #include "DestinyDeck.hpp"
 #include "CosmicDeck.hpp"
@@ -30,6 +32,7 @@ public:
 	std::vector<CosmicCardType> hand;
 
 	void dump_hand() const;
+	bool has_encounter_cards_in_hand() const;
 };
 
 class GameState
@@ -44,6 +47,10 @@ public:
 	void deal_starting_hands();
 	void dump_player_hands() const;
 	PlayerColors choose_first_player();
+	void execute_turn(PlayerColors offense);
+	PlayerInfo& get_player(const PlayerColors &c);
+	void discard_and_draw_new_hand(PlayerInfo &player);
+	void check_for_resolution();
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
@@ -51,5 +58,8 @@ private:
 	std::vector<PlayerInfo> players;
 	DestinyDeck destiny_deck;
 	CosmicDeck cosmic_deck;
+	std::vector<CosmicCardType> cosmic_discard;
+	std::stack< std::function<void()> > stack; //Stack of events?
+	TurnPhase state;
 };
 

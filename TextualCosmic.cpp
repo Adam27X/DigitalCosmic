@@ -9,7 +9,8 @@
 
 int main()
 {
-	std::srand(unsigned (std::time(0)));
+	//std::srand(unsigned (std::time(0))); //TODO: Used a fixed seed until this is stable
+	std::srand(0);
     	std::cout << "Textual Cosmic\n\n";
     	GameState game(5);
     	game.dump();
@@ -29,6 +30,8 @@ int main()
 	game.dump_player_hands();
 	PlayerColors first_player = game.choose_first_player();
 	std::cout << "The " << to_string(first_player) << " player will go first.\n";
+
+	game.execute_turn(first_player);
 
     	return 0;
 }
