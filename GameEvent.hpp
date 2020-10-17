@@ -23,6 +23,7 @@ public:
 
 	PlayerColors player;
 	GameEventType event_type;
-	std::function<void()> callback; //Action to perform once the event resolves
+	std::function<void()> callback_if_resolved; //Action to perform once the event resolves
+	std::function<void()> callback_if_action_taken; //Happens regardless if the event resolves
 };
 

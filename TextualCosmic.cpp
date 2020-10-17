@@ -33,5 +33,7 @@ int main()
 
 	game.execute_turn(first_player);
 
+	game.dump_player_hands();
+
     	return 0;
 }

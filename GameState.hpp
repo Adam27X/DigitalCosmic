@@ -31,6 +31,7 @@ public:
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
+	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
@@ -40,7 +41,6 @@ private:
 	DestinyDeck destiny_deck;
 	CosmicDeck cosmic_deck;
 	std::vector<CosmicCardType> cosmic_discard;
-	//std::stack< std::function<void()> > stack; //Stack of events?
 	std::stack<GameEvent> stack;
 	TurnPhase state;
 	bool invalidate_next_callback;

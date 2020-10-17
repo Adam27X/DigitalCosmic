@@ -301,17 +301,19 @@ void GameState::resolve_game_event(const GameEvent g)
 
 			if(take_action)
 			{
-				//FIXME: If a player uses a card to respond, the card needs to be removed from his/her hand
-				GameEvent addition(can_respond); //FIXME: Perhaps we want to pass must_respond here sometimes
-				resolve_game_event(addition);
+				//FIXME: Check if must respond is valid and if so, take that action
+				if(can_respond.callback_if_action_taken)
+				{
+					can_respond.callback_if_action_taken();
+				}
+				resolve_game_event(can_respond);
 			}
 		}
 
 		player_index = (player_index+1) % players.size();
 	} while(player_index != initial_player_index);
 
-	//TODO: Add a 'countered' flag to GameEvent (defaulting false) and refuse to resolve the event if it is true (or just set callback to null in this instance)
-	if(g.callback)
+	if(g.callback_if_resolved)
 	{
 		if(invalidate_next_callback) //Countered!
 		{
@@ -319,7 +321,7 @@ void GameState::resolve_game_event(const GameEvent g)
 		}
 		else
 		{
-			g.callback();
+			g.callback_if_resolved();
 		}
 	}
 	stack.pop();

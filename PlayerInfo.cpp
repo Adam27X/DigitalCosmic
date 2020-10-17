@@ -51,7 +51,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-			ret.callback = [this] () { this->game->draw_cosmic_card(this->game->get_player(this->color)); this->game->dump_player_hand(this->game->get_player(this->color)); };
+			ret.callback_if_resolved = [this] () { this->game->draw_cosmic_card(this->game->get_player(this->color)); };
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -65,7 +65,8 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			if(*i == CosmicCardType::CosmicZap)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
-				ret.callback = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
 				return ret;
 			}
 		}
@@ -78,7 +79,12 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CardZap)
-				return GameEvent(color,GameEventType::CardZap);
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CardZap);
+				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
 		}
 
 		return GameEvent(color,GameEventType::None);
@@ -89,7 +95,12 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CardZap)
-				return GameEvent(color,GameEventType::CardZap);
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CardZap);
+				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
 		}
 
 		return GameEvent(color,GameEventType::None);
