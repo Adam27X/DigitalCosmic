@@ -30,6 +30,7 @@ public:
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
+	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
@@ -42,5 +43,6 @@ private:
 	//std::stack< std::function<void()> > stack; //Stack of events?
 	std::stack<GameEvent> stack;
 	TurnPhase state;
+	bool invalidate_next_callback;
 };
 

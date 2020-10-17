@@ -7,7 +7,7 @@
 
 #include "GameState.hpp"
 
-GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers))
+GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false)
 {
 	assert(nplayers > 1 && nplayers < 6 && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
@@ -313,7 +313,14 @@ void GameState::resolve_game_event(const GameEvent g)
 	//TODO: Add a 'countered' flag to GameEvent (defaulting false) and refuse to resolve the event if it is true (or just set callback to null in this instance)
 	if(g.callback)
 	{
-		g.callback();
+		if(invalidate_next_callback) //Countered!
+		{
+			invalidate_next_callback  = false;
+		}
+		else
+		{
+			g.callback();
+		}
 	}
 	stack.pop();
 }

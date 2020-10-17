@@ -63,7 +63,11 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CosmicZap)
-				return GameEvent(color,GameEventType::CosmicZap);
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
+				ret.callback = [this] () { this->game->set_invalidate_next_callback(true); };
+				return ret;
+			}
 		}
 
 		return GameEvent(color,GameEventType::None);
