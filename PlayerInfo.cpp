@@ -17,7 +17,10 @@ void PlayerInfo::make_default_player(const PlayerColors c)
 	planets.resize(num_planets_per_player);
 	for(unsigned i=0; i<planets.size(); i++)
 	{
-		planets[i].push_back(std::make_pair(color,default_ships_per_planet));
+		for(unsigned ii=0; ii<default_ships_per_planet; ii++)
+		{
+			planets[i].push_back(color);
+		}
 	}
 }
 
@@ -51,6 +54,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
+			//TODO: This functionality is specific to Remora and thus should be deduced there, if possible
 			ret.callback_if_resolved = [this] () { this->game->draw_cosmic_card(this->game->get_player(this->color)); };
 			return ret;
 		}
@@ -105,6 +109,17 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 		return GameEvent(color,GameEventType::None);
 	}
+	else if(g.event_type == GameEventType::RetrieveWarpShip)
+	{
+		if(alien->can_respond(current_role,t,g,color))
+		{
+			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
+			//TODO: This functionality is specific to Remora and thus should be deduced there, if possible
+			ret.callback_if_resolved = [this] () { this->game->add_ship_to_colony(this->game->get_player(this->color)); };
+			return ret;
+		}
+		return GameEvent(color,GameEventType::None);
+	}
 	else
 	{
 		assert(0);
@@ -135,6 +150,17 @@ GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 	else if(g.event_type == GameEventType::CardZap)
 	{
 		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::RetrieveWarpShip)
+	{
+		if(alien->must_respond(current_role,t,g,color))
+		{
+			return GameEvent(color,GameEventType::AlienPower);
+		}
+		else
+		{
+			return GameEvent(color,GameEventType::None);
+		}
 	}
 	else
 	{

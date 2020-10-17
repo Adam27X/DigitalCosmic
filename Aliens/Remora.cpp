@@ -27,5 +27,5 @@ bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors
 
 bool Remora::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
-	return can_respond(e,t,g,mycolor) && get_mandatory(); //Always false here
+	return false; //Remora is an optional Alien
 }

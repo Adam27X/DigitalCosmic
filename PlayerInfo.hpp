@@ -7,7 +7,7 @@
 #include "PlayerColors.hpp"
 #include "AlienBase.hpp"
 
-typedef std::vector< std::pair<PlayerColors,unsigned> > PlanetInfo;
+typedef std::vector<PlayerColors> PlanetInfo;
 
 class GameState;
 

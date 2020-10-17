@@ -11,6 +11,7 @@ enum class GameEventType
 	AlienPower,
 	CosmicZap,
 	CardZap,
+	RetrieveWarpShip,
 	None
 };
 

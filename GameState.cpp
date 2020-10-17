@@ -50,7 +50,7 @@ void GameState::dump() const
 			{
 				if(iii != ii->begin())
 					std::cout << ",";
-				std::cout << iii->second << "(" << to_string(iii->first) << ")";
+				std::cout << to_string(*iii);
 			}
 			std::cout << "}";
 		}
@@ -207,7 +207,7 @@ void GameState::execute_turn(PlayerColors off)
 	//Ensure the offense has a valid hand
 	PlayerInfo &offense = get_player(off);
 	offense.current_role = EncounterRole::Offense;
-	bool offense_needs_discard = offense.has_encounter_cards_in_hand();
+	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
 
 	std::cout << "The " << to_string(off) << " Player is now the offense.\n";
 	if(offense_needs_discard)
@@ -221,11 +221,100 @@ void GameState::execute_turn(PlayerColors off)
 
 		GameEvent g(offense.color,GameEventType::DrawCard);
 		resolve_game_event(g);
-
-		//NOTE: This function always resolves so we just call it now; for more general game state actions that may or may not resolve, we can wrap them into std::function objects like below and put them into a stack to be processed
-		//std::function<void(PlayerInfo&)> f = [this](PlayerInfo &p) { discard_and_draw_new_hand(p); };
-		//std::function<void()> f = [this,&offense] () { discard_and_draw_new_hand(offense); };
 	}
+
+	//Regroup Phase
+	state = TurnPhase::Regroup;
+
+	//If the offense has any ships in the warp, they retrieve one of them
+	//NOTE: Remora can respond to this action if it is taken
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(*i == offense.color)
+		{
+			std::cout << "The " << to_string(off) << " player will now regroup\n";
+			add_ship_to_colony(offense);
+			warp.erase(i); //Remove the ship from the warp
+			break;
+		}
+	}
+
+	//TODO: Potentially add events if people want to play Mobius Tubes or Plague
+}
+
+//TODO: Test
+void GameState::add_ship_to_colony(PlayerInfo &p)
+{
+	//Gather the valid options and present them to the player
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
+
+	for(auto player_begin=players.begin(),player_end=players.end();player_begin!=player_end;++player_begin)
+	{
+		for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
+		{
+			for(unsigned ships=0; ships<player_begin->planets[planet].size(); ships++)
+			{
+				if(player_begin->planets[planet][ships] == p.color) //If this ship matches our color we have a colony there
+				{
+					valid_colonies.push_back(std::make_pair(player_begin->color,planet));
+					break;
+				}
+			}
+		}
+	}
+
+	//If the player has no colonies the ship goes directly onto the hyperspace gate
+	//This assumes the player is the offense, which will be true 99% of the time, but technically Remora could have no colonies and retrieve a ship in response to the offense retrieving a ship.
+	//It's not even clear from the rulebook what should happen in that case. Perhap's Remora's ability shouldn't resolve
+	if(!valid_colonies.size())
+	{
+		std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+		hyperspace_gate.push_back(p.color);
+	}
+	else
+	{
+		std::stringstream prompt;
+		prompt << "The " << to_string(p.color) << " player has the following valid colonies to choose from:\n";
+		for(unsigned i=0; i<valid_colonies.size(); i++)
+		{
+			prompt << "Option " << i << ": " << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second << "\n";
+		}
+		unsigned chosen_option;
+		do
+		{
+			std::cout << "Please choose one of the option numbers above.\n";
+			std::cout << to_string(p.color) << ">>";
+			std::cin >> chosen_option;
+		} while(chosen_option >= valid_colonies.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt
+
+		const std::pair<PlayerColors,unsigned> chosen_colony = valid_colonies[chosen_option];
+
+		//Now actually add the colony
+		bool colony_found = false; //paranoia
+		for(auto player_begin=players.begin(),player_end=players.end();player_begin!=player_end;++player_begin)
+		{
+			if(player_begin->color != chosen_colony.first)
+				continue;
+			for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
+			{
+				for(unsigned col=0; col<player_begin->planets[planet].size(); col++)
+				{
+					player_begin->planets[planet].push_back(p.color);
+					colony_found = true;
+					break;
+				}
+				if(colony_found)
+					break;
+			}
+			if(colony_found)
+				break;
+		}
+
+		assert(colony_found && "Failed to find colony to place ship!");
+	}
+
+	GameEvent g(p.color,GameEventType::RetrieveWarpShip);
+	resolve_game_event(g);
 }
 
 std::string GameState::prompt_player(PlayerInfo &p, const std::string &prompt) const

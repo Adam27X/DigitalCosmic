@@ -30,12 +30,15 @@ public:
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
+	void add_ship_to_colony(PlayerInfo &p);
+
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
+
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
 	DestinyDeck destiny_deck;
@@ -44,5 +47,7 @@ private:
 	std::stack<GameEvent> stack;
 	TurnPhase state;
 	bool invalidate_next_callback;
+	PlanetInfo warp; //The warp operates similarly to a planet
+	PlanetInfo hyperspace_gate; //As does the hyperspace gate
 };
 
