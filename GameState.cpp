@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <sstream>
 
 #include "GameState.hpp"
 
@@ -254,68 +255,38 @@ void GameState::resolve_game_event(const GameEvent g)
 	}
 	const unsigned int initial_player_index = player_index;
 
-	//TODO: Ideally this function would look the same for all event types and the logic distinguishing the events would be handled in PlayerInfo
 	do
 	{
-		if(g.event_type == GameEventType::DrawCard)
+		GameEventType can_respond = players[player_index].can_respond(state,g); //NOTE: This will eventually be a vector when multiple responses are valid
+		if(can_respond != GameEventType::None) //If there is a valid response...
 		{
-			//Only Remora can react to this event for now...Cosmic cards cannot (except possibly for some flares)
-			//Iterate through players and if they have Remora as their Alien, ask if they would like to respond
-			bool can_respond = players[player_index].can_respond(state,g);
-			if(can_respond)
+			bool take_action = false;
+			GameEventType must_respond = players[player_index].must_respond(state,g);
+			if(must_respond != GameEventType::None)
 			{
-				bool take_action = false;
-				bool must_respond = players[player_index].must_respond(state,g);
-				if(must_respond)
-				{
-					std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the draw action.\n";
-					take_action = true;
-				}
-				else
-				{
-					std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
-					std::string response;
-					do
-					{
-						response = prompt_player(players[player_index],"Would you like to respond to the card draw with your Alien power? y/n\n");
-					} while(response.compare("y") != 0 && response.compare("n") != 0);
-					if(response.compare("y") == 0)
-					{
-						take_action = true;
-					}
-				}
-
-				if(take_action)
-				{
-					GameEvent addition(players[player_index].color,GameEventType::AlienPower);
-					resolve_game_event(addition); //TODO: Need to pass a std::function<> here as well?
-				}
+				std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
+				take_action = true;
 			}
-		}
-		else if(g.event_type == GameEventType::AlienPower)
-		{
-			//The current set of supported Aliens cannot interact with an AlienPower, but a Cosmic Zap can!
-			//TODO: Consider encoding the legal turn phases for each CosmicCardType (in this case a CosmicZap is legal at any time)
-			bool can_respond = players[player_index].can_respond(state,g); //Note that a response in this context is always optional
-			if(can_respond)
+			else
 			{
-				bool take_action = false;
-				std::cout << "The " << to_string(players[player_index].color) << " player can respond to the <Alien Power> action.\n";
+				std::cout << "The " << to_string(players[player_index].color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
 				std::string response;
 				do
 				{
-					response = prompt_player(players[player_index],"Would you like to respond to the <Alien Power> with your <Cosmic Zap>? y/n\n");
+					std::stringstream response_prompt;
+					response_prompt << "Would you like to respond to the " << to_string(g.event_type) << " with your " << to_string(can_respond) << "? y/n\n";
+					response = prompt_player(players[player_index],response_prompt.str());
 				} while(response.compare("y") != 0 && response.compare("n") != 0);
 				if(response.compare("y") == 0)
 				{
 					take_action = true;
 				}
+			}
 
-				if(take_action)
-				{
-					//GameEvent addition(players[player_index].color,GameEventType::CosmicZap);
-					//resolve_game_event(addition);
-				}
+			if(take_action)
+			{
+				GameEvent addition(players[player_index].color,can_respond); //FIXME: Perhaps we want to pass must_respond here sometimes
+				resolve_game_event(addition);
 			}
 		}
 

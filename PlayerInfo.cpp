@@ -29,11 +29,15 @@ bool PlayerInfo::has_encounter_cards_in_hand() const
 	return false;
 }
 
-bool PlayerInfo::can_respond(TurnPhase t, GameEvent g)
+GameEventType PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	if(g.event_type == GameEventType::DrawCard)
 	{
-		return alien->can_respond(current_role,t,g,color);
+		if(alien->can_respond(current_role,t,g,color))
+		{
+			return GameEventType::AlienPower;
+		}
+		return GameEventType::None;
 	}
 	else if(g.event_type == GameEventType::AlienPower)
 	{
@@ -41,10 +45,10 @@ bool PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CosmicZap)
-				return true;
+				return GameEventType::CosmicZap;
 		}
 
-		return false;
+		return GameEventType::None;
 	}
 	else
 	{
@@ -52,15 +56,22 @@ bool PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	}
 }
 
-bool PlayerInfo::must_respond(TurnPhase t, GameEvent g)
+GameEventType PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 {
 	if(g.event_type == GameEventType::DrawCard)
 	{
-		return alien->must_respond(current_role,t,g,color);
+		if(alien->must_respond(current_role,t,g,color))
+		{
+			return GameEventType::AlienPower;
+		}
+		else
+		{
+			return GameEventType::None;
+		}
 	}
 	else if(g.event_type == GameEventType::AlienPower)
 	{
-		return false;
+		return GameEventType::None;
 	}
 	else
 	{

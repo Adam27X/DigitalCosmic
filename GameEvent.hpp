@@ -7,7 +7,9 @@
 enum class GameEventType
 {
 	DrawCard,
-	AlienPower
+	AlienPower,
+	CosmicZap,
+	None
 };
 
 std::string to_string(const GameEventType &g);
