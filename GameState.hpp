@@ -8,32 +8,8 @@
 #include "DestinyDeck.hpp"
 #include "CosmicDeck.hpp"
 #include "AlienBase.hpp"
-
-enum class PlayerColors
-{
-	Red,
-	Blue,
-	Purple,
-	Yellow,
-	Green
-};
-
-std::string to_string(const PlayerColors &p);
-
-typedef std::vector< std::pair<PlayerColors,unsigned> > PlanetInfo;
-
-class PlayerInfo
-{
-public:
-	PlayerColors color;
-	unsigned score; //TODO: Provide a function to compute the score from the planet information below?
-	std::vector<PlanetInfo> planets; //Each planet has some number of ships of each valid player color
-	std::unique_ptr<AlienBase> alien;
-	std::vector<CosmicCardType> hand;
-
-	void dump_hand() const;
-	bool has_encounter_cards_in_hand() const;
-};
+#include "PlayerInfo.hpp"
+#include "GameEvent.hpp"
 
 class GameState
 {
@@ -50,7 +26,7 @@ public:
 	void execute_turn(PlayerColors offense);
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
-	void check_for_resolution();
+	void resolve_stack();
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
@@ -59,7 +35,8 @@ private:
 	DestinyDeck destiny_deck;
 	CosmicDeck cosmic_deck;
 	std::vector<CosmicCardType> cosmic_discard;
-	std::stack< std::function<void()> > stack; //Stack of events?
+	//std::stack< std::function<void()> > stack; //Stack of events?
+	std::stack<GameEvent> stack;
 	TurnPhase state;
 };
 

@@ -3,6 +3,8 @@
 #include <vector>
 #include <string>
 
+#include "GameEvent.hpp"
+
 enum class PlayerRole
 {
 	AnyPlayer,
@@ -29,6 +31,15 @@ enum class TurnPhase
 
 std::string to_string(const TurnPhase &t);
 
+enum class EncounterRole
+{
+	Offense,
+	Defense,
+	OffensiveAlly,
+	DefensiveAlly,
+	None
+};
+
 class AlienBase
 {
 public:
@@ -41,6 +52,8 @@ public:
 	void set_mandatory(bool m) { mandatory = m; }
 	void valid_phases_push_back(const TurnPhase &t) { valid_phases.push_back(t); }
 	void set_description(const std::string &s) { description = s; }
+	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
+	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 
 private:
 	std::string name;

@@ -6,61 +6,6 @@
 
 #include "GameState.hpp"
 
-std::string to_string(const PlayerColors &p)
-{
-	std::string ret;
-	switch(p)
-	{
-		case PlayerColors::Red:
-			ret = "Red";
-		break;
-
-		case PlayerColors::Blue:
-			ret = "Blue";
-		break;
-
-		case PlayerColors::Purple:
-			ret = "Purple";
-		break;
-
-		case PlayerColors::Yellow:
-			ret = "Yellow";
-		break;
-
-		case PlayerColors::Green:
-			ret = "Green";
-		break;
-
-		default:
-			assert(0 && "Invalid player color!");
-		break;
-	}
-
-	return ret;
-}
-
-void PlayerInfo::dump_hand() const
-{
-	std::cout << "Hand for the " << to_string(color) << " player:\n";
-	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
-	{
-		std::cout << to_string(*i) << "\n";
-	}
-}
-
-bool PlayerInfo::has_encounter_cards_in_hand() const
-{
-	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
 PlayerInfo GameState::make_default_player(const PlayerColors color)
 {
 	PlayerInfo player;
@@ -232,6 +177,10 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 		cosmic_deck.erase(cosmic_deck.begin());
 	}
 
+	GameEvent g(player.color,GameEventType::DrawCard);
+	stack.push(g);
+	resolve_stack();
+
 	//If the new hand isn't valid, try again
 	if(!player.has_encounter_cards_in_hand())
 		discard_and_draw_new_hand(player);
@@ -241,25 +190,68 @@ void GameState::execute_turn(PlayerColors off)
 {
 	//Start Turn Phase
 	state = TurnPhase::StartTurn;
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		players[i].current_role = EncounterRole::None;
+	}
 
 	//Ensure the offense has a valid hand
 	PlayerInfo &offense = get_player(off);
+	offense.current_role = EncounterRole::Offense;
 	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
 
+	std::cout << "The " << to_string(off) << " Player is now the offense\n";
 	if(offense_needs_discard)
 	{
 		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
-		//discard_and_draw_new_hand(offense);
-		//TODO: Support a stack and reactions to this event
+		discard_and_draw_new_hand(offense);
+		//NOTE: This function always resolves so we just call it now; for more general game state actions that may or may not resolve, we can wrap them into std::function objects like below and put them into a stack to be processed
 		//std::function<void(PlayerInfo&)> f = [this](PlayerInfo &p) { discard_and_draw_new_hand(p); };
-		std::function<void()> f = [this,&offense] () { discard_and_draw_new_hand(offense); };
-		stack.push(f);
-		check_for_resolution();
+		//std::function<void()> f = [this,&offense] () { discard_and_draw_new_hand(offense); };
 	}
 }
 
-void GameState::check_for_resolution()
+void GameState::resolve_stack()
 {
 	//TODO: Remora is an example of a response to discard_and_draw...how can we detect that Remora could respond? Perhaps in addition to or instead of adding functions we could add more specific actions such as 'player draw'
-	//Basically we can have a stack of any actions that can be responded to
+	//Peek at the top of the stack and ask players in turn order if they would like to respond or resolve (but only ask if they have a valid response)
+	while(!stack.empty())
+	{
+		GameEvent g = stack.top();
+		if(g.event_type == GameEventType::DrawCard)
+		{
+			//Only Remora can react to this event for now...Cosmic cards cannot (except possibly for some flares)
+			//Iterate through players and if they have Remora as their Alien, ask if they would like to respond
+			unsigned player_index = 6; //Sentinel value meant to be invalid
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color == g.player)
+				{
+					player_index = i;
+					break;
+				}
+			}
+
+			const unsigned int initial_player_index = player_index;
+
+			do
+			{
+				bool can_respond = players[player_index].can_respond(state,g);
+				if(can_respond)
+				{
+					std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
+					//TODO: bool must_respond = players[i].alien.must_respond(players[i].current_role,state);
+					std::string response;
+					std::cout << "Would you like to respond to the card draw with your Alien power?";
+					std::cin >> response;
+					if(response.compare("y") == 0)
+					{
+						//TODO: Push the Alien power and start over
+					}
+				}
+				player_index = (player_index+1) % players.size();
+			} while(player_index != initial_player_index);
+			stack.pop();
+		}
+	}
 }

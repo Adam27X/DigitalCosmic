@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include "PlayerColors.hpp"
+
 enum class DestinyCardType
 {
 	Red, //3 for each player
@@ -17,8 +19,6 @@ enum class DestinyCardType
 };
 
 std::string to_string(const DestinyCardType &c);
-
-enum class PlayerColors;
 
 class DestinyDeck
 {

@@ -4,7 +4,6 @@
 #include <algorithm>
 
 #include "DestinyDeck.hpp"
-#include "GameState.hpp"
 
 std::string to_string(const DestinyCardType &c)
 {
