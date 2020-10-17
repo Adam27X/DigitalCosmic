@@ -254,6 +254,7 @@ void GameState::resolve_game_event(const GameEvent g)
 	}
 	const unsigned int initial_player_index = player_index;
 
+	//TODO: Ideally this function would look the same for all event types and the logic distinguishing the events would be handled in PlayerInfo
 	do
 	{
 		if(g.event_type == GameEventType::DrawCard)
@@ -295,7 +296,27 @@ void GameState::resolve_game_event(const GameEvent g)
 		{
 			//The current set of supported Aliens cannot interact with an AlienPower, but a Cosmic Zap can!
 			//TODO: Consider encoding the legal turn phases for each CosmicCardType (in this case a CosmicZap is legal at any time)
+			bool can_respond = players[player_index].can_respond(state,g); //Note that a response in this context is always optional
+			if(can_respond)
+			{
+				bool take_action = false;
+				std::cout << "The " << to_string(players[player_index].color) << " player can respond to the <Alien Power> action.\n";
+				std::string response;
+				do
+				{
+					response = prompt_player(players[player_index],"Would you like to respond to the <Alien Power> with your <Cosmic Zap>? y/n\n");
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
+				if(response.compare("y") == 0)
+				{
+					take_action = true;
+				}
 
+				if(take_action)
+				{
+					//GameEvent addition(players[player_index].color,GameEventType::CosmicZap);
+					//resolve_game_event(addition);
+				}
+			}
 		}
 
 		player_index = (player_index+1) % players.size();
