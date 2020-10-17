@@ -18,6 +18,10 @@ std::string to_string(const GameEventType &g)
 			ret = "Cosmic Zap";
 		break;
 
+		case GameEventType::CardZap:
+			ret = "Card Zap";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

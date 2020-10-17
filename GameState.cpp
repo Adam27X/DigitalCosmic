@@ -7,43 +7,30 @@
 
 #include "GameState.hpp"
 
-PlayerInfo GameState::make_default_player(const PlayerColors color)
-{
-	PlayerInfo player;
-	player.score = 0;
-
-	player.color = color;
-	const unsigned num_planets_per_player = 5;
-	const unsigned default_ships_per_planet = 4;
-	player.planets.resize(num_planets_per_player);
-	for(unsigned i=0; i<player.planets.size(); i++)
-	{
-		player.planets[i].push_back(std::make_pair(player.color,default_ships_per_planet));
-	}
-
-	return player;
-}
-
-GameState::GameState(unsigned nplayers) : num_players(nplayers), destiny_deck(DestinyDeck(nplayers))
+GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers))
 {
 	assert(nplayers > 1 && nplayers < 6 && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
 
 	//For now assign colors in a specific order...TODO: let the user choose colors
-	players.resize(num_players);
-	players[0] = make_default_player(PlayerColors::Red);
-	players[1] = make_default_player(PlayerColors::Blue);
+	players[0].make_default_player(PlayerColors::Red);
+	players[1].make_default_player(PlayerColors::Blue);
 	if(num_players > 2)
 	{
-		players[2] = make_default_player(PlayerColors::Purple);
+		players[2].make_default_player(PlayerColors::Purple);
 	}
 	if(num_players > 3)
 	{
-		players[3] = make_default_player(PlayerColors::Yellow);
+		players[3].make_default_player(PlayerColors::Yellow);
 	}
 	if(num_players > 4)
 	{
-		players[4] = make_default_player(PlayerColors::Green);
+		players[4].make_default_player(PlayerColors::Green);
+	}
+
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		players[i].set_game_state(this);
 	}
 }
 
@@ -119,6 +106,31 @@ void GameState::deal_starting_hands()
 
 		current_cards_dealt++;
 	}
+
+}
+
+void GameState::shuffle_discard_into_cosmic_deck()
+{
+	assert(cosmic_deck.empty() && "Expected empty CosmicDeck when shuffling the discard pile back into the CosmicDeck");
+	for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
+	{
+		cosmic_deck.push_back(*i);
+	}
+	cosmic_discard.clear();
+	cosmic_deck.shuffle();
+}
+
+void GameState::draw_cosmic_card(PlayerInfo &player)
+{
+	//If the deck is empty, shuffle the discard deck into the deck
+	if(cosmic_deck.empty())
+	{
+		shuffle_discard_into_cosmic_deck();
+	}
+
+	auto iter = cosmic_deck.begin();
+	player.hand.push_back(*iter);
+	cosmic_deck.erase(iter);
 }
 
 void GameState::dump_player_hands() const
@@ -127,6 +139,11 @@ void GameState::dump_player_hands() const
 	{
 		i->dump_hand();
 	}
+}
+
+void GameState::dump_player_hand(const PlayerInfo &p) const
+{
+	p.dump_hand();
 }
 
 PlayerColors GameState::choose_first_player()
@@ -164,13 +181,7 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 			player.hand.push_back(*i);
 		}
 		cosmic_deck.clear();
-		//std::move(cosmic_discard.begin(),cosmic_discard.end(),cosmic_deck.begin());
-		for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
-		{
-			cosmic_deck.push_back(*i);
-		}
-		cosmic_discard.clear();
-		cosmic_deck.shuffle();
+		shuffle_discard_into_cosmic_deck();
 	}
 
 	while(player.hand.size() < 8)
@@ -178,9 +189,6 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 		player.hand.push_back(*cosmic_deck.begin());
 		cosmic_deck.erase(cosmic_deck.begin());
 	}
-
-	GameEvent g(player.color,GameEventType::DrawCard);
-	resolve_game_event(g);
 
 	//If the new hand isn't valid, try again
 	if(!player.has_encounter_cards_in_hand())
@@ -199,13 +207,21 @@ void GameState::execute_turn(PlayerColors off)
 	//Ensure the offense has a valid hand
 	PlayerInfo &offense = get_player(off);
 	offense.current_role = EncounterRole::Offense;
-	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
+	bool offense_needs_discard = offense.has_encounter_cards_in_hand();
 
 	std::cout << "The " << to_string(off) << " Player is now the offense.\n";
 	if(offense_needs_discard)
 	{
 		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
 		discard_and_draw_new_hand(offense);
+
+		//This implementations treats the dump and discard operation as one draw action, even if the player is forced to draw and discard multiple times
+		//Hence Remora will only draw once for this action, which seems appropriate
+		dump_player_hand(offense);
+
+		GameEvent g(offense.color,GameEventType::DrawCard);
+		resolve_game_event(g);
+
 		//NOTE: This function always resolves so we just call it now; for more general game state actions that may or may not resolve, we can wrap them into std::function objects like below and put them into a stack to be processed
 		//std::function<void(PlayerInfo&)> f = [this](PlayerInfo &p) { discard_and_draw_new_hand(p); };
 		//std::function<void()> f = [this,&offense] () { discard_and_draw_new_hand(offense); };
@@ -257,12 +273,12 @@ void GameState::resolve_game_event(const GameEvent g)
 
 	do
 	{
-		GameEventType can_respond = players[player_index].can_respond(state,g); //NOTE: This will eventually be a vector when multiple responses are valid
-		if(can_respond != GameEventType::None) //If there is a valid response...
+		GameEvent can_respond = players[player_index].can_respond(state,g); //NOTE: This will eventually be a vector when multiple responses are valid
+		if(can_respond.event_type != GameEventType::None) //If there is a valid response...
 		{
 			bool take_action = false;
-			GameEventType must_respond = players[player_index].must_respond(state,g);
-			if(must_respond != GameEventType::None)
+			GameEvent must_respond = players[player_index].must_respond(state,g);
+			if(must_respond.event_type != GameEventType::None)
 			{
 				std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
 				take_action = true;
@@ -274,7 +290,7 @@ void GameState::resolve_game_event(const GameEvent g)
 				do
 				{
 					std::stringstream response_prompt;
-					response_prompt << "Would you like to respond to the " << to_string(g.event_type) << " with your " << to_string(can_respond) << "? y/n\n";
+					response_prompt << "Would you like to respond to the " << to_string(g.event_type) << " with your " << to_string(can_respond.event_type) << "? y/n\n";
 					response = prompt_player(players[player_index],response_prompt.str());
 				} while(response.compare("y") != 0 && response.compare("n") != 0);
 				if(response.compare("y") == 0)
@@ -285,7 +301,8 @@ void GameState::resolve_game_event(const GameEvent g)
 
 			if(take_action)
 			{
-				GameEvent addition(players[player_index].color,can_respond); //FIXME: Perhaps we want to pass must_respond here sometimes
+				//FIXME: If a player uses a card to respond, the card needs to be removed from his/her hand
+				GameEvent addition(can_respond); //FIXME: Perhaps we want to pass must_respond here sometimes
 				resolve_game_event(addition);
 			}
 		}
@@ -293,6 +310,11 @@ void GameState::resolve_game_event(const GameEvent g)
 		player_index = (player_index+1) % players.size();
 	} while(player_index != initial_player_index);
 
+	//TODO: Add a 'countered' flag to GameEvent (defaulting false) and refuse to resolve the event if it is true (or just set callback to null in this instance)
+	if(g.callback)
+	{
+		g.callback();
+	}
 	stack.pop();
 }
 

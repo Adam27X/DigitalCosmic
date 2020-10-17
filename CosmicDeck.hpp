@@ -51,6 +51,7 @@ public:
 	std::vector<CosmicCardType>::iterator erase(std::vector<CosmicCardType>::const_iterator position) { return deck.erase(position); }
 	void clear() { deck.clear(); }
 	unsigned size() const { return deck.size(); }
+	bool empty() const { return deck.empty(); }
 	void push_back(const CosmicCardType &c) { deck.push_back(c); }
 private:
 	std::vector<CosmicCardType> deck;

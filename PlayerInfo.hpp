@@ -9,6 +9,8 @@
 
 typedef std::vector< std::pair<PlayerColors,unsigned> > PlanetInfo;
 
+class GameState;
+
 class PlayerInfo
 {
 public:
@@ -19,9 +21,14 @@ public:
 	std::vector<CosmicCardType> hand;
 	EncounterRole current_role;
 
+	void make_default_player(const PlayerColors c);
 	void dump_hand() const;
 	bool has_encounter_cards_in_hand() const;
-	GameEventType can_respond(TurnPhase t, GameEvent g);
-	GameEventType must_respond(TurnPhase t, GameEvent g);
+	GameEvent can_respond(TurnPhase t, GameEvent g);
+	GameEvent must_respond(TurnPhase t, GameEvent g);
+	void set_game_state(GameState *g) { game = g; }
+
+	//Does this need a forward decl?
+	GameState *game; //Intended for callbacks and should be used sparingly
 };
 

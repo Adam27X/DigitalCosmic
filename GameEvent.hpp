@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 #include "PlayerColors.hpp"
 
 //Game actions that go on a stack and can be responded to
@@ -9,6 +10,7 @@ enum class GameEventType
 	DrawCard,
 	AlienPower,
 	CosmicZap,
+	CardZap,
 	None
 };
 
@@ -21,5 +23,6 @@ public:
 
 	PlayerColors player;
 	GameEventType event_type;
+	std::function<void()> callback; //Action to perform once the event resolves
 };
 
