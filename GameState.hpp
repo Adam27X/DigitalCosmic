@@ -26,7 +26,7 @@ public:
 	void execute_turn(PlayerColors offense);
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
-	void resolve_stack();
+	void resolve_game_event(const GameEvent g);
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 private:	

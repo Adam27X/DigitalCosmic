@@ -179,8 +179,7 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 	}
 
 	GameEvent g(player.color,GameEventType::DrawCard);
-	stack.push(g);
-	resolve_stack();
+	resolve_game_event(g);
 
 	//If the new hand isn't valid, try again
 	if(!player.has_encounter_cards_in_hand())
@@ -199,7 +198,7 @@ void GameState::execute_turn(PlayerColors off)
 	//Ensure the offense has a valid hand
 	PlayerInfo &offense = get_player(off);
 	offense.current_role = EncounterRole::Offense;
-	bool offense_needs_discard = offense.has_encounter_cards_in_hand();
+	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
 
 	std::cout << "The " << to_string(off) << " Player is now the offense.\n";
 	if(offense_needs_discard)
@@ -230,7 +229,7 @@ void GameState::dump_current_stack() const
 	while(!copy_stack.empty())
 	{
 		GameEvent g = copy_stack.top();
-		unsigned depth = stack.size()-1;
+		unsigned depth = copy_stack.size()-1;
 		std::cout << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "\n";
 		copy_stack.pop();
 	}
@@ -238,64 +237,70 @@ void GameState::dump_current_stack() const
 	assert(copy_stack.empty() && "Error printing stack!");
 }
 
-void GameState::resolve_stack()
+void GameState::resolve_game_event(const GameEvent g)
 {
-	//Peek at the top of the stack and ask players in turn order if they would like to respond or resolve (but only ask if they have a valid response)
+	stack.push(g);
 	dump_current_stack();
-	while(!stack.empty())
+
+	//Enforce player order during resolution
+	unsigned player_index = 6; //Sentinel value meant to be invalid
+	for(unsigned i=0; i<players.size(); i++)
 	{
-		GameEvent g = stack.top();
+		if(players[i].color == g.player)
+		{
+			player_index = i;
+			break;
+		}
+	}
+	const unsigned int initial_player_index = player_index;
+
+	do
+	{
 		if(g.event_type == GameEventType::DrawCard)
 		{
 			//Only Remora can react to this event for now...Cosmic cards cannot (except possibly for some flares)
 			//Iterate through players and if they have Remora as their Alien, ask if they would like to respond
-			unsigned player_index = 6; //Sentinel value meant to be invalid
-			for(unsigned i=0; i<players.size(); i++)
+			bool can_respond = players[player_index].can_respond(state,g);
+			if(can_respond)
 			{
-				if(players[i].color == g.player)
+				bool take_action = false;
+				bool must_respond = players[player_index].must_respond(state,g);
+				if(must_respond)
 				{
-					player_index = i;
-					break;
+					std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the draw action.\n";
+					take_action = true;
 				}
-			}
-
-			const unsigned int initial_player_index = player_index;
-
-			do
-			{
-				bool can_respond = players[player_index].can_respond(state,g);
-				if(can_respond)
+				else
 				{
-					bool take_action = false;
-					bool must_respond = players[player_index].must_respond(state,g);
-					if(must_respond)
+					std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
+					std::string response;
+					do
 					{
-						std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the draw action.\n";
+						response = prompt_player(players[player_index],"Would you like to respond to the card draw with your Alien power? y/n\n");
+					} while(response.compare("y") != 0 && response.compare("n") != 0);
+					if(response.compare("y") == 0)
+					{
 						take_action = true;
 					}
-					else
-					{
-						std::cout << "The " << to_string(players[player_index].color) << " player can respond to the draw action.\n";
-						std::string response;
-					       	do
-						{
-							response = prompt_player(players[player_index],"Would you like to respond to the card draw with your Alien power? y/n\n");
-						} while(response.compare("y") != 0 && response.compare("n") != 0);
-						if(response.compare("y") == 0)
-						{
-							take_action = true;
-						}
-					}
-
-					if(take_action)
-					{
-						//TODO:
-					}
 				}
 
-				player_index = (player_index+1) % players.size();
-			} while(player_index != initial_player_index);
-			stack.pop();
+				if(take_action)
+				{
+					GameEvent addition(players[player_index].color,GameEventType::AlienPower);
+					resolve_game_event(addition); //TODO: Need to pass a std::function<> here as well?
+				}
+			}
 		}
-	}
+		else if(g.event_type == GameEventType::AlienPower)
+		{
+			//The current set of supported Aliens cannot interact with an AlienPower, but a Cosmic Zap can!
+			//TODO: Consider encoding the legal turn phases for each CosmicCardType (in this case a CosmicZap is legal at any time)
+
+		}
+
+		player_index = (player_index+1) % players.size();
+	} while(player_index != initial_player_index);
+
+	stack.pop();
 }
+
