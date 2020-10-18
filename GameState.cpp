@@ -195,6 +195,14 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 		discard_and_draw_new_hand(player);
 }
 
+void GameState::free_all_ships_from_warp()
+{
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		move_ship_from_warp_to_colony(get_player(*i));
+	}
+}
+
 void GameState::execute_turn(PlayerColors off)
 {
 	//Start Turn Phase
@@ -226,15 +234,46 @@ void GameState::execute_turn(PlayerColors off)
 	//Regroup Phase
 	state = TurnPhase::Regroup;
 
+	//If the offense has Mobius Tubes, they now have the option to play it
+	if(!warp.empty()) //Don't bother prompting if the warp is empty
+	{
+		bool offense_has_mobius_tubes = false;
+		std::vector<CosmicCardType>::iterator mobius_tubes_iter;
+		for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::MobiusTubes)
+			{
+				offense_has_mobius_tubes = true;
+				mobius_tubes_iter = i;
+				break;
+			}
+		}
+
+		if(offense_has_mobius_tubes)
+		{
+			std::string response;
+			do {
+				response = prompt_player(offense,"Would you like to cast Mobius Tubes? y/n\n");
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				//Note: This technically triggers Remora but all ships are freed anyway
+				GameEvent g(offense.color,GameEventType::MobiusTubes);
+				g.callback_if_resolved = [this] () { this->free_all_ships_from_warp(); };
+				g.callback_if_action_taken = [this,mobius_tubes_iter,off] () { this->add_to_discard_pile(*mobius_tubes_iter); this->get_player(off).hand.erase(mobius_tubes_iter); };
+				resolve_game_event(g);
+			}
+		}
+	}
+
 	//If the offense has any ships in the warp, they retrieve one of them
-	//NOTE: Remora can respond to this action if it is taken
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
 		if(*i == offense.color)
 		{
 			std::cout << "The " << to_string(off) << " player will now regroup\n";
-			add_ship_to_colony(offense);
-			warp.erase(i); //Remove the ship from the warp
+			move_ship_from_warp_to_colony(offense);
 			break;
 		}
 	}
@@ -243,7 +282,7 @@ void GameState::execute_turn(PlayerColors off)
 }
 
 //TODO: Test
-void GameState::add_ship_to_colony(PlayerInfo &p)
+void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 {
 	//Gather the valid options and present them to the player
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
@@ -311,6 +350,16 @@ void GameState::add_ship_to_colony(PlayerInfo &p)
 		}
 
 		assert(colony_found && "Failed to find colony to place ship!");
+	}
+
+	//Remove the ship from the warp
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(*i == p.color)
+		{
+			warp.erase(i);
+			break;
+		}
 	}
 
 	GameEvent g(p.color,GameEventType::RetrieveWarpShip);

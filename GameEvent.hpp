@@ -12,6 +12,7 @@ enum class GameEventType
 	CosmicZap,
 	CardZap,
 	RetrieveWarpShip,
+	MobiusTubes,
 	None
 };
 

@@ -30,7 +30,7 @@ public:
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
-	void add_ship_to_colony(PlayerInfo &p);
+	void move_ship_from_warp_to_colony(PlayerInfo &p);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -38,6 +38,7 @@ private:
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
+	void free_all_ships_from_warp();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
