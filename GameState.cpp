@@ -203,6 +203,106 @@ void GameState::free_all_ships_from_warp()
 	}
 }
 
+//TODO: Some events occur before the 'standard' turn phase completes whereas others occur after...do we want to call this function twice for each turn phase with a before and after flag that gets passed around?
+//Artifact cards all seem to happen after the standard turn phase, so we'll follow that policy for now. Aliens can be handled separately for now but that's probably not a great long term plan
+void GameState::check_for_game_events(PlayerInfo &offense)
+{
+	std::vector<CosmicCardType> valid_plays;
+
+	unsigned player_index = 6; //Sentinel value meant to be invalid
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		if(players[i].color == offense.color)
+		{
+			player_index = i;
+			break;
+		}
+	}
+	const unsigned int initial_player_index = player_index;
+
+	do
+	{
+		PlayerInfo &current_player = players[player_index];
+		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
+		valid_plays.clear();
+		for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+		{
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
+			{
+				valid_plays.push_back(*i);
+			}
+		}
+		//TODO: For now we'll support Aliens outside of this context, but I'm honestly not sure if that's the right decision
+
+		//List the valid plays and ask the player if they would like to do any. Note that if they choose one they can still play another
+		while(valid_plays.size())
+		{
+			std::stringstream prompt;
+			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
+			for(unsigned i=0; i<valid_plays.size(); i++)
+			{
+				prompt << "Option " << i << ": " << to_string(valid_plays[i]) << "\n";
+			}
+			prompt << "Option " << valid_plays.size() << ": None\n";
+			unsigned chosen_option;
+			do
+			{
+				std::cout << prompt.str();
+				std::cout << "Please choose one of the option numbers above.\n";
+				std::cout << to_string(current_player.color) << ">>";
+				std::cin >> chosen_option;
+			} while(chosen_option > valid_plays.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt. Take in a string instead and filter it
+
+			if(chosen_option != valid_plays.size()) //An action was taken
+			{
+				CosmicCardType play = valid_plays[chosen_option];
+
+				//Remove this card from the player's hand and add it to discard
+				add_to_discard_pile(play);
+				unsigned old_hand_size = current_player.hand.size(); //Sanity checking
+				for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+				{
+					if(*i == play)
+					{
+						current_player.hand.erase(i);
+						break;
+					}
+				}
+				assert(current_player.hand.size()+1 == old_hand_size && "Error removing played card from the player's hand!");
+
+				GameEvent g(current_player.color,to_game_event_type(play));
+				get_callbacks_for_cosmic_card(play,g);
+				resolve_game_event(g);
+
+				//Remove this option from valid_plays and if there are still plays that could be made, prompt them again
+				for(auto i=valid_plays.begin(),e=valid_plays.end();i!=e;++i)
+				{
+					if(*i == play)
+					{
+						valid_plays.erase(i);
+					}
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		player_index = (player_index+1) % players.size();
+	} while(player_index != initial_player_index);
+}
+
+void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
+{
+	if(play != CosmicCardType::MobiusTubes)
+	{
+		assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
+	}
+
+	g.callback_if_resolved = [this] () { this->free_all_ships_from_warp(); };
+}
+
 void GameState::execute_turn(PlayerColors off)
 {
 	//Start Turn Phase
@@ -231,41 +331,10 @@ void GameState::execute_turn(PlayerColors off)
 		resolve_game_event(g);
 	}
 
+	check_for_game_events(offense);
+
 	//Regroup Phase
 	state = TurnPhase::Regroup;
-
-	//If the offense has Mobius Tubes, they now have the option to play it
-	if(!warp.empty()) //Don't bother prompting if the warp is empty
-	{
-		bool offense_has_mobius_tubes = false;
-		std::vector<CosmicCardType>::iterator mobius_tubes_iter;
-		for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
-		{
-			if(*i == CosmicCardType::MobiusTubes)
-			{
-				offense_has_mobius_tubes = true;
-				mobius_tubes_iter = i;
-				break;
-			}
-		}
-
-		if(offense_has_mobius_tubes)
-		{
-			std::string response;
-			do {
-				response = prompt_player(offense,"Would you like to cast Mobius Tubes? y/n\n");
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
-
-			if(response.compare("y") == 0)
-			{
-				//Note: This technically triggers Remora but all ships are freed anyway
-				GameEvent g(offense.color,GameEventType::MobiusTubes);
-				g.callback_if_resolved = [this] () { this->free_all_ships_from_warp(); };
-				g.callback_if_action_taken = [this,mobius_tubes_iter,off] () { this->add_to_discard_pile(*mobius_tubes_iter); this->get_player(off).hand.erase(mobius_tubes_iter); };
-				resolve_game_event(g);
-			}
-		}
-	}
 
 	//If the offense has any ships in the warp, they retrieve one of them
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
@@ -279,11 +348,26 @@ void GameState::execute_turn(PlayerColors off)
 	}
 
 	//TODO: Potentially add events if people want to play Mobius Tubes or Plague
+	check_for_game_events(offense);
 }
 
 //TODO: Test
+//NOTE: This function assumes that at least one of p.color ships is in the warp!
 void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 {
+	//Check that at least one ship of the specified color resides in the warp; if not, return
+	bool ship_exists_in_warp = false;
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(*i == p.color)
+		{
+			ship_exists_in_warp = true;
+		}
+	}
+
+	if(!ship_exists_in_warp)
+		return;
+
 	//Gather the valid options and present them to the player
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
 
@@ -321,6 +405,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 		unsigned chosen_option;
 		do
 		{
+			std::cout << prompt.str();
 			std::cout << "Please choose one of the option numbers above.\n";
 			std::cout << to_string(p.color) << ">>";
 			std::cin >> chosen_option;
@@ -463,5 +548,20 @@ void GameState::resolve_game_event(const GameEvent g)
 		}
 	}
 	stack.pop();
+}
+
+
+void GameState::debug_send_ship_to_warp()
+{
+	PlayerColors victim = PlayerColors::Yellow;
+	warp.push_back(victim);
+
+	PlayerInfo &yellow = get_player(victim);
+	yellow.planets[0].erase(yellow.planets[0].begin());
+
+	PlayerColors victim2 = PlayerColors::Red;
+	warp.push_back(victim2);
+	PlayerInfo &red = get_player(victim2);
+	red.planets[2].erase(red.planets[2].begin());
 }
 

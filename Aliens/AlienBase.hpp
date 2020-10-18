@@ -4,41 +4,9 @@
 #include <string>
 
 #include "GameEvent.hpp"
-
-enum class PlayerRole
-{
-	AnyPlayer,
-	MainPlayer,
-	Offense,
-	MainPlayerOrAlly,
-	NotMainPlayer,
-	NotOffense
-};
-
-std::string to_string(const PlayerRole &p);
-
-enum class TurnPhase
-{
-	StartTurn,
-	Regroup,
-	Destiny,
-	Launch,
-	Alliance,
-	Planning,
-	Reveal,
-	Resolution
-};
-
-std::string to_string(const TurnPhase &t);
-
-enum class EncounterRole
-{
-	Offense,
-	Defense,
-	OffensiveAlly,
-	DefensiveAlly,
-	None
-};
+#include "TurnPhase.hpp"
+#include "EncounterRole.hpp"
+#include "PlayerRole.hpp"
 
 class AlienBase
 {

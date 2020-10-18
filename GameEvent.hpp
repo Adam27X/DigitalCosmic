@@ -13,6 +13,9 @@ enum class GameEventType
 	CardZap,
 	RetrieveWarpShip,
 	MobiusTubes,
+	Plague,
+	EmotionControl,
+	ForceField,
 	None
 };
 

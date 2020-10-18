@@ -33,5 +33,7 @@ int main()
 
 	game.execute_turn(first_player);
 
+	game.dump();
+
     	return 0;
 }

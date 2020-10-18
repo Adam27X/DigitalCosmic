@@ -1,6 +1,9 @@
 #pragma once
 
 #include <vector>
+#include "TurnPhase.hpp"
+#include "EncounterRole.hpp"
+#include "GameEvent.hpp"
 
 enum class CosmicCardType
 {
@@ -38,6 +41,8 @@ enum class CosmicCardType
 };
 
 std::string to_string(const CosmicCardType &c);
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role);
+GameEventType to_game_event_type(const CosmicCardType c);
 
 class CosmicDeck
 {

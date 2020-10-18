@@ -142,6 +142,94 @@ std::string to_string(const CosmicCardType &c)
 	return ret;
 }
 
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role)
+{
+	switch(c)
+	{
+		case CosmicCardType::MobiusTubes:
+			if(role == EncounterRole::Offense && state == TurnPhase::Regroup)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		case CosmicCardType::Plague:
+			//Valid for any player
+			if(state == TurnPhase::Regroup)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		//TODO: It may be better to do this as a response. Note that it must be done *after* cards are revealed
+		case CosmicCardType::EmotionControl:
+			if(state == TurnPhase::Reveal)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		//TODO: It may be better to do this as a response. Note that it must be done *after* allies are selected
+		case CosmicCardType::ForceField:
+			if(state == TurnPhase::Alliance)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		default:
+			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
+			//Quash can only be played in response to a deal
+			//Ionic Gas should be played in response to compensation or defensive rewards
+			return false;
+		break;
+	}
+}
+
+GameEventType to_game_event_type(const CosmicCardType c)
+{
+	switch(c)
+	{
+		case CosmicCardType::MobiusTubes:
+			return GameEventType::MobiusTubes;
+		break;
+
+		case CosmicCardType::Plague:
+			return GameEventType::Plague;
+		break;
+
+		case CosmicCardType::EmotionControl:
+			return GameEventType::EmotionControl;
+		break;
+
+		case CosmicCardType::ForceField:
+			return GameEventType::ForceField;
+		break;
+
+		default:
+			std::cerr << "Error: Unexpected CosmicCardtType passed to to_game_event()\n";
+			std::cerr << "Type: " << to_string(c) << "\n";
+			assert(0);
+		break;
+	}
+}
+
 CosmicDeck::CosmicDeck()
 {
 	deck.insert(deck.end(),1,CosmicCardType::Attack0);

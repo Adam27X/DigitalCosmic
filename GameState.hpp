@@ -34,11 +34,16 @@ public:
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
+
+	//Methods only meant for testing
+	void debug_send_ship_to_warp();
 private:	
 	void shuffle_destiny_deck();
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
 	void free_all_ships_from_warp();
+	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
+	void check_for_game_events(PlayerInfo &offense);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

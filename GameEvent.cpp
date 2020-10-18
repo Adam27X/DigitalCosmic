@@ -22,6 +22,26 @@ std::string to_string(const GameEventType &g)
 			ret = "Card Zap";
 		break;
 
+		case GameEventType::RetrieveWarpShip:
+			ret = "Retrieve Warp Ship";
+		break;
+
+		case GameEventType::MobiusTubes:
+			ret = "Mobius Tubes";
+		break;
+
+		case GameEventType::Plague:
+			ret = "Plague";
+		break;
+
+		case GameEventType::EmotionControl:
+			ret = "Emotion Control";
+		break;
+
+		case GameEventType::ForceField:
+			ret = "Force Field";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;
