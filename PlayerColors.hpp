@@ -8,7 +8,8 @@ enum class PlayerColors
 	Blue,
 	Purple,
 	Yellow,
-	Green
+	Green,
+	Invalid
 };
 
 std::string to_string(const PlayerColors &p);

@@ -20,6 +20,8 @@ enum class DestinyCardType
 
 std::string to_string(const DestinyCardType &c);
 
+PlayerColors to_PlayerColors(const DestinyCardType &c);
+
 class DestinyDeck
 {
 public:
@@ -27,7 +29,9 @@ public:
 	void shuffle();
 	void dump() const;
 	PlayerColors draw_for_first_player_and_shuffle();
+	DestinyCardType draw();
 private:
 	std::vector<DestinyCardType> deck;
+	std::vector<DestinyCardType> discard;
 };
 

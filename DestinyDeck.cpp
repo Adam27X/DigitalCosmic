@@ -54,6 +54,36 @@ std::string to_string(const DestinyCardType &c)
 	return ret;
 }
 
+PlayerColors to_PlayerColors(const DestinyCardType &c)
+{
+	switch(c)
+	{
+		case DestinyCardType::Red:
+			return PlayerColors::Red;
+		break;
+
+		case DestinyCardType::Blue:
+			return PlayerColors::Blue;
+		break;
+
+		case DestinyCardType::Purple:
+			return PlayerColors::Purple;
+		break;
+
+		case DestinyCardType::Yellow:
+			return PlayerColors::Yellow;
+		break;
+
+		case DestinyCardType::Green:
+			return PlayerColors::Green;
+		break;
+
+		default:
+			return PlayerColors::Invalid;
+		break;
+	}
+}
+
 DestinyDeck::DestinyDeck(unsigned nplayers)
 {
 	//Again we're assigning colors in a specific order here
@@ -124,6 +154,21 @@ PlayerColors DestinyDeck::draw_for_first_player_and_shuffle()
 	}
 
 	shuffle();
+
+	return ret;
+}
+
+DestinyCardType DestinyDeck::draw()
+{
+	if(deck.empty())
+	{
+		std::copy(discard.begin(),discard.end(),deck.begin());
+		discard.clear();
+	}
+
+	DestinyCardType ret = deck[0];
+	discard.push_back(ret);
+	deck.erase(deck.begin());
 
 	return ret;
 }

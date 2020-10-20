@@ -499,6 +499,52 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 	}
 }
 
+void GameState::draw_from_destiny_deck(PlayerColors off)
+{
+	DestinyCardType dest = destiny_deck.draw();
+
+	if(to_PlayerColors(dest) != PlayerColors::Invalid)
+	{
+		//We drew a player color
+		PlayerColors drawn = to_PlayerColors(dest);
+
+		//TODO: Check if drawn == offense. If so they can either redraw or have an encounter in his or her own system
+		if(drawn == off)
+		{
+			std::cout << "The " << to_string(off) << " player has drawn his or her own color.\n";
+
+			PlayerInfo &offense = get_player(off);
+			std::vector< std::pair<PlayerColors,unsigned> > valid_home_system_encounters; //List of <opponent,planet number> pairs
+			for(unsigned i=0; i<offense.planets.size(); i++)
+			{
+				for(auto ii=offense.planets[i].begin(),ee=offense.planets[i].end(); ii!=ee; ++ii)
+				{
+					if(*ii != off)
+					{
+						valid_home_system_encounters.push_back(std::make_pair(*ii,i));
+					}
+				}
+			}
+			if(valid_home_system_encounters.empty())
+			{
+				std::cout << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
+				draw_from_destiny_deck(off);
+			}
+			else
+			{
+				std::cout << "The offense may either have an encounter with a player in his or her own system or draw another destiny card\n";
+				//TODO: List off valid home system encounters and the option to redraw and let the player choose
+				//TODO: Add the number of ships on each valid home system encounter?
+				//Redraw -> recurse, otherwise we need to record the defensive player and which planet the encounter will occur on
+			}
+		}
+	}
+	else
+	{
+		//We drew some sort of special card
+	}
+}
+
 void GameState::execute_turn(PlayerColors off)
 {
 	//Start Turn Phase
@@ -543,8 +589,12 @@ void GameState::execute_turn(PlayerColors off)
 		}
 	}
 
-	//TODO: Potentially add events if people want to play Mobius Tubes or Plague
 	check_for_game_events(offense);
+
+	//Destiny Phase
+	state = TurnPhase::Destiny;
+
+	draw_from_destiny_deck(off);
 }
 
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)

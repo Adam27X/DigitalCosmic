@@ -39,6 +39,7 @@ public:
 	void debug_send_ship_to_warp();
 private:	
 	void shuffle_destiny_deck();
+	void draw_from_destiny_deck(PlayerColors off);
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
 	void free_all_ships_from_warp();
