@@ -291,6 +291,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				break;
 			}
 		}
 	}
@@ -323,6 +324,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				break;
 			}
 		}
 	}
@@ -333,6 +335,7 @@ void GameState::plague_player()
 		{
 			cosmic_discard.push_back(*i);
 			victim.hand.erase(i);
+			break;
 		}
 	}
 	//Morph
@@ -342,6 +345,7 @@ void GameState::plague_player()
 		{
 			cosmic_discard.push_back(*i);
 			victim.hand.erase(i);
+			break;
 		}
 	}
 	//Reinforcement
@@ -373,6 +377,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				break;
 			}
 		}
 	}

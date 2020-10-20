@@ -10,7 +10,7 @@
 int main()
 {
 	//std::srand(unsigned (std::time(0))); //TODO: Used a fixed seed until this is stable
-	std::srand(0);
+	std::srand(1);
     	std::cout << "Textual Cosmic\n\n";
     	GameState game(5);
     	game.dump();
