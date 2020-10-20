@@ -44,6 +44,10 @@ private:
 	void free_all_ships_from_warp();
 	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
 	void check_for_game_events(PlayerInfo &offense);
+	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color);
+	void cast_plague(const PlayerColors casting_player);
+	void plague_player();
+	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -53,6 +57,8 @@ private:
 	std::stack<GameEvent> stack;
 	TurnPhase state;
 	bool invalidate_next_callback;
+	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
+	unsigned player_to_be_plagued;
 	PlanetInfo warp; //The warp operates similarly to a planet
 	PlanetInfo hyperspace_gate; //As does the hyperspace gate
 };

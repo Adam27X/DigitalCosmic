@@ -7,9 +7,9 @@
 
 #include "GameState.hpp"
 
-GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false)
+GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel)
 {
-	assert(nplayers > 1 && nplayers < 6 && "Invalid number of players!");
+	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
 
 	//For now assign colors in a specific order...TODO: let the user choose colors
@@ -203,13 +203,191 @@ void GameState::free_all_ships_from_warp()
 	}
 }
 
+void GameState::cast_plague(const PlayerColors casting_player)
+{
+	std::cout << "Which player would you like to harm?\n";
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		std::cout << i << ": " << to_string(players[i].color) << "\n";
+	}
+
+	unsigned chosen_option;
+	do
+	{
+		std::cout << "Please choose one of the option numbers above.\n";
+		std::cout << to_string(casting_player) << ">>";
+		std::cin >> chosen_option;
+	} while(chosen_option > players.size());
+
+	assert(player_to_be_plagued == max_player_sentinel);
+	player_to_be_plagued = chosen_option;
+}
+
+void GameState::plague_player()
+{
+	assert(player_to_be_plagued < players.size());
+	PlayerInfo &victim = players[player_to_be_plagued];
+
+	//First they lose three ships of his or her choice to the warp (if possible)
+	for(unsigned ship_num=0; ship_num<3; ship_num++)
+	{
+		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(victim.color); //A list of planet colors and indices
+		if(!valid_colonies.size())
+		{
+			//Check if the player has a ship on the hyperspace gate
+			for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+			{
+				if(*i == victim.color)
+				{
+					hyperspace_gate.erase(i);
+					break;
+				}
+			}
+		}
+		else
+		{
+			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(victim.color,valid_colonies);
+			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+			for(auto i=player_with_chosen_colony.planets[chosen_colony.second].begin(),e=player_with_chosen_colony.planets[chosen_colony.second].end();i!=e;++i)
+			{
+				if(*i == victim.color)
+				{
+					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
+					break;
+				}
+			}
+		}
+	}
+
+	//Then they must discard one card of each type he or she has in hand
+	//FIXME: Seg fault on choosing last attack card?
+	unsigned chosen_option;
+	//Artifacts
+	std::vector<CosmicCardType> valid_artifacts;
+	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	{
+		if((*i >= CosmicCardType::CardZap) && (*i <= CosmicCardType::Quash))
+		{
+			valid_artifacts.push_back(*i);
+		}
+	}
+	if(valid_artifacts.size())
+	{
+		std::cout << "The " << to_string(victim.color) << " player has the following artifacts. Choose one to discard.\n";
+		for(unsigned i=0; i<valid_artifacts.size(); i++)
+		{
+			std::cout << i << ": " << to_string(valid_artifacts[i]) << "\n";
+		}
+		do
+		{
+			std::cout << "Please choose one of the option numbers above.\n";
+			std::cout << to_string(victim.color) << ">>";
+			std::cin >> chosen_option;
+		} while(chosen_option >= valid_artifacts.size());
+		CosmicCardType choice = valid_artifacts[chosen_option];
+		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		{
+			if(*i == choice)
+			{
+				cosmic_discard.push_back(*i);
+				victim.hand.erase(i);
+			}
+		}
+	}
+	//Attack
+	std::vector<CosmicCardType> valid_attacks;
+	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	{
+		if((*i >= CosmicCardType::Attack0) && (*i <= CosmicCardType::Attack40))
+		{
+			valid_attacks.push_back(*i);
+		}
+	}
+	if(valid_attacks.size())
+	{
+		std::cout << "The " << to_string(victim.color) << " player has the following attack cards. Choose one to discard.\n";
+		for(unsigned i=0; i<valid_attacks.size(); i++)
+		{
+			std::cout << i << ": " << to_string(valid_attacks[i]) << "\n";
+		}
+		do
+		{
+			std::cout << "Please choose one of the option numbers above.\n";
+			std::cout << to_string(victim.color) << ">>";
+			std::cin >> chosen_option;
+		} while(chosen_option >= valid_attacks.size());
+		CosmicCardType choice = valid_attacks[chosen_option];
+		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		{
+			if(*i == choice)
+			{
+				cosmic_discard.push_back(*i);
+				victim.hand.erase(i);
+			}
+		}
+	}
+	//Negotiate
+	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	{
+		if(*i == CosmicCardType::Negotiate)
+		{
+			cosmic_discard.push_back(*i);
+			victim.hand.erase(i);
+		}
+	}
+	//Morph
+	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	{
+		if(*i == CosmicCardType::Morph)
+		{
+			cosmic_discard.push_back(*i);
+			victim.hand.erase(i);
+		}
+	}
+	//Reinforcement
+	std::vector<CosmicCardType> valid_reinforcements;
+	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	{
+		if((*i >= CosmicCardType::Reinforcement2) && (*i <= CosmicCardType::Reinforcement5))
+		{
+			valid_reinforcements.push_back(*i);
+		}
+	}
+	if(valid_reinforcements.size())
+	{
+		std::cout << "The " << to_string(victim.color) << " player has the following reinforcement cards. Choose one to discard.\n";
+		for(unsigned i=0; i<valid_reinforcements.size(); i++)
+		{
+			std::cout << i << ": " << to_string(valid_reinforcements[i]) << "\n";
+		}
+		do
+		{
+			std::cout << "Please choose one of the option numbers above.\n";
+			std::cout << to_string(victim.color) << ">>";
+			std::cin >> chosen_option;
+		} while(chosen_option >= valid_reinforcements.size());
+		CosmicCardType choice = valid_reinforcements[chosen_option];
+		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		{
+			if(*i == choice)
+			{
+				cosmic_discard.push_back(*i);
+				victim.hand.erase(i);
+			}
+		}
+	}
+	//TODO: Support Flares here when they're available
+
+	player_to_be_plagued = max_player_sentinel;
+}
+
 //TODO: Some events occur before the 'standard' turn phase completes whereas others occur after...do we want to call this function twice for each turn phase with a before and after flag that gets passed around?
 //Artifact cards all seem to happen after the standard turn phase, so we'll follow that policy for now. Aliens can be handled separately for now but that's probably not a great long term plan
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
 	std::vector<CosmicCardType> valid_plays;
 
-	unsigned player_index = 6; //Sentinel value meant to be invalid
+	unsigned player_index = max_player_sentinel;
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		if(players[i].color == offense.color)
@@ -272,6 +450,8 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 				GameEvent g(current_player.color,to_game_event_type(play));
 				get_callbacks_for_cosmic_card(play,g);
+				g.callback_if_action_taken();
+				g.callback_if_action_taken = nullptr;
 				resolve_game_event(g);
 
 				//Remove this option from valid_plays and if there are still plays that could be made, prompt them again
@@ -295,12 +475,23 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
 {
-	if(play != CosmicCardType::MobiusTubes)
+	switch(play)
 	{
-		assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
-	}
+		case CosmicCardType::MobiusTubes:
+			g.callback_if_resolved = [this] () { this->free_all_ships_from_warp(); };
+		break;
 
-	g.callback_if_resolved = [this] () { this->free_all_ships_from_warp(); };
+		case CosmicCardType::Plague:
+			//Choose which player to plague
+			g.callback_if_action_taken = [this,g] () { this->cast_plague(g.player); };
+			//Plague them
+			g.callback_if_resolved = [this] () { this->plague_player(); };
+		break;
+
+		default:
+			assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
+		break;
+	}
 }
 
 void GameState::execute_turn(PlayerColors off)
@@ -351,8 +542,48 @@ void GameState::execute_turn(PlayerColors off)
 	check_for_game_events(offense);
 }
 
-//TODO: Test
-//NOTE: This function assumes that at least one of p.color ships is in the warp!
+std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)
+{
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
+
+	for(auto player_begin=players.begin(),player_end=players.end();player_begin!=player_end;++player_begin)
+	{
+		for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
+		{
+			for(unsigned ships=0; ships<player_begin->planets[planet].size(); ships++)
+			{
+				if(player_begin->planets[planet][ships] == color) //If this ship matches our color we have a colony there
+				{
+					valid_colonies.push_back(std::make_pair(player_begin->color,planet));
+					break;
+				}
+			}
+		}
+	}
+
+	return valid_colonies;
+}
+
+const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies)
+{
+	std::stringstream prompt;
+	prompt << "The " << to_string(color) << " player has the following valid colonies to choose from:\n";
+	for(unsigned i=0; i<valid_colonies.size(); i++)
+	{
+		prompt << "Option " << i << ": " << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second << "\n";
+	}
+	unsigned chosen_option;
+	do
+	{
+		std::cout << prompt.str();
+		std::cout << "Please choose one of the option numbers above.\n";
+		std::cout << to_string(color) << ">>";
+		std::cin >> chosen_option;
+	} while(chosen_option >= valid_colonies.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt
+
+	return valid_colonies[chosen_option];
+}
+
 void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 {
 	//Check that at least one ship of the specified color resides in the warp; if not, return
@@ -369,22 +600,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 		return;
 
 	//Gather the valid options and present them to the player
-	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
-
-	for(auto player_begin=players.begin(),player_end=players.end();player_begin!=player_end;++player_begin)
-	{
-		for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
-		{
-			for(unsigned ships=0; ships<player_begin->planets[planet].size(); ships++)
-			{
-				if(player_begin->planets[planet][ships] == p.color) //If this ship matches our color we have a colony there
-				{
-					valid_colonies.push_back(std::make_pair(player_begin->color,planet));
-					break;
-				}
-			}
-		}
-	}
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(p.color); //A list of planet colors and indices
 
 	//If the player has no colonies the ship goes directly onto the hyperspace gate
 	//This assumes the player is the offense, which will be true 99% of the time, but technically Remora could have no colonies and retrieve a ship in response to the offense retrieving a ship.
@@ -396,22 +612,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 	}
 	else
 	{
-		std::stringstream prompt;
-		prompt << "The " << to_string(p.color) << " player has the following valid colonies to choose from:\n";
-		for(unsigned i=0; i<valid_colonies.size(); i++)
-		{
-			prompt << "Option " << i << ": " << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second << "\n";
-		}
-		unsigned chosen_option;
-		do
-		{
-			std::cout << prompt.str();
-			std::cout << "Please choose one of the option numbers above.\n";
-			std::cout << to_string(p.color) << ">>";
-			std::cin >> chosen_option;
-		} while(chosen_option >= valid_colonies.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt
-
-		const std::pair<PlayerColors,unsigned> chosen_colony = valid_colonies[chosen_option];
+		const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(p.color,valid_colonies);
 
 		//Now actually add the colony
 		bool colony_found = false; //paranoia
@@ -483,7 +684,7 @@ void GameState::resolve_game_event(const GameEvent g)
 	dump_current_stack();
 
 	//Enforce player order during resolution
-	unsigned player_index = 6; //Sentinel value meant to be invalid
+	unsigned player_index = max_player_sentinel; //Sentinel value meant to be invalid
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		if(players[i].color == g.player)
