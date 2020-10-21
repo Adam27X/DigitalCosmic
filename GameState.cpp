@@ -260,7 +260,6 @@ void GameState::plague_player()
 	}
 
 	//Then they must discard one card of each type he or she has in hand
-	//FIXME: Seg fault on choosing last attack card?
 	unsigned chosen_option;
 	//Artifacts
 	std::vector<CosmicCardType> valid_artifacts;
@@ -499,6 +498,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 	}
 }
 
+//FIXME: Remove references to 'off' here and use assignments.offense instead
 void GameState::draw_from_destiny_deck(PlayerColors off)
 {
 	DestinyCardType dest = destiny_deck.draw();
@@ -508,20 +508,26 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 		//We drew a player color
 		PlayerColors drawn = to_PlayerColors(dest);
 
-		//TODO: Check if drawn == offense. If so they can either redraw or have an encounter in his or her own system
 		if(drawn == off)
 		{
 			std::cout << "The " << to_string(off) << " player has drawn his or her own color.\n";
 
 			PlayerInfo &offense = get_player(off);
-			std::vector< std::pair<PlayerColors,unsigned> > valid_home_system_encounters; //List of <opponent,planet number> pairs
+			std::map< std::pair<PlayerColors,unsigned>, unsigned > valid_home_system_encounters; //Map <opponent,planet number> -> number of opponent ships on that planet
 			for(unsigned i=0; i<offense.planets.size(); i++)
 			{
 				for(auto ii=offense.planets[i].begin(),ee=offense.planets[i].end(); ii!=ee; ++ii)
 				{
 					if(*ii != off)
 					{
-						valid_home_system_encounters.push_back(std::make_pair(*ii,i));
+						if(valid_home_system_encounters.find(std::make_pair(*ii,i)) == valid_home_system_encounters.end())
+						{
+							valid_home_system_encounters[std::make_pair(*ii,i)] = 1;
+						}
+						else
+						{
+							valid_home_system_encounters[std::make_pair(*ii,i)]++;
+						}
 					}
 				}
 			}
@@ -533,10 +539,61 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			else
 			{
 				std::cout << "The offense may either have an encounter with a player in his or her own system or draw another destiny card\n";
-				//TODO: List off valid home system encounters and the option to redraw and let the player choose
-				//TODO: Add the number of ships on each valid home system encounter?
-				//Redraw -> recurse, otherwise we need to record the defensive player and which planet the encounter will occur on
+				unsigned option = 0;
+				for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
+				{
+					std::cout << option << ": Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)\n";
+					option++;
+				}
+				std::cout << option << ": Draw another destiny card\n";
+				unsigned chosen_option;
+				do
+				{
+					std::cout << "Please choose one of the above options.\n";
+					std::cout << to_string(off) << ">>\n";
+					std::cin >> chosen_option;
+				} while(chosen_option > valid_home_system_encounters.size());
+
+				if(chosen_option == valid_home_system_encounters.size())
+				{
+					std::cout << "The offense has chosen to redraw\n";
+					draw_from_destiny_deck(off);
+				}
+				else
+				{
+					//The offense has chosen to have an encounter against another player in their home system
+					std::pair<PlayerColors,unsigned> home_system_encounter;
+					option = 0;
+					for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
+					{
+						if(option == chosen_option)
+						{
+							home_system_encounter = i->first;
+						}
+						option++;
+					}
+					assignments.defense = home_system_encounter.first;
+					assignments.planet_location = off;
+					assignments.planet_id = home_system_encounter.second;
+				}
 			}
+		}
+		else
+		{
+			assignments.defense = drawn;
+			assignments.planet_location = drawn;
+			//The offense needs to choose one of the planets
+			std::cout << "The offense has drawn a " << to_string(drawn) << " destiny card and must have an encounter with the " << to_string(drawn) << " player on their home system\n";
+			unsigned chosen_option;
+			do
+			{
+				//TODO: Dump planet info here to help the player make his or her choice
+				std::cout << "Please choose which planet you would like to attack (0-4).\n";
+				std::cout << to_string(off) << ">>\n";
+				std::cin >> chosen_option;
+			} while(chosen_option > 4);
+
+			assignments.planet_id = chosen_option;
 		}
 	}
 	else
@@ -545,10 +602,12 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 	}
 }
 
+//FIXME: The offensive color should be stored in the class (assignments.offense), not passed to this function
 void GameState::execute_turn(PlayerColors off)
 {
 	//Start Turn Phase
 	state = TurnPhase::StartTurn;
+	assignments.offense = off; //FIXME: Handle this before this function is called
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		players[i].current_role = EncounterRole::None;

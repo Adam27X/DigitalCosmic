@@ -11,6 +11,19 @@
 #include "PlayerInfo.hpp"
 #include "GameEvent.hpp"
 
+class PlayerAssignments
+{
+public:
+	PlayerAssignments() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; }
+	PlayerColors offense;
+	PlayerColors defense;
+	PlayerColors planet_location;
+	unsigned planet_id;
+	//std::vector<PlayerColors> offensive_allies;
+	//std::vector<PlayerColors> defensive_allies;
+	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
+};
+
 class GameState
 {
 public:
@@ -62,5 +75,6 @@ private:
 	unsigned player_to_be_plagued;
 	PlanetInfo warp; //The warp operates similarly to a planet
 	PlanetInfo hyperspace_gate; //As does the hyperspace gate
+	PlayerAssignments assignments;
 };
 
