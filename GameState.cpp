@@ -4,6 +4,7 @@
 #include <cassert>
 #include <algorithm>
 #include <sstream>
+#include <limits>
 
 #include "GameState.hpp"
 
@@ -599,6 +600,142 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 	else
 	{
 		//We drew some sort of special card
+		if(dest == DestinyCardType::Special_fewest_ships_in_warp)
+		{
+			std::map<PlayerColors,unsigned> num_ships_in_warp; //Map each player to how many ships they have in the warp
+			num_ships_in_warp[PlayerColors::Red] = 0;
+			num_ships_in_warp[PlayerColors::Blue] = 0;
+			if(num_players > 2)
+				num_ships_in_warp[PlayerColors::Purple] = 0;
+			if(num_players > 3)
+				num_ships_in_warp[PlayerColors::Yellow] = 0;
+			if(num_players > 4)
+				num_ships_in_warp[PlayerColors::Green] = 0;
+			for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+			{
+				num_ships_in_warp[*i]++;
+			}
+			//Tiebreak with the player closest in ascending player order
+			//Start with the player closest to the offense and keep the old result during ties
+			unsigned player_index = max_player_sentinel;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color == off)
+				{
+					player_index = i;
+					break;
+				}
+			}
+			unsigned defense_index = max_player_sentinel;
+			unsigned min_ships_in_warp = std::numeric_limits<unsigned>::max();
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				unsigned current_player_index = (i+player_index) % players.size();
+				PlayerColors current_player_color = players[current_player_index].color;
+				if((current_player_color != off) && (num_ships_in_warp[current_player_color] < min_ships_in_warp))
+				{
+					min_ships_in_warp = num_ships_in_warp[current_player_color];
+					defense_index = current_player_index;
+				}
+			}
+
+			assignments.defense = players[defense_index].color;
+			assignments.planet_location = players[defense_index].color;
+
+			//The offense needs to choose one of the planets
+			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the fewest ships in the warp. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
+			unsigned chosen_option;
+			do
+			{
+				//TODO: Dump planet info here to help the player make his or her choice
+				std::cout << "Please choose which planet you would like to attack (0-4).\n";
+				std::cout << to_string(off) << ">>\n";
+				std::cin >> chosen_option;
+			} while(chosen_option > 4);
+			assignments.planet_id = chosen_option;
+		}
+		else if(dest == DestinyCardType::Special_most_cards_in_hand)
+		{
+			//Tiebreak with the player closest in ascending player order
+			//Start with the player closest to the offense and keep the old result during ties
+			unsigned player_index = max_player_sentinel;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color == off)
+				{
+					player_index = i;
+					break;
+				}
+			}
+			unsigned defense_index = max_player_sentinel;
+			unsigned most_cards_in_hand = 0;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				unsigned current_player_index = (i+player_index) % players.size();
+				PlayerColors current_player_color = players[current_player_index].color;
+				if((current_player_color != off) && (players[current_player_index].hand.size() > most_cards_in_hand))
+				{
+					most_cards_in_hand = players[current_player_index].hand.size();
+					defense_index = current_player_index;
+				}
+			}
+
+			assignments.defense = players[defense_index].color;
+			assignments.planet_location = players[defense_index].color;
+
+			//The offense needs to choose one of the planets
+			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the most cards in hand. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
+			unsigned chosen_option;
+			do
+			{
+				//TODO: Dump planet info here to help the player make his or her choice
+				std::cout << "Please choose which planet you would like to attack (0-4).\n";
+				std::cout << to_string(off) << ">>\n";
+				std::cin >> chosen_option;
+			} while(chosen_option > 4);
+			assignments.planet_id = chosen_option;
+		}
+		else if(dest == DestinyCardType::Special_most_foreign_colonies)
+		{
+			//Tiebreak with the player closest in ascending player order
+			//Start with the player closest to the offense and keep the old result during ties
+			unsigned player_index = max_player_sentinel;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color == off)
+				{
+					player_index = i;
+					break;
+				}
+			}
+			unsigned defense_index = max_player_sentinel;
+			unsigned most_foreign_colonies = 0;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				unsigned current_player_index = (i+player_index) % players.size();
+				PlayerColors current_player_color = players[current_player_index].color;
+				if((current_player_color != off) && (players[current_player_index].score > most_foreign_colonies))
+				{
+					most_foreign_colonies = players[current_player_index].score;
+					defense_index = current_player_index;
+				}
+			}
+
+			assignments.defense = players[defense_index].color;
+			assignments.planet_location = players[defense_index].color;
+
+			//The offense needs to choose one of the planets
+			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the most foreign colonies. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
+			unsigned chosen_option;
+			do
+			{
+				//TODO: Dump planet info here to help the player make his or her choice
+				std::cout << "Please choose which planet you would like to attack (0-4).\n";
+				std::cout << to_string(off) << ">>\n";
+				std::cin >> chosen_option;
+			} while(chosen_option > 4);
+			assignments.planet_id = chosen_option;
+		}
 	}
 }
 
@@ -654,6 +791,8 @@ void GameState::execute_turn(PlayerColors off)
 	state = TurnPhase::Destiny;
 
 	draw_from_destiny_deck(off);
+
+	check_for_game_events(offense);
 }
 
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)

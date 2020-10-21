@@ -7,10 +7,16 @@
 #include "AlienBase.hpp"
 #include "Aliens.hpp"
 
-int main()
+int main(int argc, char *argv[])
 {
-	//std::srand(unsigned (std::time(0))); //TODO: Used a fixed seed until this is stable
-	std::srand(1);
+	if(argc == 2)
+	{
+		std::srand(std::stoi(argv[1]));
+	}
+	else
+	{
+		std::srand(unsigned (std::time(0)));
+	}
     	std::cout << "Textual Cosmic\n\n";
     	GameState game(5);
     	game.dump();
