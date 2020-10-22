@@ -583,18 +583,6 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 		{
 			assignments.defense = drawn;
 			assignments.planet_location = drawn;
-			//The offense needs to choose one of the planets
-			std::cout << "The offense has drawn a " << to_string(drawn) << " destiny card and must have an encounter with the " << to_string(drawn) << " player on their home system\n";
-			unsigned chosen_option;
-			do
-			{
-				//TODO: Dump planet info here to help the player make his or her choice
-				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > 4);
-
-			assignments.planet_id = chosen_option;
 		}
 	}
 	else
@@ -641,18 +629,6 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
-
-			//The offense needs to choose one of the planets
-			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the fewest ships in the warp. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
-			unsigned chosen_option;
-			do
-			{
-				//TODO: Dump planet info here to help the player make his or her choice
-				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > 4);
-			assignments.planet_id = chosen_option;
 		}
 		else if(dest == DestinyCardType::Special_most_cards_in_hand)
 		{
@@ -688,18 +664,6 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
-
-			//The offense needs to choose one of the planets
-			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the most cards in hand. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
-			unsigned chosen_option;
-			do
-			{
-				//TODO: Dump planet info here to help the player make his or her choice
-				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > 4);
-			assignments.planet_id = chosen_option;
 		}
 		else if(dest == DestinyCardType::Special_most_foreign_colonies)
 		{
@@ -735,18 +699,6 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
-
-			//The offense needs to choose one of the planets
-			std::cout << "The offense has drawn a special destiny card and must have an encounter with the player who has the most foreign colonies. Taking tiebreakers into account, the offense will have an encounter with the " << to_string(assignments.defense) << " player in their home system\n";
-			unsigned chosen_option;
-			do
-			{
-				//TODO: Dump planet info here to help the player make his or her choice
-				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > 4);
-			assignments.planet_id = chosen_option;
 		}
 		else if(dest == DestinyCardType::Wild)
 		{
@@ -768,21 +720,32 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 
 			assignments.defense = players[chosen_option].color;
 			assignments.planet_location = players[chosen_option].color;
-			std::cout << "The offense has chosen to have an encounter with the " << to_string(players[chosen_option].color) << " player.\n";
-			do
-			{
-				//TODO: Dump planet info here to help the player make his or her choice
-				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > 4);
-			assignments.planet_id = chosen_option;
 		}
 		else
 		{
 			assert(0 && "Unexpected destiny card type!");
 		}
 	}
+}
+
+void GameState::choose_opponent_planet()
+{
+
+	//If the offense is having an encounter on their home system they've already chosen a planet, so there's nothing to do here
+	if(assignments.planet_location == assignments.offense)
+		return;
+
+	std::cout << "The offense has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
+	const PlayerInfo &host = get_player(assignments.planet_location);
+	unsigned chosen_option;
+	do
+	{
+		//TODO: Dump planet info here to help the player make his or her choice
+		std::cout << "Please choose which planet you would like to attack (0-" << host.planets.size()-1 << ").\n";
+		std::cout << to_string(assignments.offense) << ">>";
+		std::cin >> chosen_option;
+	} while(chosen_option > (host.planets.size()-1));
+	assignments.planet_id = chosen_option;
 }
 
 //FIXME: The offensive color should be stored in the class (assignments.offense), not passed to this function
@@ -839,6 +802,12 @@ void GameState::execute_turn(PlayerColors off)
 	draw_from_destiny_deck(off);
 
 	check_for_game_events(offense);
+
+	state = TurnPhase::Launch;
+
+	choose_opponent_planet();
+
+	//TODO: Determine the number of ships the offense wants to send in
 }
 
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)

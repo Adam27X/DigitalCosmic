@@ -62,6 +62,7 @@ private:
 	void cast_plague(const PlayerColors casting_player);
 	void plague_player();
 	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies);
+	void choose_opponent_planet();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
