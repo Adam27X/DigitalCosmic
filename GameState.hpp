@@ -35,8 +35,8 @@ public:
 	void deal_starting_hands();
 	void dump_player_hands() const;
 	void dump_player_hand(const PlayerInfo &p) const;
-	PlayerColors choose_first_player();
-	void execute_turn(PlayerColors offense);
+	void choose_first_player();
+	void execute_turn();
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
 	void resolve_game_event(const GameEvent g);
@@ -52,7 +52,7 @@ public:
 	void debug_send_ship_to_warp();
 private:	
 	void shuffle_destiny_deck();
-	void draw_from_destiny_deck(PlayerColors off);
+	void draw_from_destiny_deck();
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
 	void free_all_ships_from_warp();
@@ -63,6 +63,7 @@ private:
 	void plague_player();
 	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies);
 	void choose_opponent_planet();
+	void send_in_offensive_ships();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

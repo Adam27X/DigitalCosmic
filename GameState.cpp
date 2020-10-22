@@ -158,9 +158,11 @@ void GameState::dump_player_hand(const PlayerInfo &p) const
 	p.dump_hand();
 }
 
-PlayerColors GameState::choose_first_player()
+void GameState::choose_first_player()
 {
-	return destiny_deck.draw_for_first_player_and_shuffle();
+	PlayerColors first_player = destiny_deck.draw_for_first_player_and_shuffle();
+	std::cout << "The " << to_string(first_player) << " player will go first\n";
+	assignments.offense = first_player;
 }
 
 PlayerInfo& GameState::get_player(const PlayerColors &c)
@@ -510,10 +512,10 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 	}
 }
 
-//FIXME: Remove references to 'off' here and use assignments.offense instead
-void GameState::draw_from_destiny_deck(PlayerColors off)
+void GameState::draw_from_destiny_deck()
 {
 	DestinyCardType dest = destiny_deck.draw();
+	const PlayerColors off = assignments.offense;
 
 	if(to_PlayerColors(dest) != PlayerColors::Invalid)
 	{
@@ -546,7 +548,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			if(valid_home_system_encounters.empty())
 			{
 				std::cout << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
-				draw_from_destiny_deck(off);
+				draw_from_destiny_deck();
 			}
 			else
 			{
@@ -571,7 +573,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 				if(chosen_option == valid_home_system_encounters.size())
 				{
 					std::cout << "The offense has chosen to redraw\n";
-					draw_from_destiny_deck(off);
+					draw_from_destiny_deck();
 				}
 				else
 				{
@@ -761,66 +763,8 @@ void GameState::choose_opponent_planet()
 	assignments.planet_id = chosen_option;
 }
 
-//FIXME: The offensive color should be stored in the class (assignments.offense), not passed to this function
-void GameState::execute_turn(PlayerColors off)
+void GameState::send_in_offensive_ships()
 {
-	//Start Turn Phase
-	state = TurnPhase::StartTurn;
-	assignments.offense = off; //FIXME: Handle this before this function is called
-	for(unsigned i=0; i<players.size(); i++)
-	{
-		players[i].current_role = EncounterRole::None;
-	}
-
-	//Ensure the offense has a valid hand
-	PlayerInfo &offense = get_player(off);
-	offense.current_role = EncounterRole::Offense;
-	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
-
-	std::cout << "The " << to_string(off) << " Player is now the offense.\n";
-	if(offense_needs_discard)
-	{
-		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
-		discard_and_draw_new_hand(offense);
-
-		//This implementations treats the dump and discard operation as one draw action, even if the player is forced to draw and discard multiple times
-		//Hence Remora will only draw once for this action, which seems appropriate
-		dump_player_hand(offense);
-
-		GameEvent g(offense.color,GameEventType::DrawCard);
-		resolve_game_event(g);
-	}
-
-	check_for_game_events(offense);
-
-	//Regroup Phase
-	state = TurnPhase::Regroup;
-
-	//If the offense has any ships in the warp, they retrieve one of them
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
-	{
-		if(*i == offense.color)
-		{
-			std::cout << "The " << to_string(off) << " player will now regroup\n";
-			move_ship_from_warp_to_colony(offense);
-			break;
-		}
-	}
-
-	check_for_game_events(offense);
-
-	//Destiny Phase
-	state = TurnPhase::Destiny;
-
-	draw_from_destiny_deck(off);
-
-	check_for_game_events(offense);
-
-	state = TurnPhase::Launch;
-
-	choose_opponent_planet();
-
-	//TODO: Determine the number of ships the offense wants to send in
 	//List the offense's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
 	std::cout << "The offense can choose up to four ships from any of their valid colonies\n";
 	unsigned launched_ships = 0;
@@ -855,6 +799,66 @@ void GameState::execute_turn(PlayerColors off)
 			launched_ships++;
 		}
 	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
+}
+
+void GameState::execute_turn()
+{
+	//Start Turn Phase
+	state = TurnPhase::StartTurn;
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		players[i].current_role = EncounterRole::None;
+	}
+
+	//Ensure the offense has a valid hand
+	PlayerInfo &offense = get_player(assignments.offense);
+	offense.current_role = EncounterRole::Offense;
+	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
+
+	std::cout << "The " << to_string(assignments.offense) << " Player is now the offense.\n";
+	if(offense_needs_discard)
+	{
+		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
+		discard_and_draw_new_hand(offense);
+
+		//This implementations treats the dump and discard operation as one draw action, even if the player is forced to draw and discard multiple times
+		//Hence Remora will only draw once for this action, which seems appropriate
+		dump_player_hand(offense);
+
+		GameEvent g(offense.color,GameEventType::DrawCard);
+		resolve_game_event(g);
+	}
+
+	check_for_game_events(offense);
+
+	//Regroup Phase
+	state = TurnPhase::Regroup;
+
+	//If the offense has any ships in the warp, they retrieve one of them
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(*i == offense.color)
+		{
+			std::cout << "The " << to_string(assignments.offense) << " player will now regroup\n";
+			move_ship_from_warp_to_colony(offense);
+			break;
+		}
+	}
+
+	check_for_game_events(offense);
+
+	//Destiny Phase
+	state = TurnPhase::Destiny;
+
+	draw_from_destiny_deck();
+
+	check_for_game_events(offense);
+
+	state = TurnPhase::Launch;
+
+	choose_opponent_planet();
+
+	send_in_offensive_ships();
 }
 
 //FIXME: This should be const

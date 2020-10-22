@@ -34,10 +34,9 @@ int main(int argc, char *argv[])
 
 	game.deal_starting_hands();
 	game.dump_player_hands();
-	PlayerColors first_player = game.choose_first_player();
-	std::cout << "The " << to_string(first_player) << " player will go first.\n";
+	game.choose_first_player();
 
-	game.execute_turn(first_player);
+	game.execute_turn();
 
 	game.dump();
 
