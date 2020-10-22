@@ -58,6 +58,17 @@ void GameState::dump() const
 		std::cout << "}\n";
 	}
 	std::cout << "\n";
+	if(hyperspace_gate.size())
+	{
+		std::cout << "Hyperspace gate: {";
+	}
+	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+	{
+		if(i != hyperspace_gate.begin())
+			std::cout << ",";
+		std::cout << to_string(*i);
+	}
+	std::cout << "}\n";
 }
 
 void GameState::dump_destiny_deck() const
@@ -541,6 +552,8 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			{
 				std::cout << "The offense may either have an encounter with a player in his or her own system or draw another destiny card\n";
 				unsigned option = 0;
+				//TODO: It's probably better to let the offense choose between some sort of home system encounter and redrawing now and then letting them choose the specific home system encounter during launch should they go that route
+				//	In practice I'm not sure that this timing will ever matter
 				for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
 				{
 					std::cout << option << ": Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)\n";
@@ -808,8 +821,43 @@ void GameState::execute_turn(PlayerColors off)
 	choose_opponent_planet();
 
 	//TODO: Determine the number of ships the offense wants to send in
+	//List the offense's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
+	std::cout << "The offense can choose up to four ships from any of their valid colonies\n";
+	unsigned launched_ships = 0;
+	unsigned choice;
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
+	do
+	{
+		valid_colonies = get_valid_colonies(assignments.offense);
+		for(unsigned i=0; i<valid_colonies.size(); i++)
+		{
+			std::cout << i << ": " << to_string(valid_colonies[i].first) << " planet " << valid_colonies[i].second << "\n";
+		}
+		std::cout << valid_colonies.size() << ": None\n";
+
+		std::cout << "Please choose one of the above options.\n";
+		std::cout << to_string(assignments.offense) << ">>";
+		std::cin >> choice;
+		if(choice < valid_colonies.size())
+		{
+			hyperspace_gate.push_back(assignments.offense); //Add the ship to the hyperspace gate
+			//Remove the ship from the chosen colony
+			PlayerInfo &host = get_player(valid_colonies[choice].first);
+			const unsigned planet_id = valid_colonies[choice].second;
+			for(auto i=host.planets[planet_id].begin(),e=host.planets[planet_id].end();i!=e;++i)
+			{
+				if(*i == assignments.offense)
+				{
+					host.planets[planet_id].erase(i);
+					break;
+				}
+			}
+			launched_ships++;
+		}
+	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
 }
 
+//FIXME: This should be const
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)
 {
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
@@ -1018,7 +1066,6 @@ void GameState::resolve_game_event(const GameEvent g)
 	}
 	stack.pop();
 }
-
 
 void GameState::debug_send_ship_to_warp()
 {
