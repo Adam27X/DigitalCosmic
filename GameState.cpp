@@ -551,7 +551,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 				do
 				{
 					std::cout << "Please choose one of the above options.\n";
-					std::cout << to_string(off) << ">>\n";
+					std::cout << to_string(off) << ">>";
 					std::cin >> chosen_option;
 				} while(chosen_option > valid_home_system_encounters.size());
 
@@ -590,7 +590,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			{
 				//TODO: Dump planet info here to help the player make his or her choice
 				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>\n";
+				std::cout << to_string(off) << ">>";
 				std::cin >> chosen_option;
 			} while(chosen_option > 4);
 
@@ -649,7 +649,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			{
 				//TODO: Dump planet info here to help the player make his or her choice
 				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>\n";
+				std::cout << to_string(off) << ">>";
 				std::cin >> chosen_option;
 			} while(chosen_option > 4);
 			assignments.planet_id = chosen_option;
@@ -680,6 +680,12 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 				}
 			}
 
+			if(most_cards_in_hand == 0)
+			{
+				//4 way tie!
+				defense_index = (player_index+1) % players.size();
+			}
+
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
 
@@ -690,7 +696,7 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			{
 				//TODO: Dump planet info here to help the player make his or her choice
 				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>\n";
+				std::cout << to_string(off) << ">>";
 				std::cin >> chosen_option;
 			} while(chosen_option > 4);
 			assignments.planet_id = chosen_option;
@@ -721,6 +727,12 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 				}
 			}
 
+			if(most_foreign_colonies == 0)
+			{
+				//4 way tie!
+				defense_index = (player_index+1) % players.size();
+			}
+
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
 
@@ -731,10 +743,44 @@ void GameState::draw_from_destiny_deck(PlayerColors off)
 			{
 				//TODO: Dump planet info here to help the player make his or her choice
 				std::cout << "Please choose which planet you would like to attack (0-4).\n";
-				std::cout << to_string(off) << ">>\n";
+				std::cout << to_string(off) << ">>";
 				std::cin >> chosen_option;
 			} while(chosen_option > 4);
 			assignments.planet_id = chosen_option;
+		}
+		else if(dest == DestinyCardType::Wild)
+		{
+			std::cout << "The offense has drawn a wild destiny card and may have an encounter with the player of his or her choice in their home system.\n";
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color != off)
+				{
+					std::cout << i << ": " << to_string(players[i].color) << "\n";
+				}
+			}
+			unsigned chosen_option;
+			do
+			{
+				std::cout << "Please choose which player you would like to attack.\n";
+				std::cout << to_string(off) << ">>";
+				std::cin >> chosen_option;
+			} while((chosen_option >= players.size()) || (players[chosen_option].color == off));
+
+			assignments.defense = players[chosen_option].color;
+			assignments.planet_location = players[chosen_option].color;
+			std::cout << "The offense has chosen to have an encounter with the " << to_string(players[chosen_option].color) << " player.\n";
+			do
+			{
+				//TODO: Dump planet info here to help the player make his or her choice
+				std::cout << "Please choose which planet you would like to attack (0-4).\n";
+				std::cout << to_string(off) << ">>";
+				std::cin >> chosen_option;
+			} while(chosen_option > 4);
+			assignments.planet_id = chosen_option;
+		}
+		else
+		{
+			assert(0 && "Unexpected destiny card type!");
 		}
 	}
 }
