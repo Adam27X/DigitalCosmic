@@ -47,6 +47,45 @@ bool PlayerInfo::has_encounter_cards_in_hand() const
 	return false;
 }
 
+CosmicCardType PlayerInfo::choose_encounter_card()
+{
+	std::cout << "Which encounter card would you like to play?\n";
+	unsigned chosen_option;
+	unsigned num_encounter_cards_in_hand = 0;
+	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			std::cout << num_encounter_cards_in_hand << ": " << to_string(*i) << "\n";
+			num_encounter_cards_in_hand++;
+		}
+	}
+
+	do
+	{
+		std::cout << "Please choose one of the options above.\n";
+		std::cout << to_string(color) << ">>";
+		std::cin >> chosen_option;
+	} while(chosen_option >= num_encounter_cards_in_hand);
+
+	unsigned option = 0;
+	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			if(option == chosen_option)
+			{
+				CosmicCardType ret = *i;
+				hand.erase(i);
+				return ret;
+			}
+			option++;
+		}
+	}
+
+	assert(0 && "Should never get here");
+}
+
 GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	if(g.event_type == GameEventType::DrawCard)

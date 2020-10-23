@@ -27,6 +27,7 @@ public:
 	GameEvent can_respond(TurnPhase t, GameEvent g);
 	GameEvent must_respond(TurnPhase t, GameEvent g);
 	void set_game_state(GameState *g) { game = g; }
+	CosmicCardType choose_encounter_card();
 
 	//Does this need a forward decl?
 	GameState *game; //Intended for callbacks and should be used sparingly

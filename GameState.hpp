@@ -24,6 +24,7 @@ public:
 	std::map<PlayerColors,unsigned> offensive_allies;
 	std::map<PlayerColors,unsigned> defensive_allies;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
+	void clear() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; offensive_allies.clear(); defensive_allies.clear(); }
 };
 
 class GameState

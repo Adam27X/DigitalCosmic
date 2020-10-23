@@ -216,7 +216,13 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 
 	//If the new hand isn't valid, try again
 	if(!player.has_encounter_cards_in_hand())
-		discard_and_draw_new_hand(player);
+	{
+		return discard_and_draw_new_hand(player);
+	}
+
+	//Once we've succeeded, add the GameEvent for potential responses
+	GameEvent g(player.color,GameEventType::DrawCard);
+	resolve_game_event(g);
 }
 
 void GameState::free_all_ships_from_warp()
@@ -1037,9 +1043,6 @@ void GameState::execute_turn()
 		//This implementations treats the dump and discard operation as one draw action, even if the player is forced to draw and discard multiple times
 		//Hence Remora will only draw once for this action, which seems appropriate
 		dump_player_hand(offense);
-
-		GameEvent g(offense.color,GameEventType::DrawCard);
-		resolve_game_event(g);
 	}
 
 	check_for_game_events(offense);
@@ -1093,6 +1096,52 @@ void GameState::execute_turn()
 	std::set<PlayerColors> invited_by_defense = invite_allies(potential_allies,false);
 
 	form_alliances(invited_by_offense,invited_by_defense);
+
+	check_for_game_events(offense);
+
+	//Planning Phase
+	state = TurnPhase::Planning;
+
+	//If the offense happens to have no encounter cards in hand, the turn ends immediately
+	if(!offense.has_encounter_cards_in_hand())
+	{
+		//Return ships from the hyperspace gate to their players' colonies
+		for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+		{
+			move_ship_to_colony(get_player(*i),hyperspace_gate);
+		}
+		//Return ships for any defensive allies as well
+		for(auto i=defensive_ally_ships.begin(),e=defensive_ally_ships.end();i!=e;++i)
+		{
+			move_ship_to_colony(get_player(*i),defensive_ally_ships);
+		}
+
+		//TODO: Refactor this out into an end of turn cleanup phase?
+		assignments.clear(); //Reset assignments
+		for(unsigned i=0; i<players.size(); i++)
+		{
+			players[i].current_role = EncounterRole::None;
+		}
+
+		return;
+	}
+
+	//If the defense has no encounter cards in hand, they get to draw
+	PlayerInfo &defense = get_player(assignments.defense);
+	if(!defense.has_encounter_cards_in_hand())
+	{
+		discard_and_draw_new_hand(defense);
+	}
+
+	//Before cards are selected effects can now resolve
+
+	CosmicCardType offensive_encounter_card = offense.choose_encounter_card();
+	CosmicCardType defensive_encounter_card = defense.choose_encounter_card();
+
+	std::cout << "The offense has chosen encounter card: " << to_string(offensive_encounter_card) << "\n";
+	std::cout << "The defense has chosen encounter card: " << to_string(defensive_encounter_card) << "\n";
+
+	//After cards are selected effects can now resolve
 
 	check_for_game_events(offense);
 }
