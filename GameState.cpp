@@ -37,6 +37,12 @@ GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayer
 
 void GameState::dump() const
 {
+	dump_planets();
+	dump_hyperspace_gate();
+}
+
+void GameState::dump_planets() const
+{
 	std::cout << "Current scores:\n";
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
@@ -58,6 +64,10 @@ void GameState::dump() const
 		std::cout << "}\n";
 	}
 	std::cout << "\n";
+}
+
+void GameState::dump_hyperspace_gate() const
+{
 	if(hyperspace_gate.size())
 	{
 		std::cout << "Hyperspace gate: {";
@@ -213,7 +223,7 @@ void GameState::free_all_ships_from_warp()
 {
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		move_ship_from_warp_to_colony(get_player(*i));
+		move_ship_to_colony(get_player(*i),warp);
 	}
 }
 
@@ -235,6 +245,42 @@ void GameState::cast_plague(const PlayerColors casting_player)
 
 	assert(player_to_be_plagued == max_player_sentinel);
 	player_to_be_plagued = chosen_option;
+}
+
+void GameState::cast_force_field(const PlayerColors casting_player)
+{
+	std::cout << "Which alliances would you like to end?\n";
+	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
+	{
+		std::cout << to_string(i->first) << "? y/n (allied with the offense)\n";
+		std::string response;
+		do
+		{
+			std::cout << to_string(casting_player) << ">>";
+			std::cin >> response;
+		} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+		if(response.compare("y") == 0)
+		{
+			allies_to_be_stopped.insert(i->first);
+		}
+	}
+
+	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+	{
+		std::cout << to_string(i->first) << "? y/n (allied with the defense)\n";
+		std::string response;
+		do
+		{
+			std::cout << to_string(casting_player) << ">>";
+			std::cin >> response;
+		} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+		if(response.compare("y") == 0)
+		{
+			allies_to_be_stopped.insert(i->first);
+		}
+	}
 }
 
 void GameState::plague_player()
@@ -399,6 +445,39 @@ void GameState::plague_player()
 	player_to_be_plagued = max_player_sentinel;
 }
 
+void GameState::stop_allies()
+{
+	for(auto i=allies_to_be_stopped.begin(),e=allies_to_be_stopped.end();i!=e;++i)
+	{
+		//Remove from assignments, update player status, and send ships back
+		PlayerInfo &ally = get_player(*i);
+		if(assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
+		{
+			unsigned num_ally_ships_sent = assignments.offensive_allies[*i];
+			assignments.offensive_allies.erase(*i);
+			for(unsigned num_ships=0; num_ships<num_ally_ships_sent; num_ships++)
+			{
+				move_ship_to_colony(ally,hyperspace_gate);
+			}
+		}
+		else if(assignments.defensive_allies.find(*i) != assignments.defensive_allies.end())
+		{
+			unsigned num_ally_ships_sent = assignments.defensive_allies[*i];
+			assignments.defensive_allies.erase(*i);
+			for(unsigned num_ships=0; num_ships<num_ally_ships_sent; num_ships++)
+			{
+				move_ship_to_colony(ally,defensive_ally_ships);
+			}
+		}
+		else
+		{
+			assert(0 && "Ally needs to be stopped but wasn't found in offensive or defensive allies list\n");
+		}
+
+		ally.current_role = EncounterRole::None;
+	}
+}
+
 //TODO: Some events occur before the 'standard' turn phase completes whereas others occur after...do we want to call this function twice for each turn phase with a before and after flag that gets passed around?
 //Artifact cards all seem to happen after the standard turn phase, so we'll follow that policy for now. Aliens can be handled separately for now but that's probably not a great long term plan
 void GameState::check_for_game_events(PlayerInfo &offense)
@@ -506,6 +585,13 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_resolved = [this] () { this->plague_player(); };
 		break;
 
+		case CosmicCardType::ForceField:
+			//Choose which alliances to end
+			g.callback_if_action_taken = [this,g] () { this->cast_force_field(g.player); };
+			//End them
+			g.callback_if_resolved = [this] () { this->stop_allies(); };
+		break;
+
 		default:
 			assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
 		break;
@@ -591,6 +677,8 @@ void GameState::draw_from_destiny_deck()
 					assignments.defense = home_system_encounter.first;
 					assignments.planet_location = off;
 					assignments.planet_id = home_system_encounter.second;
+					PlayerInfo &def = get_player(assignments.defense);
+					def.current_role = EncounterRole::Defense;
 				}
 			}
 		}
@@ -598,6 +686,8 @@ void GameState::draw_from_destiny_deck()
 		{
 			assignments.defense = drawn;
 			assignments.planet_location = drawn;
+			PlayerInfo &def = get_player(assignments.defense);
+			def.current_role = EncounterRole::Defense;
 		}
 	}
 	else
@@ -644,6 +734,8 @@ void GameState::draw_from_destiny_deck()
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
+			PlayerInfo &def = get_player(assignments.defense);
+			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Special_most_cards_in_hand)
 		{
@@ -679,6 +771,8 @@ void GameState::draw_from_destiny_deck()
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
+			PlayerInfo &def = get_player(assignments.defense);
+			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Special_most_foreign_colonies)
 		{
@@ -714,6 +808,8 @@ void GameState::draw_from_destiny_deck()
 
 			assignments.defense = players[defense_index].color;
 			assignments.planet_location = players[defense_index].color;
+			PlayerInfo &def = get_player(assignments.defense);
+			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Wild)
 		{
@@ -735,6 +831,8 @@ void GameState::draw_from_destiny_deck()
 
 			assignments.defense = players[chosen_option].color;
 			assignments.planet_location = players[chosen_option].color;
+			PlayerInfo &def = get_player(assignments.defense);
+			def.current_role = EncounterRole::Defense;
 		}
 		else
 		{
@@ -745,7 +843,6 @@ void GameState::draw_from_destiny_deck()
 
 void GameState::choose_opponent_planet()
 {
-
 	//If the offense is having an encounter on their home system they've already chosen a planet, so there's nothing to do here
 	if(assignments.planet_location == assignments.offense)
 		return;
@@ -763,16 +860,16 @@ void GameState::choose_opponent_planet()
 	assignments.planet_id = chosen_option;
 }
 
-void GameState::send_in_offensive_ships()
+void GameState::send_in_ships(const PlayerColors player)
 {
-	//List the offense's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
-	std::cout << "The offense can choose up to four ships from any of their valid colonies\n";
+	//List the player's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
+	std::cout << "The " << to_string(player) << " player can choose up to four ships from any of their valid colonies\n";
 	unsigned launched_ships = 0;
 	unsigned choice;
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
 	do
 	{
-		valid_colonies = get_valid_colonies(assignments.offense);
+		valid_colonies = get_valid_colonies(player);
 		for(unsigned i=0; i<valid_colonies.size(); i++)
 		{
 			std::cout << i << ": " << to_string(valid_colonies[i].first) << " planet " << valid_colonies[i].second << "\n";
@@ -780,17 +877,29 @@ void GameState::send_in_offensive_ships()
 		std::cout << valid_colonies.size() << ": None\n";
 
 		std::cout << "Please choose one of the above options.\n";
-		std::cout << to_string(assignments.offense) << ">>";
+		std::cout << to_string(player) << ">>";
 		std::cin >> choice;
 		if(choice < valid_colonies.size())
 		{
-			hyperspace_gate.push_back(assignments.offense); //Add the ship to the hyperspace gate
+			if(assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
+			{
+				defensive_ally_ships.push_back(player);
+				assignments.defensive_allies[player]++; //Keep track of the number of ships sent in by each ally
+			}
+			else //Offense or offensive ally
+			{
+				if(assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
+				{
+					assignments.offensive_allies[player]++; //Keep track of the number of ships sent in by each ally
+				}
+				hyperspace_gate.push_back(player); //Add the ship to the hyperspace gate
+			}
 			//Remove the ship from the chosen colony
 			PlayerInfo &host = get_player(valid_colonies[choice].first);
 			const unsigned planet_id = valid_colonies[choice].second;
 			for(auto i=host.planets[planet_id].begin(),e=host.planets[planet_id].end();i!=e;++i)
 			{
-				if(*i == assignments.offense)
+				if(*i == player)
 				{
 					host.planets[planet_id].erase(i);
 					break;
@@ -799,6 +908,109 @@ void GameState::send_in_offensive_ships()
 			launched_ships++;
 		}
 	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
+
+	if((player != assignments.offense) && (launched_ships == 0))
+	{
+		std::cout << "Allies *must* commit at least one ship to the encounter. Try again.\n";
+		send_in_ships(player);
+	}
+}
+
+std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &potential_allies, bool offense)
+{
+	std::set<PlayerColors> invited;
+	std::string inviter = offense ? "offense" : "defense";
+	for(auto i=potential_allies.begin(),e=potential_allies.end();i!=e;++i)
+	{
+		std::string response;
+		do
+		{
+			std::cout << "Would the " << inviter << " like to invite the " << to_string(*i) << " player as an ally? y/n\n";
+			if(offense)
+				std::cout << to_string(assignments.offense) << ">>";
+			else
+				std::cout << to_string(assignments.defense) << ">>";
+			std::cin >> response;
+		} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+		if(response.compare("y") == 0)
+		{
+			invited.insert(*i);
+		}
+	}
+
+	return invited;
+}
+
+void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense)
+{
+	unsigned player_index = max_player_sentinel;
+	//FIXME: Write a PlayerColors -> PlayerID helper because this is used all over the place. Could even write an iterator that takes in a function to be executed in player order
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		if(players[i].color == assignments.offense)
+		{
+			player_index = i;
+			break;
+		}
+	}
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		unsigned current_player_index = (i+player_index) % players.size();
+		PlayerColors current_player_color = players[current_player_index].color;
+
+		if(get_valid_colonies(current_player_color).empty())
+		{
+			//The potential ally has no ships to commit to the encounter and therefore cannot be an ally
+			continue;
+		}
+
+		if(invited_by_offense.find(current_player_color) != invited_by_offense.end())
+		{
+			std::string response;
+			do
+			{
+				std::cout << "Would the " << to_string(current_player_color) << " like to join with the offense? y/n\n";
+				std::cout << to_string(current_player_color) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				assignments.offensive_allies.insert(std::make_pair(current_player_color,0));
+				PlayerInfo &ally = get_player(current_player_color);
+				ally.current_role = EncounterRole::OffensiveAlly;
+				send_in_ships(current_player_color);
+				if(invited_by_defense.find(current_player_color) != invited_by_defense.end()) //Cannot join both offense and defense as an ally, so remove from the defensive list
+				{
+					invited_by_defense.erase(current_player_color);
+				}
+			}
+		}
+
+		if(invited_by_defense.find(current_player_color) != invited_by_defense.end())
+		{
+			std::string response;
+			do
+			{
+				std::cout << "Would the " << to_string(current_player_color) << " like to join with the defense? y/n\n";
+				std::cout << to_string(current_player_color) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				assignments.defensive_allies.insert(std::make_pair(current_player_color,0));
+				PlayerInfo &ally = get_player(current_player_color);
+				ally.current_role = EncounterRole::DefensiveAlly;
+				send_in_ships(current_player_color);
+				if(invited_by_offense.find(current_player_color) != invited_by_offense.end()) //Cannot join both offense and defense as an ally, so remove from the offensive list
+				{
+					invited_by_offense.erase(current_player_color);
+				}
+			}
+		}
+	}
 }
 
 void GameState::execute_turn()
@@ -807,6 +1019,7 @@ void GameState::execute_turn()
 	state = TurnPhase::StartTurn;
 	for(unsigned i=0; i<players.size(); i++)
 	{
+		//FIXME: update this data appropriately or infer it from assignments
 		players[i].current_role = EncounterRole::None;
 	}
 
@@ -840,7 +1053,7 @@ void GameState::execute_turn()
 		if(*i == offense.color)
 		{
 			std::cout << "The " << to_string(assignments.offense) << " player will now regroup\n";
-			move_ship_from_warp_to_colony(offense);
+			move_ship_to_colony(offense,warp);
 			break;
 		}
 	}
@@ -854,11 +1067,34 @@ void GameState::execute_turn()
 
 	check_for_game_events(offense);
 
+	//Launch Phase
 	state = TurnPhase::Launch;
 
 	choose_opponent_planet();
 
-	send_in_offensive_ships();
+	send_in_ships(assignments.offense);
+
+	check_for_game_events(offense);
+
+	//Alliance Phase
+	state = TurnPhase::Alliance;
+
+	//Offense invites, then the defense invites, then players accept/reject and commit ships in turn order
+	std::set<PlayerColors> potential_allies;
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		if((players[i].color != assignments.offense) && (players[i].color != assignments.defense))
+		{
+			potential_allies.insert(players[i].color);
+		}
+	}
+
+	std::set<PlayerColors> invited_by_offense = invite_allies(potential_allies,true);
+	std::set<PlayerColors> invited_by_defense = invite_allies(potential_allies,false);
+
+	form_alliances(invited_by_offense,invited_by_defense);
+
+	check_for_game_events(offense);
 }
 
 //FIXME: This should be const
@@ -904,27 +1140,27 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 	return valid_colonies[chosen_option];
 }
 
-void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
+//Source = warp, hyperspace_gate, defensive_ally_ships, etc.
+void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 {
-	//Check that at least one ship of the specified color resides in the warp; if not, return
-	bool ship_exists_in_warp = false;
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	//Check that at least one ship of the specified color resides in the source; if not, return
+	bool ship_exists_in_source = false;
+	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
 		if(*i == p.color)
 		{
-			ship_exists_in_warp = true;
+			ship_exists_in_source = true;
 		}
 	}
 
-	if(!ship_exists_in_warp)
+	if(!ship_exists_in_source)
 		return;
 
 	//Gather the valid options and present them to the player
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(p.color); //A list of planet colors and indices
 
-	//If the player has no colonies the ship goes directly onto the hyperspace gate
-	//This assumes the player is the offense, which will be true 99% of the time, but technically Remora could have no colonies and retrieve a ship in response to the offense retrieving a ship.
-	//It's not even clear from the rulebook what should happen in that case. Perhap's Remora's ability shouldn't resolve
+	//If the player has no colonies the ship goes directly onto the hyperspace gate. It's unclear if this should really happen for players who aren't the offense, but it's a corner case and is a reasonable solution.
+	//Chances are if you're even thinking about this scenario as player you are pretty screwed
 	if(!valid_colonies.size())
 	{
 		std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
@@ -940,36 +1176,40 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 		{
 			if(player_begin->color != chosen_colony.first)
 				continue;
-			for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
+			PlanetInfo &chosen_planet = player_begin->planets[chosen_colony.second];
+			for(auto i=chosen_planet.begin(),e=chosen_planet.end();i!=e; ++i)
 			{
-				for(unsigned col=0; col<player_begin->planets[planet].size(); col++)
+				if(*i == p.color)
 				{
-					player_begin->planets[planet].push_back(p.color);
 					colony_found = true;
 					break;
 				}
-				if(colony_found)
-					break;
 			}
 			if(colony_found)
+			{
+				chosen_planet.push_back(p.color);
 				break;
+			}
 		}
 
 		assert(colony_found && "Failed to find colony to place ship!");
 	}
 
-	//Remove the ship from the warp
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	//Remove the ship from the source
+	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
 		if(*i == p.color)
 		{
-			warp.erase(i);
+			source.erase(i);
 			break;
 		}
 	}
 
-	GameEvent g(p.color,GameEventType::RetrieveWarpShip);
-	resolve_game_event(g);
+	if(&source == &warp) //If the source is the warp
+	{
+		GameEvent g(p.color,GameEventType::RetrieveWarpShip);
+		resolve_game_event(g);
+	}
 }
 
 std::string GameState::prompt_player(PlayerInfo &p, const std::string &prompt) const
