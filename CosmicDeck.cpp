@@ -135,7 +135,7 @@ std::string to_string(const CosmicCardType &c)
 		break;
 
 		default:
-			assert(0 && "Invalid Destiny card type!");
+			assert(0 && "Invalid Cosmic card type!");
 		break;
 	}
 
@@ -223,8 +223,44 @@ GameEventType to_game_event_type(const CosmicCardType c)
 		break;
 
 		default:
-			std::cerr << "Error: Unexpected CosmicCardtType passed to to_game_event()\n";
+			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
+			assert(0);
+		break;
+	}
+}
+
+CosmicCardType to_cosmic_card_type(const GameEventType g)
+{
+	switch(g)
+	{
+		case GameEventType::CosmicZap:
+			return CosmicCardType::CosmicZap;
+		break;
+
+		case GameEventType::CardZap:
+			return CosmicCardType::CardZap;
+		break;
+
+		case GameEventType::MobiusTubes:
+			return CosmicCardType::MobiusTubes;
+		break;
+
+		case GameEventType::Plague:
+			return CosmicCardType::Plague;
+		break;
+
+		case GameEventType::EmotionControl:
+			return CosmicCardType::EmotionControl;
+		break;
+
+		case GameEventType::ForceField:
+			return CosmicCardType::ForceField;
+		break;
+
+		default:
+			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
+			std::cerr << "Type: " << to_string(g) << "\n";
 			assert(0);
 		break;
 	}

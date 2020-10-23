@@ -484,11 +484,9 @@ void GameState::stop_allies()
 	}
 }
 
-//TODO: Some events occur before the 'standard' turn phase completes whereas others occur after...do we want to call this function twice for each turn phase with a before and after flag that gets passed around?
-//Artifact cards all seem to happen after the standard turn phase, so we'll follow that policy for now. Aliens can be handled separately for now but that's probably not a great long term plan
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
-	std::vector<CosmicCardType> valid_plays;
+	std::vector<GameEvent> valid_plays;
 
 	unsigned player_index = max_player_sentinel;
 	for(unsigned i=0; i<players.size(); i++)
@@ -510,10 +508,18 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 		{
 			if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
 			{
-				valid_plays.push_back(*i);
+				GameEvent g(current_player.color,to_game_event_type(*i));
+				valid_plays.push_back(g);
 			}
 		}
-		//TODO: For now we'll support Aliens outside of this context, but I'm honestly not sure if that's the right decision
+
+		//TODO: Handle events where we *must* use the Alien power
+		GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
+		if(alien_power.event_type != GameEventType::None)
+		{
+			assert(alien_power.event_type == GameEventType::AlienPower);
+			valid_plays.push_back(alien_power);
+		}
 
 		//List the valid plays and ask the player if they would like to do any. Note that if they choose one they can still play another
 		while(valid_plays.size())
@@ -522,7 +528,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
 			for(unsigned i=0; i<valid_plays.size(); i++)
 			{
-				prompt << "Option " << i << ": " << to_string(valid_plays[i]) << "\n";
+				prompt << "Option " << i << ": " << to_string(valid_plays[i].event_type) << "\n";
 			}
 			prompt << "Option " << valid_plays.size() << ": None\n";
 			unsigned chosen_option;
@@ -536,34 +542,42 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 			if(chosen_option != valid_plays.size()) //An action was taken
 			{
-				CosmicCardType play = valid_plays[chosen_option];
-
-				//Remove this card from the player's hand and add it to discard
-				add_to_discard_pile(play);
-				unsigned old_hand_size = current_player.hand.size(); //Sanity checking
-				for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+				GameEvent g = valid_plays[chosen_option];
+				if(g.event_type != GameEventType::AlienPower)
 				{
-					if(*i == play)
-					{
-						current_player.hand.erase(i);
-						break;
-					}
-				}
-				assert(current_player.hand.size()+1 == old_hand_size && "Error removing played card from the player's hand!");
+					CosmicCardType play = to_cosmic_card_type(g.event_type);
 
-				GameEvent g(current_player.color,to_game_event_type(play));
-				get_callbacks_for_cosmic_card(play,g);
-				g.callback_if_action_taken();
+					//Remove this card from the player's hand and add it to discard
+					add_to_discard_pile(play);
+					unsigned old_hand_size = current_player.hand.size(); //Sanity checking
+					for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+					{
+						if(*i == play)
+						{
+							current_player.hand.erase(i);
+							break;
+						}
+					}
+					assert(current_player.hand.size()+1 == old_hand_size && "Error removing played card from the player's hand!");
+
+					get_callbacks_for_cosmic_card(play,g);
+				}
+
+				if(g.callback_if_action_taken)
+					g.callback_if_action_taken();
 				g.callback_if_action_taken = nullptr;
 				resolve_game_event(g);
 
 				//Remove this option from valid_plays and if there are still plays that could be made, prompt them again
+				unsigned valid_play_index = 0;
 				for(auto i=valid_plays.begin(),e=valid_plays.end();i!=e;++i)
 				{
-					if(*i == play)
+					if(valid_play_index == chosen_option)
 					{
 						valid_plays.erase(i);
+						break;
 					}
+					valid_play_index++;
 				}
 			}
 			else
@@ -915,6 +929,7 @@ void GameState::send_in_ships(const PlayerColors player)
 		}
 	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
 
+	//FIXME: Does the offense *have* to send in a ship if they have one?
 	if((player != assignments.offense) && (launched_ships == 0))
 	{
 		std::cout << "Allies *must* commit at least one ship to the encounter. Try again.\n";
@@ -1100,7 +1115,7 @@ void GameState::execute_turn()
 	check_for_game_events(offense);
 
 	//Planning Phase
-	state = TurnPhase::Planning;
+	state = TurnPhase::Planning_before_selection;
 
 	//If the offense happens to have no encounter cards in hand, the turn ends immediately
 	if(!offense.has_encounter_cards_in_hand())
@@ -1134,16 +1149,27 @@ void GameState::execute_turn()
 	}
 
 	//Before cards are selected effects can now resolve
+	//TODO: Support Trader alien power
 
-	CosmicCardType offensive_encounter_card = offense.choose_encounter_card();
-	CosmicCardType defensive_encounter_card = defense.choose_encounter_card();
-
-	std::cout << "The offense has chosen encounter card: " << to_string(offensive_encounter_card) << "\n";
-	std::cout << "The defense has chosen encounter card: " << to_string(defensive_encounter_card) << "\n";
+	assignments.offensive_encounter_card = offense.choose_encounter_card();
+	assignments.defensive_encounter_card = defense.choose_encounter_card();
 
 	//After cards are selected effects can now resolve
-
+	state = TurnPhase::Planning_after_selection;
 	check_for_game_events(offense);
+
+	//TODO: Reveal Phase
+	state = TurnPhase::Reveal;
+
+	std::cout << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
+	std::cout << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
+}
+
+void GameState::swap_encounter_cards()
+{
+	CosmicCardType tmp = assignments.offensive_encounter_card;
+	assignments.offensive_encounter_card = assignments.defensive_encounter_card;
+	assignments.defensive_encounter_card = tmp;
 }
 
 //FIXME: This should be const

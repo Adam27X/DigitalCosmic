@@ -23,12 +23,15 @@ public:
 	void set_description(const std::string &s) { description = s; }
 	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
+	//TODO: Make this a pure virtual function and make AlienBase an abstract base class?
+	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
 
 private:
 	std::string name;
 	std::string power; //You have the power of...
 	PlayerRole role; //Which role the player must have to use the alien power
 	bool mandatory; //Is the Alien power optional or mandatory?
+	//FIXME: This should be a std::set
 	std::vector<TurnPhase> valid_phases; //When can/must the player exercise the power?
 	std::string description; //Actual text from Alien card
 };

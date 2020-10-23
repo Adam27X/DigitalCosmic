@@ -9,7 +9,8 @@ enum class TurnPhase
 	Destiny,
 	Launch,
 	Alliance,
-	Planning,
+	Planning_before_selection,
+	Planning_after_selection,
 	Reveal,
 	Resolution
 };

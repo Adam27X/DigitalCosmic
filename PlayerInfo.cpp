@@ -267,3 +267,15 @@ GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 	}
 }
 
+GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
+{
+	if(alien->check_for_game_event(current_role,t))
+	{
+		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
+		//TODO: This functionality is specific to Trader and thus should be deduced there, if possible
+		ret.callback_if_resolved = [this] () { this->game->swap_encounter_cards(); };
+		return ret;
+	}
+
+	return GameEvent(color,GameEventType::None);
+}

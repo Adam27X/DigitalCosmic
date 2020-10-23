@@ -16,7 +16,7 @@
 class PlayerAssignments
 {
 public:
-	PlayerAssignments() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; }
+	PlayerAssignments() { clear(); }
 	PlayerColors offense;
 	PlayerColors defense;
 	PlayerColors planet_location;
@@ -24,7 +24,9 @@ public:
 	std::map<PlayerColors,unsigned> offensive_allies;
 	std::map<PlayerColors,unsigned> defensive_allies;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
-	void clear() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; offensive_allies.clear(); defensive_allies.clear(); }
+	CosmicCardType offensive_encounter_card;
+	CosmicCardType defensive_encounter_card;
+	void clear() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; offensive_allies.clear(); defensive_allies.clear(); offensive_encounter_card = CosmicCardType::None; defensive_encounter_card = CosmicCardType::None; }
 };
 
 class GameState
@@ -49,6 +51,7 @@ public:
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
 	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
+	void swap_encounter_cards();
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

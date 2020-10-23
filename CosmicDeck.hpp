@@ -37,12 +37,14 @@ enum class CosmicCardType
 	ForceField, //1
 	IonicGas, //1
 	Plague, //1
-	Quash //1
+	Quash, //1
+	None
 };
 
 std::string to_string(const CosmicCardType &c);
 bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role);
 GameEventType to_game_event_type(const CosmicCardType c);
+CosmicCardType to_cosmic_card_type(const GameEventType g);
 
 class CosmicDeck
 {

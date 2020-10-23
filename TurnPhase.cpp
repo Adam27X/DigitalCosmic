@@ -27,8 +27,12 @@ std::string to_string(const TurnPhase &t)
 			ret = "Alliance";
 		break;
 
-		case TurnPhase::Planning:
-			ret = "Planning";
+		case TurnPhase::Planning_before_selection:
+			ret = "Planning (before cards are selected)";
+		break;
+
+		case TurnPhase::Planning_after_selection:
+			ret = "Planning (after cards are selected)";
 		break;
 
 		case TurnPhase::Reveal:
