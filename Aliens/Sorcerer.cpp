@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Sorcerer.hpp"
+#include "GameState.hpp"
 
 Sorcerer::Sorcerer()
 {
@@ -25,3 +26,10 @@ bool Sorcerer::check_for_game_event(const EncounterRole e, const TurnPhase t) co
 
 	return false;
 }
+
+std::function<void()> Sorcerer::get_resolution_callback(GameState *g, const PlayerColors player)
+{
+	std::function<void()> ret = [g] () { g->swap_encounter_cards(); };
+	return ret;
+}
+

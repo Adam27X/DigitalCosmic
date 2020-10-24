@@ -93,8 +93,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-			//TODO: This functionality is specific to Remora and thus should be deduced there, if possible
-			ret.callback_if_resolved = [this] () { this->game->draw_cosmic_card(this->game->get_player(this->color)); };
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -272,8 +271,7 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 	if(alien->check_for_game_event(current_role,t))
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-		//TODO: This functionality is specific to Trader and thus should be deduced there, if possible
-		ret.callback_if_resolved = [this] () { this->game->swap_encounter_cards(); };
+		ret.callback_if_resolved = alien->get_resolution_callback(game,color);
 		return ret;
 	}
 

@@ -2,11 +2,14 @@
 
 #include <vector>
 #include <string>
+#include <cassert>
 
 #include "GameEvent.hpp"
 #include "TurnPhase.hpp"
 #include "EncounterRole.hpp"
 #include "PlayerRole.hpp"
+
+class GameState;
 
 class AlienBase
 {
@@ -25,6 +28,7 @@ public:
 	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 	//TODO: Make this a pure virtual function and make AlienBase an abstract base class?
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
+	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player) { assert(0 && "Attempt to get resolution callback for AlienBase"); return nullptr; }
 
 private:
 	std::string name;

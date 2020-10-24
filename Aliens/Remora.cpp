@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Remora.hpp"
+#include "GameState.hpp"
 
 Remora::Remora()
 {
@@ -29,4 +30,10 @@ bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors
 bool Remora::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
 	return false; //Remora is an optional Alien
+}
+
+std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player)
+{
+	std::function<void()> ret = [g,player] () { g->draw_cosmic_card(g->get_player(player)); };
+	return ret;
 }

@@ -1150,6 +1150,7 @@ void GameState::execute_turn()
 
 	//Before cards are selected effects can now resolve
 	//TODO: Support Trader alien power
+	check_for_game_events(offense);
 
 	assignments.offensive_encounter_card = offense.choose_encounter_card();
 	assignments.defensive_encounter_card = defense.choose_encounter_card();
@@ -1170,6 +1171,16 @@ void GameState::swap_encounter_cards()
 	CosmicCardType tmp = assignments.offensive_encounter_card;
 	assignments.offensive_encounter_card = assignments.defensive_encounter_card;
 	assignments.defensive_encounter_card = tmp;
+}
+
+void GameState::swap_main_player_hands()
+{
+	PlayerInfo &offense = get_player(assignments.offense);
+	PlayerInfo &defense = get_player(assignments.defense);
+
+	std::vector<CosmicCardType> tmp = offense.hand;
+	offense.hand = defense.hand;
+	defense.hand = tmp;
 }
 
 //FIXME: This should be const
