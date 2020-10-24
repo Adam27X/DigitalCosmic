@@ -78,6 +78,7 @@ private:
 	void send_in_ships(const PlayerColors player);
 	std::set<PlayerColors> invite_allies(const std::set<PlayerColors> &potential_allies, bool offense);
 	void form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense);
+	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

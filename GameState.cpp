@@ -289,21 +289,17 @@ void GameState::cast_force_field(const PlayerColors casting_player)
 	}
 }
 
-void GameState::plague_player()
+void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num_ships)
 {
-	assert(player_to_be_plagued < players.size());
-	PlayerInfo &victim = players[player_to_be_plagued];
-
-	//First they lose three ships of his or her choice to the warp (if possible)
-	for(unsigned ship_num=0; ship_num<3; ship_num++)
+	for(unsigned ship_num=0; ship_num<num_ships; ship_num++)
 	{
-		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(victim.color); //A list of planet colors and indices
+		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(player); //A list of planet colors and indices
 		if(!valid_colonies.size())
 		{
 			//Check if the player has a ship on the hyperspace gate
 			for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
 			{
-				if(*i == victim.color)
+				if(*i == player)
 				{
 					hyperspace_gate.erase(i);
 					break;
@@ -312,11 +308,11 @@ void GameState::plague_player()
 		}
 		else
 		{
-			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(victim.color,valid_colonies);
+			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(player,valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			for(auto i=player_with_chosen_colony.planets[chosen_colony.second].begin(),e=player_with_chosen_colony.planets[chosen_colony.second].end();i!=e;++i)
 			{
-				if(*i == victim.color)
+				if(*i == player)
 				{
 					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
 					break;
@@ -324,6 +320,15 @@ void GameState::plague_player()
 			}
 		}
 	}
+}
+
+void GameState::plague_player()
+{
+	assert(player_to_be_plagued < players.size());
+	PlayerInfo &victim = players[player_to_be_plagued];
+
+	//First they lose three ships of his or her choice to the warp (if possible)
+	lose_ships_to_warp(victim.color,3);
 
 	//Then they must discard one card of each type he or she has in hand
 	unsigned chosen_option;
@@ -482,8 +487,10 @@ void GameState::stop_allies()
 
 		ally.current_role = EncounterRole::None;
 	}
+	allies_to_be_stopped.clear();
 }
 
+//TODO: Is this a good function to check player scores and aliens to see if someone won the game?
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
 	std::vector<GameEvent> valid_plays;
@@ -1164,6 +1171,242 @@ void GameState::execute_turn()
 
 	std::cout << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
 	std::cout << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
+
+	//TODO: Support Human Alien power
+	//TODO: Support the Emotion Control artifact card
+
+	//TODO: Refactor this into its own deal-related function
+	//Good primer of negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
+	//FIXME: Resolution of the deal shouldn't take place until the resolution phase (this is important for the Quash Deal artifact)
+	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	{
+		//TODO: How to enforce a one minute timer?
+		//Allies return ships to their colonies; similar logic to the Force Field artifact card
+		for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
+		{
+			allies_to_be_stopped.insert(i->first);
+		}
+
+		for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+		{
+			allies_to_be_stopped.insert(i->first);
+		}
+		stop_allies();
+		//TODO: Return offense/defense ships to their colonies as well at this point?
+
+		//TODO: Handle this situation better once the client/server aspect of the game is solidifed; for now we can accept input from 'both' players
+		//Need to know how many cards will be exchanged by each player and if either (or both) players will receive a colony
+		//Players cannot see each other's cards during a deal. They can say whatever they want about their hand and it does not have to be true or false.
+		//Technically players can offer specific cards but if they do they *must* actually have the card. TODO: We could support this behavior at some point and enforce trading specific types of cards
+		bool successful_deal = false;
+		std::string response;
+		do
+		{
+			std::cout << "Was the deal successful?\n";
+			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+			std::cin >> response;
+		} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+		if(response.compare("y") == 0)
+		{
+			successful_deal = true;
+		}
+		response = "";
+
+		if(successful_deal) //Collect the terms of the deal
+		{
+			unsigned num_cards_to_offense = 0;
+			bool cards_to_offense_chosen_randomly = false;
+			unsigned num_cards_to_defense = 0;
+			bool cards_to_defense_chosen_randomly = false;
+			bool offense_receives_colony = false;
+			bool defense_receives_colony = false;
+			do
+			{
+				std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
+				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				offense_receives_colony = true;
+			}
+			response = "";
+
+			do
+			{
+				std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
+				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				defense_receives_colony = true;
+			}
+			response = "";
+
+			std::cout << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
+			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+			std::cin >> num_cards_to_offense;
+
+			if(num_cards_to_offense > 0)
+			{
+				do
+				{
+					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+				if(response.compare("y") == 0)
+				{
+					cards_to_offense_chosen_randomly = true;
+				}
+				response = "";
+			}
+
+			std::cout << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
+			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+			std::cin >> num_cards_to_defense;
+
+			if(num_cards_to_defense > 0)
+			{
+				do
+				{
+					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.offense) << " player (offense).\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+				if(response.compare("y") == 0)
+				{
+					cards_to_defense_chosen_randomly = true;
+				}
+			}
+
+			//Now that we have the information we need, carry out the deal
+			std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
+			std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.offense); //A list of planet colors and indices
+			//FIXME: Check for this scenario earlier and force re-entry of deal parameters if it occurs?
+			if((offense_receives_colony && defense_valid_colonies.empty()) || (defense_receives_colony && offense_valid_colonies.empty()))
+			{
+				std::cout << "One player was promised a colony where the other player already has a colony, but the other player has no colonies!\n";
+				std::cout << "Ignoring colony trades for this instance.\n";
+				offense_receives_colony = false;
+				defense_receives_colony = false;
+			}
+			if(offense_receives_colony)
+			{
+				//Choose from any of the valid defense colonies
+				const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.offense,defense_valid_colonies);
+				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+				player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.offense);
+			}
+			if(defense_receives_colony)
+			{
+				//Choose from any of the valid offense colonies
+				const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
+				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+				player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.defense);
+			}
+			std::vector<CosmicCardType> cards_to_offense;
+			//Choose which cards will be taken from the defense
+			if(num_cards_to_offense > 0)
+			{
+				assert(num_cards_to_offense <= defense.hand.size());
+				if(cards_to_offense_chosen_randomly)
+				{
+					for(unsigned i=0; i<num_cards_to_offense; i++)
+					{
+						unsigned chosen_card_index = rand() % defense.hand.size();
+						cards_to_offense.push_back(defense.hand[chosen_card_index]);
+						defense.hand.erase(defense.hand.begin()+chosen_card_index);
+					}
+				}
+				else
+				{
+					for(unsigned i=0; i<num_cards_to_offense; i++)
+					{
+						std::cout << "The " << to_string(assignments.defense) << " player has the following cards. Choose one to give to the offense.\n";
+						for(unsigned i=0; i<defense.hand.size(); i++)
+						{
+							std::cout << i << ": " << to_string(defense.hand[i]) << "\n";
+						}
+						unsigned chosen_option;
+						do
+						{
+							std::cout << "Please choose one of the option numbers above.\n";
+							std::cout << to_string(assignments.defense) << ">>";
+							std::cin >> chosen_option;
+						} while(chosen_option >= defense.hand.size());
+						cards_to_offense.push_back(defense.hand[chosen_option]);
+						defense.hand.erase(defense.hand.begin()+chosen_option);
+					}
+				}
+			}
+			std::vector<CosmicCardType> cards_to_defense;
+			//Choose which cards will be taken from the offense
+			if(num_cards_to_defense > 0)
+			{
+				assert(num_cards_to_defense <= offense.hand.size());
+				if(cards_to_defense_chosen_randomly)
+				{
+					for(unsigned i=0; i<num_cards_to_defense; i++)
+					{
+						unsigned chosen_card_index = rand() % offense.hand.size();
+						cards_to_defense.push_back(offense.hand[chosen_card_index]);
+						offense.hand.erase(offense.hand.begin()+chosen_card_index);
+					}
+				}
+				else
+				{
+					for(unsigned i=0; i<num_cards_to_defense; i++)
+					{
+						std::cout << "The " << to_string(assignments.offense) << " player has the following cards. Choose one to give to the defense.\n";
+						for(unsigned i=0; i<offense.hand.size(); i++)
+						{
+							std::cout << i << ": " << to_string(offense.hand[i]) << "\n";
+						}
+						unsigned chosen_option;
+						do
+						{
+							std::cout << "Please choose one of the option numbers above.\n";
+							std::cout << to_string(assignments.offense) << ">>";
+							std::cin >> chosen_option;
+						} while(chosen_option >= offense.hand.size());
+						cards_to_defense.push_back(offense.hand[chosen_option]);
+						offense.hand.erase(offense.hand.begin()+chosen_option);
+					}
+				}
+			}
+			//Distribute the chosen cards to their new players
+			for(auto i=cards_to_offense.begin(),e=cards_to_offense.end();i!=e;++i)
+			{
+				offense.hand.push_back(*i);
+			}
+			for(auto i=cards_to_defense.begin(),e=cards_to_defense.end();i!=e;++i)
+			{
+				defense.hand.push_back(*i);
+			}
+		}
+		else //Each player loses three ships to the warp
+		{
+			//NOTE: This signifies an unsuccessful encounter
+			//This logic should be similar to part of a plague
+			lose_ships_to_warp(assignments.offense,3);
+			lose_ships_to_warp(assignments.defense,3);
+		}
+	}
+	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	{
+		//The player with the negotiate loses, but collects compensation later
+	}
+	else
+	{
+		//Both players played attack/morph cards, time to do math
+	}
 }
 
 void GameState::swap_encounter_cards()
