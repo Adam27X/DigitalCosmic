@@ -1055,7 +1055,15 @@ void GameState::setup_negotiation()
 		allies_to_be_stopped.insert(i->first);
 	}
 	stop_allies();
-	//TODO: Return offense/defense ships to their colonies as well at this point?
+	//Return offensive ships to their colonies as well (does the timing ever matter here?)
+	PlayerInfo &offense = get_player(assignments.offense);
+	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+	{
+		if(*i == offense.color)
+		{
+			move_ship_to_colony(offense,hyperspace_gate);
+		}
+	}
 
 	//TODO: Handle this situation better once the client/server aspect of the game is solidifed; for now we can accept input from 'both' players
 	//Need to know how many cards will be exchanged by each player and if either (or both) players will receive a colony
