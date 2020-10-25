@@ -29,6 +29,20 @@ public:
 	void clear() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; offensive_allies.clear(); defensive_allies.clear(); offensive_encounter_card = CosmicCardType::None; defensive_encounter_card = CosmicCardType::None; }
 };
 
+class DealParameters
+{
+public:
+	DealParameters() { clear(); }
+	bool successful;
+	unsigned num_cards_to_offense;
+	bool cards_to_offense_chosen_randomly;
+	unsigned num_cards_to_defense;
+	bool cards_to_defense_chosen_randomly;
+	bool offense_receives_colony;
+	bool defense_receives_colony;
+	void clear() { successful = false; num_cards_to_offense = 0; cards_to_offense_chosen_randomly = 0; num_cards_to_defense = 0; cards_to_defense_chosen_randomly = 0; offense_receives_colony = false; defense_receives_colony = false; }
+};
+
 class GameState
 {
 public:
@@ -79,6 +93,8 @@ private:
 	std::set<PlayerColors> invite_allies(const std::set<PlayerColors> &potential_allies, bool offense);
 	void form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense);
 	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
+	void setup_negotiation();
+	void resolve_negotiation();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -95,5 +111,6 @@ private:
 	PlanetInfo defensive_ally_ships;
 	PlayerAssignments assignments;
 	std::set<PlayerColors> allies_to_be_stopped; //Allies to be prevented by the player casting force field (if it resolves)
+	DealParameters deal_params;
 };
 
