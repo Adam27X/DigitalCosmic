@@ -21,13 +21,16 @@ public:
 	PlayerColors defense;
 	PlayerColors planet_location;
 	unsigned planet_id;
-	std::map<PlayerColors,unsigned> offensive_allies;
+	std::map<PlayerColors,unsigned> offensive_allies; //Map ally color to the number of ships provided
 	std::map<PlayerColors,unsigned> defensive_allies;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	CosmicCardType offensive_encounter_card;
 	CosmicCardType defensive_encounter_card;
 	PlayerColors player_receiving_compensation;
 	PlayerColors player_giving_compensation;
+	unsigned offense_attack_value;
+	unsigned defense_attack_value;
+
 	void clear()
 	{
 		offense = PlayerColors::Invalid;
@@ -40,6 +43,8 @@ public:
 		defensive_encounter_card = CosmicCardType::None;
 		player_receiving_compensation = PlayerColors::Invalid;
 		player_giving_compensation = PlayerColors::Invalid;
+		offense_attack_value = 0;
+		defense_attack_value = 0;
 	}
 };
 
@@ -111,6 +116,8 @@ private:
 	void resolve_negotiation();
 	void setup_compensation();
 	void resolve_compensation();
+	void setup_attack();
+	void resolve_attack();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

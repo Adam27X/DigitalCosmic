@@ -157,6 +157,9 @@ void GameState::draw_cosmic_card(PlayerInfo &player)
 	auto iter = cosmic_deck.begin();
 	player.hand.push_back(*iter);
 	cosmic_deck.erase(iter);
+
+	GameEvent g(player.color,GameEventType::DrawCard);
+	resolve_game_event(g);
 }
 
 void GameState::dump_player_hands() const
@@ -1370,6 +1373,187 @@ void GameState::resolve_compensation()
 	}
 }
 
+void GameState::setup_attack()
+{
+	//Base values from encounter cards
+	if(assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Morph)
+	{
+		//There's only one Morph card in the deck, but the rules explicitly state that *both* players lose the encounter should this scenario somehow occur
+		std::cout << "Both players revealed a Morph card! Both players lose the encounter and all ships involved will go to the warp. Yes, this scenario is explicitly laid out in the rules.\n";
+		return;
+	}
+	else if(assignments.offensive_encounter_card == CosmicCardType::Morph)
+	{
+		assignments.defense_attack_value = static_cast<unsigned>(assignments.defensive_encounter_card);
+		assignments.offense_attack_value = assignments.defense_attack_value;
+	}
+	else if(assignments.defensive_encounter_card == CosmicCardType::Morph)
+	{
+		assignments.offense_attack_value = static_cast<unsigned>(assignments.offensive_encounter_card);
+		assignments.defense_attack_value = assignments.offense_attack_value;
+	}
+	else
+	{
+		assignments.offense_attack_value = static_cast<unsigned>(assignments.offensive_encounter_card);
+		assignments.defense_attack_value = static_cast<unsigned>(assignments.defensive_encounter_card);
+	}
+
+	std::cout << "Initial scores from encounter cards: Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+
+	//Add score from ships
+	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end(); i!=e; ++i)
+	{
+		if(*i == assignments.offense || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
+		{
+			std::cout << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
+			assignments.offense_attack_value++;
+		}
+	}
+
+	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
+	{
+		if(*i == assignments.defense)
+		{
+			std::cout << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
+			assignments.defense_attack_value++;
+		}
+	}
+	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+	{
+		std::cout << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
+		assignments.defense_attack_value += i->second;
+	}
+
+	std::cout << "Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+}
+
+void GameState::resolve_attack()
+{
+	if(assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Morph)
+	{
+		//Send all ships involved to the warp
+		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+		{
+			warp.push_back(*i);
+			i=hyperspace_gate.erase(i);
+		}
+		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
+		{
+			if(*i == assignments.defense)
+			{
+				warp.push_back(*i);
+				i = encounter_planet.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+		for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
+		{
+			warp.push_back(*i);
+			i=defensive_ally_ships.erase(i);
+		}
+
+		return;
+	}
+
+	if(assignments.offense_attack_value > assignments.defense_attack_value)
+	{
+		//Defense and defensive ally ships go to the warp
+		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
+		{
+			if(*i == assignments.defense)
+			{
+				warp.push_back(*i);
+				i = encounter_planet.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+		for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
+		{
+			warp.push_back(*i);
+			i=defensive_ally_ships.erase(i);
+		}
+
+		//Offense and offensive ally ships create (or reinforce) a colony on the encounter planet
+		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+		{
+			encounter_planet.push_back(*i);
+			i=hyperspace_gate.erase(i);
+		}
+
+		//TODO: Since the offense won, they may have a second encounter (double check to see if this is actually optional)
+
+	}
+	else //Ties go to the defense
+	{
+		//Offense and offensive ally ships go to the warp
+		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+		{
+			warp.push_back(*i);
+			i=hyperspace_gate.erase(i);
+		}
+		//Defensive allies return each of their ships to one of their colonies
+		while(!defensive_ally_ships.empty())
+		{
+			move_ship_to_colony(get_player(*defensive_ally_ships.begin()),defensive_ally_ships);
+		}
+		//Handle defender rewards (Note: This should generate quite a few Remora triggers)
+		for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+		{
+			unsigned num_ships = i->second;
+			for(unsigned ship=0; ship<num_ships; ship++)
+			{
+				//For each ship, the ally gets the choice of returning a ship from the warp or drawing a card
+				bool ship_exists_in_warp = false;
+				for(auto ii=warp.begin(),ee=warp.end();ii!=ee;++ii)
+				{
+					if(*ii == i->first)
+					{
+						ship_exists_in_warp = true;
+					}
+				}
+
+				if(!ship_exists_in_warp) //The player has no ships in the warp and must draw a card
+				{
+					std::cout << "Defender rewards. Drawing a card for the " << to_string(i->first) << " player.\n";
+					draw_cosmic_card(get_player(i->first));
+				}
+				else
+				{
+					unsigned choice;
+					do
+					{
+						std::cout << "Defender rewards. Choose one of the options below.\n";
+						std::cout << "0: Retrieve one of your ships from the warp.\n";
+						std::cout << "1: Draw a card from the Cosmic deck.\n";
+						std::cout << to_string(i->first) << ">>";
+						std::cin >> choice;
+					} while(choice != 0 && choice != 1);
+
+					if(choice == 0)
+					{
+						move_ship_to_colony(get_player(i->first),warp);
+					}
+					else
+					{
+						draw_cosmic_card(get_player(i->first));
+					}
+				}
+			}
+		}
+
+		//TODO: Since the offense lost, they do not have a second encounter
+	}
+}
+
 void GameState::execute_turn()
 {
 	//Start Turn Phase
@@ -1504,7 +1688,7 @@ void GameState::execute_turn()
 	//TODO: Support Human Alien power
 	//TODO: Support the Emotion Control artifact card
 
-	//Good primer of negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
+	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
 	{
 		setup_negotiation();
@@ -1516,7 +1700,11 @@ void GameState::execute_turn()
 	else
 	{
 		//Both players played attack/morph cards, time to do math
+		//TODO: Support reinforcement cards
+		setup_attack();
 	}
+
+	check_for_game_events(offense);
 
 	//TODO: Resolution Phase
 	state = TurnPhase::Resolution;
@@ -1527,6 +1715,10 @@ void GameState::execute_turn()
 	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
 	{
 		resolve_compensation();
+	}
+	else
+	{
+		resolve_attack();
 	}
 }
 

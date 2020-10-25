@@ -23,3 +23,15 @@ void TickTock::discard_token()
 		std::exit(0); //TODO: Propagate this info up the stack to exit properly
 	}
 }
+
+bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
+{
+	return false; //FIXME
+	//return AlienBase::can_respond(e,t,g,mycolor) && (g.player != mycolor); //We can't respond to our own draws/ships taken from the warp
+}
+
+bool TickTock::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
+{
+	return false; //FIXME: HACK since this Alien is NYI...change to true once we're done
+}
+
