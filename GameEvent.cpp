@@ -42,6 +42,18 @@ std::string to_string(const GameEventType &g)
 			ret = "Force Field";
 		break;
 
+		case GameEventType::Reinforcement2:
+			ret = "Reinforcement +2";
+		break;
+
+		case GameEventType::Reinforcement3:
+			ret = "Reinforcement +3";
+		break;
+
+		case GameEventType::Reinforcement5:
+			ret = "Reinforcement +5";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

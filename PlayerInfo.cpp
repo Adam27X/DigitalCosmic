@@ -224,6 +224,37 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 		return GameEvent(color,GameEventType::None);
 	}
+	else if(g.event_type == GameEventType::Reinforcement2 || g.event_type == GameEventType::Reinforcement3 || g.event_type == GameEventType::Reinforcement5)
+	{
+		//We can respond with another reinforcement card
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			//FIXME: Support multiple valid responses
+			if(*i == CosmicCardType::Reinforcement2)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
+				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
+			else if(*i == CosmicCardType::Reinforcement3)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
+				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
+			else if(*i == CosmicCardType::Reinforcement5)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
+				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
+		}
+
+		return GameEvent(color,GameEventType::None);
+	}
 	else
 	{
 		assert(0);
@@ -279,6 +310,10 @@ GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::EmotionControl)
+	{
+		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::Reinforcement2 || g.event_type == GameEventType::Reinforcement3 || g.event_type == GameEventType::Reinforcement5)
 	{
 		return GameEvent(color,GameEventType::None);
 	}

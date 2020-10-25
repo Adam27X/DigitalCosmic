@@ -169,7 +169,6 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
-		//TODO: It may be better to do this as a response. Note that it must be done *after* cards are revealed
 		case CosmicCardType::EmotionControl:
 			if(state == TurnPhase::Reveal)
 			{
@@ -181,9 +180,21 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
-		//TODO: It may be better to do this as a response. Note that it must be done *after* allies are selected
 		case CosmicCardType::ForceField:
 			if(state == TurnPhase::Alliance)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		case CosmicCardType::Reinforcement2:
+		case CosmicCardType::Reinforcement3:
+		case CosmicCardType::Reinforcement5:
+			if(state == TurnPhase::Reveal && role != EncounterRole::None) //Main player or ally only
 			{
 				return true;
 			}
@@ -222,6 +233,18 @@ GameEventType to_game_event_type(const CosmicCardType c)
 			return GameEventType::ForceField;
 		break;
 
+		case CosmicCardType::Reinforcement2:
+			return GameEventType::Reinforcement2;
+		break;
+
+		case CosmicCardType::Reinforcement3:
+			return GameEventType::Reinforcement3;
+		break;
+
+		case CosmicCardType::Reinforcement5:
+			return GameEventType::Reinforcement5;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -256,6 +279,18 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 
 		case GameEventType::ForceField:
 			return CosmicCardType::ForceField;
+		break;
+
+		case GameEventType::Reinforcement2:
+			return CosmicCardType::Reinforcement2;
+		break;
+
+		case GameEventType::Reinforcement3:
+			return CosmicCardType::Reinforcement3;
+		break;
+
+		case GameEventType::Reinforcement5:
+			return CosmicCardType::Reinforcement5;
 		break;
 
 		default:

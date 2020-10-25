@@ -71,7 +71,7 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 {
 	if(source.size())
 	{
-		std::cout << name << " :{";
+		std::cout << name << ": {";
 	}
 	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
@@ -499,6 +499,7 @@ void GameState::stop_allies()
 }
 
 //TODO: Is this a good function to check player scores and aliens to see if someone won the game?
+//TODO: Once the defense is well-defined the player order here should actually be: offense, defense, clockwise from offense for remaining players
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
 	std::vector<GameEvent> valid_plays;
@@ -529,6 +530,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 		}
 
 		//TODO: Handle events where we *must* use the Alien power
+		bool alien_power_used = false;
 		GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
 		if(alien_power.event_type != GameEventType::None)
 		{
@@ -577,22 +579,36 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 					get_callbacks_for_cosmic_card(play,g);
 				}
+				else
+				{
+					alien_power_used = true;
+				}
 
 				if(g.callback_if_action_taken)
 					g.callback_if_action_taken();
 				g.callback_if_action_taken = nullptr;
 				resolve_game_event(g);
 
-				//Remove this option from valid_plays and if there are still plays that could be made, prompt them again
-				unsigned valid_play_index = 0;
-				for(auto i=valid_plays.begin(),e=valid_plays.end();i!=e;++i)
+				//Recalculate the set of valid plays since either the current play or a response to it could have changed it
+				valid_plays.clear();
+				for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
 				{
-					if(valid_play_index == chosen_option)
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
 					{
-						valid_plays.erase(i);
-						break;
+						GameEvent g(current_player.color,to_game_event_type(*i));
+						valid_plays.push_back(g);
 					}
-					valid_play_index++;
+				}
+
+				//TODO: Handle events where we *must* use the Alien power
+				if(!alien_power_used)
+				{
+					GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
+					if(alien_power.event_type != GameEventType::None)
+					{
+						assert(alien_power.event_type == GameEventType::AlienPower);
+						valid_plays.push_back(alien_power);
+					}
 				}
 			}
 			else
@@ -629,6 +645,18 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 
 		case CosmicCardType::EmotionControl:
 			g.callback_if_resolved = [this] () { this->force_negotiation(); };
+		break;
+
+		case CosmicCardType::Reinforcement2:
+			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,2); };
+		break;
+
+		case CosmicCardType::Reinforcement3:
+			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,3); };
+		break;
+
+		case CosmicCardType::Reinforcement5:
+			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,5); };
 		break;
 
 		default:
@@ -1567,6 +1595,24 @@ void GameState::resolve_attack()
 
 		//TODO: Since the offense lost, they do not have a second encounter
 	}
+}
+
+void GameState::add_reinforcements(const PlayerColors player, const unsigned value)
+{
+	if(player == assignments.offense || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
+	{
+		assignments.offense_attack_value += value;
+	}
+	else if(player == assignments.defense || assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
+	{
+		assignments.defense_attack_value += value;
+	}
+	else
+	{
+		assert(0 && "Invalid player casted reinforcement card!");
+	}
+
+	std::cout << "After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
 }
 
 void GameState::execute_turn()

@@ -86,6 +86,7 @@ public:
 	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
+	void add_reinforcements(const PlayerColors player, const unsigned value);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

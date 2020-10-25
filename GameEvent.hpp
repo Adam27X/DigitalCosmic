@@ -16,6 +16,9 @@ enum class GameEventType
 	Plague,
 	EmotionControl,
 	ForceField,
+	Reinforcement2,
+	Reinforcement3,
+	Reinforcement5,
 	None
 };
 
