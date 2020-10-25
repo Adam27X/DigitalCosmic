@@ -71,7 +71,7 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 {
 	if(source.size())
 	{
-		std::cout << name << ":{";
+		std::cout << name << " :{";
 	}
 	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
@@ -321,6 +321,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
+					warp.push_back(*i);
 					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
 					break;
 				}
@@ -624,6 +625,10 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_action_taken = [this,g] () { this->cast_force_field(g.player); };
 			//End them
 			g.callback_if_resolved = [this] () { this->stop_allies(); };
+		break;
+
+		case CosmicCardType::EmotionControl:
+			g.callback_if_resolved = [this] () { this->force_negotiation(); };
 		break;
 
 		default:
@@ -1048,6 +1053,14 @@ void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::
 	}
 }
 
+void GameState::force_negotiation()
+{
+	assignments.offensive_encounter_card = CosmicCardType::Negotiate;
+	assignments.defensive_encounter_card = CosmicCardType::Negotiate;
+
+	setup_negotiation();
+}
+
 void GameState::setup_negotiation()
 {
 	//TODO: How to enforce a one minute timer?
@@ -1173,6 +1186,8 @@ void GameState::setup_negotiation()
 				deal_params.cards_to_defense_chosen_randomly = true;
 			}
 		}
+
+		//TODO: Add a check to ensure that something was exchange? Otherwise you could force a failed deal or re-prompt the players...
 	}
 }
 

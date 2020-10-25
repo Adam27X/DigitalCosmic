@@ -118,6 +118,7 @@ private:
 	void resolve_compensation();
 	void setup_attack();
 	void resolve_attack();
+	void force_negotiation();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
