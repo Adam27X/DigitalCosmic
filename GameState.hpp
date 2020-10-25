@@ -26,7 +26,21 @@ public:
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	CosmicCardType offensive_encounter_card;
 	CosmicCardType defensive_encounter_card;
-	void clear() { offense = PlayerColors::Invalid; defense = PlayerColors::Invalid; planet_location = PlayerColors::Invalid; planet_id = max_player_sentinel; offensive_allies.clear(); defensive_allies.clear(); offensive_encounter_card = CosmicCardType::None; defensive_encounter_card = CosmicCardType::None; }
+	PlayerColors player_receiving_compensation;
+	PlayerColors player_giving_compensation;
+	void clear()
+	{
+		offense = PlayerColors::Invalid;
+		defense = PlayerColors::Invalid;
+		planet_location = PlayerColors::Invalid;
+		planet_id = max_player_sentinel;
+		offensive_allies.clear();
+		defensive_allies.clear();
+		offensive_encounter_card = CosmicCardType::None;
+		defensive_encounter_card = CosmicCardType::None;
+		player_receiving_compensation = PlayerColors::Invalid;
+		player_giving_compensation = PlayerColors::Invalid;
+	}
 };
 
 class DealParameters
@@ -49,7 +63,7 @@ public:
 	GameState(unsigned nplayers);
 	void dump() const;
 	void dump_planets() const;
-	void dump_hyperspace_gate() const;
+	void dump_PlanetInfo(const PlanetInfo &source, const std::string name) const;
 	void dump_destiny_deck() const;
 	void dump_cosmic_deck() const;
 	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
@@ -95,6 +109,8 @@ private:
 	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
 	void setup_negotiation();
 	void resolve_negotiation();
+	void setup_compensation();
+	void resolve_compensation();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

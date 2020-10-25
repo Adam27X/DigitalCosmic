@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 	game.execute_turn();
 
 	game.dump();
+	game.dump_player_hands();
 
     	return 0;
 }

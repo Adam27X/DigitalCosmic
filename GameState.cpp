@@ -38,7 +38,8 @@ GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayer
 void GameState::dump() const
 {
 	dump_planets();
-	dump_hyperspace_gate();
+	dump_PlanetInfo(hyperspace_gate,"Hyperspace gate");
+	dump_PlanetInfo(warp,"Warp");
 }
 
 void GameState::dump_planets() const
@@ -66,19 +67,22 @@ void GameState::dump_planets() const
 	std::cout << "\n";
 }
 
-void GameState::dump_hyperspace_gate() const
+void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name) const
 {
-	if(hyperspace_gate.size())
+	if(source.size())
 	{
-		std::cout << "Hyperspace gate: {";
+		std::cout << name << ":{";
 	}
-	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
-		if(i != hyperspace_gate.begin())
+		if(i!=source.begin())
 			std::cout << ",";
 		std::cout << to_string(*i);
 	}
-	std::cout << "}\n";
+	if(source.size())
+	{
+		std::cout << "}\n";
+	}
 }
 
 void GameState::dump_destiny_deck() const
@@ -1283,6 +1287,89 @@ void GameState::resolve_negotiation()
 	}
 }
 
+void GameState::setup_compensation()
+{
+	//The player with the negotiate loses, but collects compensation later
+	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate)
+	{
+		assignments.player_receiving_compensation = assignments.offense;
+		assignments.player_giving_compensation = assignments.defense;
+	}
+	else
+	{
+		assignments.player_receiving_compensation = assignments.defense;
+		assignments.player_giving_compensation = assignments.offense;
+	}
+
+	std::cout << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encoutner, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
+}
+
+void GameState::resolve_compensation()
+{
+	//The losing player's ships go to the warp
+	unsigned number_of_ships_lost = 0;
+	if(assignments.player_receiving_compensation == assignments.offense)
+	{
+		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+		{
+			if(*i == assignments.player_receiving_compensation)
+			{
+				warp.push_back(*i);
+				i=hyperspace_gate.erase(i);
+				number_of_ships_lost++;
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+	else
+	{
+		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
+		{
+			if(*i == assignments.player_receiving_compensation)
+			{
+				warp.push_back(*i);
+				i = encounter_planet.erase(i);
+				number_of_ships_lost++;
+			}
+			else
+			{
+				++i;
+			}
+		}
+
+		//Move the offensive ships to their newly established colony
+		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+		{
+			if(*i == assignments.offense)
+			{
+				encounter_planet.push_back(*i);
+				i=hyperspace_gate.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+
+	//For each ship lost, the losing player receives a card from the opponent's hand chosen at random
+	PlayerInfo &player_giving_compensation = get_player(assignments.player_giving_compensation);
+	PlayerInfo &player_receiving_compensation = get_player(assignments.player_receiving_compensation);
+	for(unsigned i=0; i<number_of_ships_lost; i++)
+	{
+		if(player_giving_compensation.hand.empty())
+			break;
+
+		unsigned card_choice = rand() % player_giving_compensation.hand.size();
+		player_receiving_compensation.hand.push_back(player_giving_compensation.hand[card_choice]);
+		player_giving_compensation.hand.erase(player_giving_compensation.hand.begin()+card_choice);
+	}
+}
+
 void GameState::execute_turn()
 {
 	//Start Turn Phase
@@ -1424,7 +1511,7 @@ void GameState::execute_turn()
 	}
 	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
 	{
-		//The player with the negotiate loses, but collects compensation later
+		setup_compensation();
 	}
 	else
 	{
@@ -1436,6 +1523,10 @@ void GameState::execute_turn()
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
 	{
 		resolve_negotiation();
+	}
+	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	{
+		resolve_compensation();
 	}
 }
 
