@@ -1085,31 +1085,48 @@ void GameState::setup_negotiation()
 
 	if(deal_params.successful) //Collect the terms of the deal
 	{
-		do
-		{
-			std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
-			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-			std::cin >> response;
-		} while(response.compare("y") != 0 && response.compare("n") != 0);
+		std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
+		std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.offense); //A list of planet colors and indices
 
-		if(response.compare("y") == 0)
+		if(defense_valid_colonies.empty())
 		{
-			deal_params.offense_receives_colony = true;
+			std::cout << "Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n";
 		}
-		response = "";
-
-		do
+		else
 		{
-			std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
-			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-			std::cin >> response;
-		} while(response.compare("y") != 0 && response.compare("n") != 0);
+			do
+			{
+				std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
+				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
 
-		if(response.compare("y") == 0)
-		{
-			deal_params.defense_receives_colony = true;
+			if(response.compare("y") == 0)
+			{
+				deal_params.offense_receives_colony = true;
+			}
+			response = "";
 		}
-		response = "";
+
+		if(offense_valid_colonies.empty())
+		{
+			std::cout << "Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n";
+		}
+		else
+		{
+			do
+			{
+				std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
+				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				deal_params.defense_receives_colony = true;
+			}
+			response = "";
+		}
 
 		std::cout << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
 		std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
@@ -1159,16 +1176,9 @@ void GameState::resolve_negotiation()
 		//Now that we have the information we need, carry out the deal
 		std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
 		std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.offense); //A list of planet colors and indices
-		//FIXME: Check for this scenario earlier and force re-entry of deal parameters if it occurs?
-		if((deal_params.offense_receives_colony && defense_valid_colonies.empty()) || (deal_params.defense_receives_colony && offense_valid_colonies.empty()))
-		{
-			std::cout << "One player was promised a colony where the other player already has a colony, but the other player has no colonies!\n";
-			std::cout << "Ignoring colony trades for this instance.\n";
-			deal_params.offense_receives_colony = false;
-			deal_params.defense_receives_colony = false;
-		}
 		if(deal_params.offense_receives_colony)
 		{
+			assert(!defense_valid_colonies.empty());
 			//Choose from any of the valid defense colonies
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.offense,defense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
@@ -1176,6 +1186,7 @@ void GameState::resolve_negotiation()
 		}
 		if(deal_params.defense_receives_colony)
 		{
+			assert(!offense_valid_colonies.empty());
 			//Choose from any of the valid offense colonies
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
