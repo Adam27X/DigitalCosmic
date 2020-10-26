@@ -33,5 +33,6 @@ public:
 	GameEventType event_type;
 	std::function<void()> callback_if_resolved; //Action to perform once the event resolves
 	std::function<void()> callback_if_action_taken; //Happens regardless if the event resolves
+	std::function<void()> callback_if_countered; //Rarely needed, but one case is for the Human; if the Human is zapped then their side wins the encounter
 };
 

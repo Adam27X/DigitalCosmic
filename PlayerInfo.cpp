@@ -226,30 +226,33 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	}
 	else if(g.event_type == GameEventType::Reinforcement2 || g.event_type == GameEventType::Reinforcement3 || g.event_type == GameEventType::Reinforcement5)
 	{
-		//We can respond with another reinforcement card
-		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		//We can respond with another reinforcement card, but only if we are a main player or ally
+		if(current_role != EncounterRole::None)
 		{
-			//FIXME: Support multiple valid responses
-			if(*i == CosmicCardType::Reinforcement2)
+			for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
-				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
-			}
-			else if(*i == CosmicCardType::Reinforcement3)
-			{
-				GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
-				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
-			}
-			else if(*i == CosmicCardType::Reinforcement5)
-			{
-				GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
-				ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				//FIXME: Support multiple valid responses
+				if(*i == CosmicCardType::Reinforcement2)
+				{
+					GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
+					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					return ret;
+				}
+				else if(*i == CosmicCardType::Reinforcement3)
+				{
+					GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
+					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					return ret;
+				}
+				else if(*i == CosmicCardType::Reinforcement5)
+				{
+					GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
+					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					return ret;
+				}
 			}
 		}
 
@@ -329,6 +332,7 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 		ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+		ret.callback_if_countered = alien->get_callback_if_countered(game,color);
 		return ret;
 	}
 

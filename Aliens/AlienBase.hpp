@@ -29,6 +29,8 @@ public:
 	//TODO: Make this a pure virtual function and make AlienBase an abstract base class?
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
 	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player) { assert(0 && "Attempt to get resolution callback for AlienBase"); return nullptr; }
+	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
+	const std::string& get_name() const { return name; }
 
 private:
 	std::string name;

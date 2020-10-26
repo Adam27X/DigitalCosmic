@@ -30,6 +30,7 @@ public:
 	PlayerColors player_giving_compensation;
 	unsigned offense_attack_value;
 	unsigned defense_attack_value;
+	bool human_wins_encounter;
 
 	void clear()
 	{
@@ -45,6 +46,7 @@ public:
 		player_giving_compensation = PlayerColors::Invalid;
 		offense_attack_value = 0;
 		defense_attack_value = 0;
+		human_wins_encounter = false;
 	}
 };
 
@@ -87,6 +89,7 @@ public:
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
 	void add_reinforcements(const PlayerColors player, const unsigned value);
+	void human_encounter_win_condition();
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -119,7 +122,10 @@ private:
 	void resolve_compensation();
 	void setup_attack();
 	void resolve_attack();
+	void offense_win_resolution();
+	void defense_win_resolution();
 	void force_negotiation();
+	void resolve_human_encounter_win();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

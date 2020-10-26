@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Human.hpp"
+#include "GameState.hpp"
 
 Human::Human()
 {
@@ -13,3 +14,24 @@ Human::Human()
 	set_description("As a main player or ally, after encounter cards are revealed, *use* this power to add 4 to your side's total. If this power is zapped, however, your side automatically wins the encounter.");
 }
 
+bool Human::check_for_game_event(const EncounterRole e, const TurnPhase t) const
+{
+	if(t == TurnPhase::Reveal && e != EncounterRole::None)
+	{
+		return true;
+	}
+
+	return false;
+}
+
+std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player)
+{
+	std::function<void()> ret = [g,player] () { g->add_reinforcements(player,4); };
+	return ret;
+}
+
+std::function<void()> Human::get_callback_if_countered(GameState *g, const PlayerColors player)
+{
+	std::function<void()> ret = [g,player] () { g->human_encounter_win_condition(); };
+	return ret;
+}
