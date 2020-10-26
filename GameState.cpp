@@ -81,7 +81,7 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 	}
 	if(source.size())
 	{
-		std::cout << "}\n";
+		std::cout << "}\n\n";
 	}
 }
 
@@ -661,6 +661,10 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 
 		case CosmicCardType::Quash:
 			g.callback_if_resolved = [this] () { this->deal_params.successful = false; };
+		break;
+
+		case CosmicCardType::IonicGas:
+			g.callback_if_resolved = [this] () { this->assignments.stop_compensation_and_rewards = true; };
 		break;
 
 		default:
@@ -1360,63 +1364,28 @@ void GameState::resolve_compensation()
 	unsigned number_of_ships_lost = 0;
 	if(assignments.player_receiving_compensation == assignments.offense)
 	{
-		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
-		{
-			if(*i == assignments.player_receiving_compensation)
-			{
-				warp.push_back(*i);
-				i=hyperspace_gate.erase(i);
-				number_of_ships_lost++;
-			}
-			else
-			{
-				++i;
-			}
-		}
+		defense_win_resolution();
 	}
 	else
 	{
-		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
-		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
-		{
-			if(*i == assignments.player_receiving_compensation)
-			{
-				warp.push_back(*i);
-				i = encounter_planet.erase(i);
-				number_of_ships_lost++;
-			}
-			else
-			{
-				++i;
-			}
-		}
-
-		//Move the offensive ships to their newly established colony
-		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
-		{
-			if(*i == assignments.offense)
-			{
-				encounter_planet.push_back(*i);
-				i=hyperspace_gate.erase(i);
-			}
-			else
-			{
-				++i;
-			}
-		}
+		offense_win_resolution();
 	}
 
-	//For each ship lost, the losing player receives a card from the opponent's hand chosen at random
-	PlayerInfo &player_giving_compensation = get_player(assignments.player_giving_compensation);
-	PlayerInfo &player_receiving_compensation = get_player(assignments.player_receiving_compensation);
-	for(unsigned i=0; i<number_of_ships_lost; i++)
-	{
-		if(player_giving_compensation.hand.empty())
-			break;
 
-		unsigned card_choice = rand() % player_giving_compensation.hand.size();
-		player_receiving_compensation.hand.push_back(player_giving_compensation.hand[card_choice]);
-		player_giving_compensation.hand.erase(player_giving_compensation.hand.begin()+card_choice);
+	if(!assignments.stop_compensation_and_rewards)
+	{
+		//For each ship lost, the losing player receives a card from the opponent's hand chosen at random
+		PlayerInfo &player_giving_compensation = get_player(assignments.player_giving_compensation);
+		PlayerInfo &player_receiving_compensation = get_player(assignments.player_receiving_compensation);
+		for(unsigned i=0; i<number_of_ships_lost; i++)
+		{
+			if(player_giving_compensation.hand.empty())
+				break;
+
+			unsigned card_choice = rand() % player_giving_compensation.hand.size();
+			player_receiving_compensation.hand.push_back(player_giving_compensation.hand[card_choice]);
+			player_giving_compensation.hand.erase(player_giving_compensation.hand.begin()+card_choice);
+		}
 	}
 }
 
@@ -1521,45 +1490,48 @@ void GameState::defense_win_resolution()
 		move_ship_to_colony(get_player(*defensive_ally_ships.begin()),defensive_ally_ships);
 	}
 	//Handle defender rewards (Note: This should generate quite a few Remora triggers)
-	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+	if(!assignments.stop_compensation_and_rewards)
 	{
-		unsigned num_ships = i->second;
-		for(unsigned ship=0; ship<num_ships; ship++)
+		for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
 		{
-			//For each ship, the ally gets the choice of returning a ship from the warp or drawing a card
-			bool ship_exists_in_warp = false;
-			for(auto ii=warp.begin(),ee=warp.end();ii!=ee;++ii)
+			unsigned num_ships = i->second;
+			for(unsigned ship=0; ship<num_ships; ship++)
 			{
-				if(*ii == i->first)
+				//For each ship, the ally gets the choice of returning a ship from the warp or drawing a card
+				bool ship_exists_in_warp = false;
+				for(auto ii=warp.begin(),ee=warp.end();ii!=ee;++ii)
 				{
-					ship_exists_in_warp = true;
+					if(*ii == i->first)
+					{
+						ship_exists_in_warp = true;
+					}
 				}
-			}
 
-			if(!ship_exists_in_warp) //The player has no ships in the warp and must draw a card
-			{
-				std::cout << "Defender rewards. Drawing a card for the " << to_string(i->first) << " player.\n";
-				draw_cosmic_card(get_player(i->first));
-			}
-			else
-			{
-				unsigned choice;
-				do
+				if(!ship_exists_in_warp) //The player has no ships in the warp and must draw a card
 				{
-					std::cout << "Defender rewards. Choose one of the options below.\n";
-					std::cout << "0: Retrieve one of your ships from the warp.\n";
-					std::cout << "1: Draw a card from the Cosmic deck.\n";
-					std::cout << to_string(i->first) << ">>";
-					std::cin >> choice;
-				} while(choice != 0 && choice != 1);
-
-				if(choice == 0)
-				{
-					move_ship_to_colony(get_player(i->first),warp);
+					std::cout << "Defender rewards. Drawing a card for the " << to_string(i->first) << " player.\n";
+					draw_cosmic_card(get_player(i->first));
 				}
 				else
 				{
-					draw_cosmic_card(get_player(i->first));
+					unsigned choice;
+					do
+					{
+						std::cout << "Defender rewards. Choose one of the options below.\n";
+						std::cout << "0: Retrieve one of your ships from the warp.\n";
+						std::cout << "1: Draw a card from the Cosmic deck.\n";
+						std::cout << to_string(i->first) << ">>";
+						std::cin >> choice;
+					} while(choice != 0 && choice != 1);
+
+					if(choice == 0)
+					{
+						move_ship_to_colony(get_player(i->first),warp);
+					}
+					else
+					{
+						draw_cosmic_card(get_player(i->first));
+					}
 				}
 			}
 		}

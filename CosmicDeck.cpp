@@ -204,7 +204,19 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		//FIXME: Can only really play this if a successful deal currently exists
 		case CosmicCardType::Quash:
+			if(state == TurnPhase::Resolution)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		case CosmicCardType::IonicGas:
 			if(state == TurnPhase::Resolution)
 			{
 				return true;
@@ -260,6 +272,10 @@ GameEventType to_game_event_type(const CosmicCardType c)
 			return GameEventType::Quash;
 		break;
 
+		case CosmicCardType::IonicGas:
+			return GameEventType::IonicGas;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -310,6 +326,10 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 
 		case GameEventType::Quash:
 			return CosmicCardType::Quash;
+		break;
+
+		case GameEventType::IonicGas:
+			return CosmicCardType::IonicGas;
 		break;
 
 		default:

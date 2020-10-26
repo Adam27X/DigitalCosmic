@@ -20,6 +20,7 @@ enum class GameEventType
 	Reinforcement3,
 	Reinforcement5,
 	Quash,
+	IonicGas,
 	None
 };
 

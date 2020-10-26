@@ -31,6 +31,7 @@ public:
 	unsigned offense_attack_value;
 	unsigned defense_attack_value;
 	bool human_wins_encounter;
+	bool stop_compensation_and_rewards;
 
 	void clear()
 	{
@@ -47,6 +48,7 @@ public:
 		offense_attack_value = 0;
 		defense_attack_value = 0;
 		human_wins_encounter = false;
+		stop_compensation_and_rewards = false;
 	}
 };
 
