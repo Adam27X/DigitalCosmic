@@ -258,6 +258,22 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 		return GameEvent(color,GameEventType::None);
 	}
+	else if(g.event_type == GameEventType::Quash)
+	{
+		//We can respond if we have a CardZap
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::CardZap)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CardZap);
+				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				return ret;
+			}
+		}
+
+		return GameEvent(color,GameEventType::None);
+	}
 	else
 	{
 		assert(0);
@@ -317,6 +333,10 @@ GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::Reinforcement2 || g.event_type == GameEventType::Reinforcement3 || g.event_type == GameEventType::Reinforcement5)
+	{
+		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::Quash)
 	{
 		return GameEvent(color,GameEventType::None);
 	}

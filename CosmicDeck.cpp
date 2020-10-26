@@ -204,6 +204,17 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Quash:
+			if(state == TurnPhase::Resolution)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -243,6 +254,10 @@ GameEventType to_game_event_type(const CosmicCardType c)
 
 		case CosmicCardType::Reinforcement5:
 			return GameEventType::Reinforcement5;
+		break;
+
+		case CosmicCardType::Quash:
+			return GameEventType::Quash;
 		break;
 
 		default:
@@ -291,6 +306,10 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 
 		case GameEventType::Reinforcement5:
 			return CosmicCardType::Reinforcement5;
+		break;
+
+		case GameEventType::Quash:
+			return CosmicCardType::Quash;
 		break;
 
 		default:

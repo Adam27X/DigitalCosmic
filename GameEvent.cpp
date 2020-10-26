@@ -54,6 +54,10 @@ std::string to_string(const GameEventType &g)
 			ret = "Reinforcement +5";
 		break;
 
+		case GameEventType::Quash:
+			ret = "Quash";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

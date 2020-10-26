@@ -19,6 +19,7 @@ enum class GameEventType
 	Reinforcement2,
 	Reinforcement3,
 	Reinforcement5,
+	Quash,
 	None
 };
 

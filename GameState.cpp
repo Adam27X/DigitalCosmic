@@ -659,6 +659,10 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,5); };
 		break;
 
+		case CosmicCardType::Quash:
+			g.callback_if_resolved = [this] () { this->deal_params.successful = false; };
+		break;
+
 		default:
 			assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
 		break;
@@ -1833,6 +1837,10 @@ void GameState::execute_turn()
 
 	//TODO: Resolution Phase
 	state = TurnPhase::Resolution;
+
+	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
+	check_for_game_events(offense);
+
 	if(assignments.human_wins_encounter)
 	{
 		resolve_human_encounter_win();
@@ -1849,6 +1857,8 @@ void GameState::execute_turn()
 	{
 		resolve_attack();
 	}
+
+	//TODO: Support Tick-Tock, Ionic Gas, and Quash
 }
 
 void GameState::swap_encounter_cards()
