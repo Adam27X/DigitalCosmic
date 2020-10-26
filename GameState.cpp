@@ -1606,20 +1606,48 @@ void GameState::resolve_attack()
 	}
 }
 
-//FIXME: Reinforcements can add to either side's total
 void GameState::add_reinforcements(const PlayerColors player, const unsigned value)
 {
+	bool player_is_offense;
 	if(player == assignments.offense || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
 	{
-		assignments.offense_attack_value += value;
+		player_is_offense = true;
 	}
 	else if(player == assignments.defense || assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
 	{
-		assignments.defense_attack_value += value;
+		player_is_offense = false;
 	}
 	else
 	{
 		assert(0 && "Invalid player casted reinforcement card!");
+	}
+
+	unsigned choice;
+	do
+	{
+		std::cout << "Would you like to add reinforcements to the offense or defense? (You are fighting with the ";
+		if(player_is_offense)
+		{
+			std::cout << "offense)\n";
+		}
+		else
+		{
+			std::cout << "defense)\n";
+		}
+		std::cout << "0: Offense\n";
+		std::cout << "1: Defense\n";
+		std::cout << to_string(player) << ">>";
+		std::cin >> choice;
+	}
+	while(choice != 0 && choice != 1);
+
+	if(choice == 0)
+	{
+		assignments.offense_attack_value += value;
+	}
+	else if(choice == 1)
+	{
+		assignments.defense_attack_value += value;
 	}
 
 	std::cout << "After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
