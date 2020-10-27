@@ -204,16 +204,8 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
-		//FIXME: Can only really play this if a successful deal currently exists
 		case CosmicCardType::Quash:
-			if(state == TurnPhase::Resolution)
-			{
-				return true;
-			}
-			else
-			{
-				return false;
-			}
+			return false; //Handled as a response to a successful deal, as that's the only case in which it is valid to play a Quash
 		break;
 
 		case CosmicCardType::IonicGas:

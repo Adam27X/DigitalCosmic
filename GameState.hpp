@@ -96,6 +96,7 @@ public:
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
 	PlanetInfo& get_warp() { return warp; }
+	DealParameters& get_deal_params() { return deal_params; }
 
 	//Methods only meant for testing
 	void debug_send_ship_to_warp();

@@ -659,10 +659,6 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,5); };
 		break;
 
-		case CosmicCardType::Quash:
-			g.callback_if_resolved = [this] () { this->deal_params.successful = false; };
-		break;
-
 		case CosmicCardType::IonicGas:
 			g.callback_if_resolved = [this] () { this->assignments.stop_compensation_and_rewards = true; };
 		break;
@@ -1229,6 +1225,13 @@ void GameState::setup_negotiation()
 
 void GameState::resolve_negotiation()
 {
+	//See if a player can quash the deal
+	if(deal_params.successful)
+	{
+		GameEvent g(assignments.offense,GameEventType::SuccessfulNegotiation); //NOTE: the color here is arbitrary
+		resolve_game_event(g);
+	}
+
 	if(deal_params.successful)
 	{
 		//Now that we have the information we need, carry out the deal

@@ -21,6 +21,7 @@ enum class GameEventType
 	Reinforcement5,
 	Quash,
 	IonicGas,
+	SuccessfulNegotiation,
 	None
 };
 
