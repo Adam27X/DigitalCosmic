@@ -20,8 +20,8 @@ void TickTock::discard_token()
 	std::cout << "Number of Tick-Tock tokens remaining: " << num_tokens << "\n";
 	if(num_tokens == 0)
 	{
-		std::cout << "Tick-Tock has won the game!\n";
-		std::exit(0); //TODO: Propagate this info up the stack to exit properly
+		std::cout << "Tick-Tock has run out of tokens and has won the game!\n";
+		std::exit(0);
 	}
 }
 

@@ -636,13 +636,14 @@ void GameState::update_player_scores()
 	{
 		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
 		{
-			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
+			std::set<PlayerColors> foreign_colony_on_this_planet;
+			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii) //For each ship on this planet
 			{
-				if(*iii != i->color) //If this ship color is a different color than the planet, it represents part of a foreign colony
+				if((*iii != i->color) && foreign_colony_on_this_planet.find(*iii) == foreign_colony_on_this_planet.end()) //If this ship color is a different color than the planet, it represents part of a foreign colony
 				{
 					PlayerInfo &player = get_player(*iii);
 					player.score++;
-					break; //Don't count multiple ships in one foreign colony as multiple foreign colonies
+					foreign_colony_on_this_planet.insert(*iii); //Don't count multiple ships in one foreign colony as multiple foreign colonies
 				}
 			}
 		}
@@ -661,6 +662,7 @@ void GameState::update_player_scores()
 
 	if(game_over)
 	{
+		dump();
 		std::exit(0);
 	}
 }
