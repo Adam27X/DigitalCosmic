@@ -32,6 +32,7 @@ public:
 	unsigned defense_attack_value;
 	bool human_wins_encounter;
 	bool stop_compensation_and_rewards;
+	bool offense_won_encounter;
 
 	void clear()
 	{
@@ -49,6 +50,7 @@ public:
 		defense_attack_value = 0;
 		human_wins_encounter = false;
 		stop_compensation_and_rewards = false;
+		offense_won_encounter = false;
 	}
 };
 
@@ -80,7 +82,6 @@ public:
 	void dump_player_hands() const;
 	void dump_player_hand(const PlayerInfo &p) const;
 	void choose_first_player();
-	void execute_turn();
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
 	void resolve_game_event(const GameEvent g);
@@ -92,6 +93,7 @@ public:
 	void swap_main_player_hands(); //Trader Alien power
 	void add_reinforcements(const PlayerColors player, const unsigned value);
 	void human_encounter_win_condition();
+	void start_game();
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -129,6 +131,8 @@ private:
 	void defense_win_resolution();
 	void force_negotiation();
 	void resolve_human_encounter_win();
+	void update_player_scores();
+	void execute_turn();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -146,5 +150,6 @@ private:
 	PlayerAssignments assignments;
 	std::set<PlayerColors> allies_to_be_stopped; //Allies to be prevented by the player casting force field (if it resolves)
 	DealParameters deal_params;
+	bool is_second_encounter_for_offense;
 };
 

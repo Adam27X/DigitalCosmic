@@ -8,7 +8,7 @@
 
 #include "GameState.hpp"
 
-GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel)
+GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
@@ -619,6 +619,50 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 		player_index = (player_index+1) % players.size();
 	} while(player_index != initial_player_index);
+
+	//Recalculate player scores
+	update_player_scores();
+}
+
+void GameState::update_player_scores()
+{
+	//Reset player scores
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		i->score = 0;
+	}
+
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
+		{
+			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
+			{
+				if(*iii != i->color) //If this ship color is a different color than the planet, it represents part of a foreign colony
+				{
+					PlayerInfo &player = get_player(*iii);
+					player.score++;
+					break; //Don't count multiple ships in one foreign colony as multiple foreign colonies
+				}
+			}
+		}
+	}
+
+	//Check to see if anyone has won the game
+	bool game_over = false;
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		if(i->score >= 5)
+		{
+			game_over = true;
+			std::cout << "The " << to_string(i->color) << " player has won the game!\n";
+		}
+	}
+
+	if(game_over)
+	{
+		std::exit(0);
+	}
 }
 
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
@@ -1497,7 +1541,7 @@ void GameState::offense_win_resolution()
 		i=hyperspace_gate.erase(i);
 	}
 
-	//TODO: Since the offense won, they may have a second encounter (double check to see if this is actually optional)
+	assignments.offense_won_encounter = true;
 }
 
 void GameState::defense_win_resolution()
@@ -1563,8 +1607,6 @@ void GameState::defense_win_resolution()
 
 	GameEvent g(assignments.defense,GameEventType::DefensiveEncounterWin);
 	resolve_game_event(g);
-
-	//TODO: Since the offense lost, they do not have a second encounter
 }
 
 void GameState::resolve_attack()
@@ -1687,13 +1729,89 @@ void GameState::resolve_human_encounter_win()
 	}
 }
 
+void GameState::start_game()
+{
+	execute_turn();
+
+	dump(); //Dump after each turn for sanity
+
+	while(1)
+	{
+		bool go_to_next_player;
+		if(assignments.offense_won_encounter && !is_second_encounter_for_offense)
+		{
+			//The offense has the option of having a second encounter
+			std::string response;
+			do
+			{
+				std::cout << "The offense just had their first successful encounter of the turn. Would they like to have a second encounter? y/n\n";
+				std::cout << to_string(assignments.offense) << ">>";
+				std::cin >> response;
+			} while(response.compare("y") !=0 && response.compare("n") != 0);
+
+			if(response.compare("y") == 0)
+			{
+				std::cout << "The offense has elected to have a second encounter this turn.\n";
+				is_second_encounter_for_offense = true;
+				go_to_next_player = false;
+			}
+			else
+			{
+				std::cout << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
+				go_to_next_player = true;
+			}
+		}
+		else if(assignments.offense_won_encounter)
+		{
+			std::cout << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
+			is_second_encounter_for_offense = false;
+			go_to_next_player = true;
+		}
+		else
+		{
+			std::cout << "The offense did not win the last encounter. Play proceeds to the next player.\n";
+			is_second_encounter_for_offense = false;
+			go_to_next_player = true;
+		}
+
+		const PlayerColors last_offense = assignments.offense;
+		assignments.clear();
+		deal_params.clear();
+		for(unsigned i=0; i<players.size(); i++)
+		{
+			players[i].current_role = EncounterRole::None;
+		}
+
+		if(go_to_next_player)
+		{
+			unsigned next_player_index = max_player_sentinel;
+			for(unsigned i=0; i<players.size();i++)
+			{
+				if(players[i].color == last_offense)
+				{
+					next_player_index = (i+1) % players.size();
+				}
+			}
+			assert(next_player_index != max_player_sentinel);
+			assignments.offense = players[next_player_index].color;
+		}
+		else
+		{
+			assignments.offense = last_offense;
+		}
+
+		execute_turn();
+
+		dump(); //Dump after each turn for sanity
+	}
+}
+
 void GameState::execute_turn()
 {
 	//Start Turn Phase
 	state = TurnPhase::StartTurn;
 	for(unsigned i=0; i<players.size(); i++)
 	{
-		//FIXME: update this data appropriately or infer it from assignments
 		players[i].current_role = EncounterRole::None;
 	}
 
@@ -1784,13 +1902,6 @@ void GameState::execute_turn()
 			move_ship_to_colony(get_player(*i),defensive_ally_ships);
 		}
 
-		//TODO: Refactor this out into an end of turn cleanup phase?
-		assignments.clear(); //Reset assignments
-		for(unsigned i=0; i<players.size(); i++)
-		{
-			players[i].current_role = EncounterRole::None;
-		}
-
 		return;
 	}
 
@@ -1855,6 +1966,8 @@ void GameState::execute_turn()
 	{
 		resolve_attack();
 	}
+
+	update_player_scores();
 }
 
 void GameState::swap_encounter_cards()

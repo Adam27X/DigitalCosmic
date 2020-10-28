@@ -15,7 +15,7 @@ class PlayerInfo
 {
 public:
 	PlayerColors color;
-	unsigned score; //TODO: Provide a function to compute the score from the planet information below?
+	unsigned score;
 	std::vector<PlanetInfo> planets; //Each planet has some number of ships of each valid player color
 	std::unique_ptr<AlienBase> alien;
 	std::vector<CosmicCardType> hand;

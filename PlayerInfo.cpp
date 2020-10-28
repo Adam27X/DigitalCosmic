@@ -86,8 +86,8 @@ CosmicCardType PlayerInfo::choose_encounter_card()
 	assert(0 && "Should never get here");
 }
 
-//FIXME: Test if the Alien can respond generally (by pushing GameEventType checking into the Alien itself)
 //TODO: In general multiple responses are possible...return a vector here
+//FIXME: If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
 GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	if(g.event_type == GameEventType::DrawCard)

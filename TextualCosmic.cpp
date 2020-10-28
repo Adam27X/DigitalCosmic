@@ -36,10 +36,7 @@ int main(int argc, char *argv[])
 	game.dump_player_hands();
 	game.choose_first_player();
 
-	game.execute_turn();
-
-	game.dump();
-	game.dump_player_hands();
+	game.start_game();
 
     	return 0;
 }
