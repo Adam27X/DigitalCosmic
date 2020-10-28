@@ -29,7 +29,7 @@ public:
 	//By default, Aliens cannot go on the stack (could change this to check for role/phase and have aliens that *can't* go on the stack override this function OR this function could be made pure virtual)
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
 	//Every Alien should uniquely define what happens when their power resolves
-	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player) = 0;
+	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge) = 0;
 	//By default, do nothing if countered (certain Aliens, like Human, will actually take an action if zapped)
 	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
 	const std::string& get_name() const { return name; }

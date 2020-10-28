@@ -37,9 +37,16 @@ bool Remora::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColor
 	return false; //Remora is an optional Alien
 }
 
-//FIXME: We draw a card when they drew a card and we retrieve a warp ship when they retrieved a warp ship
-std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player)
+std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
-	std::function<void()> ret = [g,player] () { g->draw_cosmic_card(g->get_player(player)); };
+	std::function<void()> ret;
+	if(ge.event_type == GameEventType::DrawCard)
+	{
+		ret = [g,player] () { g->draw_cosmic_card(g->get_player(player)); };
+	}
+	else if(ge.event_type == GameEventType::RetrieveWarpShip)
+	{
+		ret = [g,player] () { if(g->player_has_ship_in_warp(player)) { g->move_ship_to_colony(g->get_player(player),g->get_warp(),true); } };
+	}
 	return ret;
 }

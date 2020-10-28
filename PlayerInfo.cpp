@@ -95,7 +95,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -153,7 +153,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -309,7 +309,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -319,7 +319,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -418,7 +418,8 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 	if(alien->check_for_game_event(current_role,t))
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-		ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+		GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
+		ret.callback_if_resolved = alien->get_resolution_callback(game,color,bogus);
 		ret.callback_if_countered = alien->get_callback_if_countered(game,color);
 		return ret;
 	}

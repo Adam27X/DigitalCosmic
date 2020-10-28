@@ -236,7 +236,7 @@ void GameState::free_all_ships_from_warp()
 {
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		move_ship_to_colony(get_player(*i),warp);
+		move_ship_to_colony(get_player(*i),warp,true);
 	}
 }
 
@@ -1596,7 +1596,7 @@ void GameState::defense_win_resolution()
 
 					if(choice == 0)
 					{
-						move_ship_to_colony(get_player(i->first),warp);
+						move_ship_to_colony(get_player(i->first),warp,true);
 					}
 					else
 					{
@@ -1844,7 +1844,7 @@ void GameState::execute_turn()
 		if(*i == offense.color)
 		{
 			std::cout << "The " << to_string(assignments.offense) << " player will now regroup\n";
-			move_ship_to_colony(offense,warp);
+			move_ship_to_colony(offense,warp,true);
 			break;
 		}
 	}
@@ -2032,8 +2032,21 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 	return valid_colonies[chosen_option];
 }
 
+bool GameState::player_has_ship_in_warp(const PlayerColors player) const
+{
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(*i == player)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //Source = warp, hyperspace_gate, defensive_ally_ships, etc.
-void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
+void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool source_is_warp)
 {
 	//Check that at least one ship of the specified color resides in the source; if not, return
 	bool ship_exists_in_source = false;
@@ -2097,7 +2110,7 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 		}
 	}
 
-	if(&source == &warp) //If the source is the warp
+	if(source_is_warp)
 	{
 		GameEvent g(p.color,GameEventType::RetrieveWarpShip);
 		resolve_game_event(g);

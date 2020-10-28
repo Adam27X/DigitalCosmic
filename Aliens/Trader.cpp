@@ -25,7 +25,7 @@ bool Trader::check_for_game_event(const EncounterRole e, const TurnPhase t) cons
 	return false;
 }
 
-std::function<void()> Trader::get_resolution_callback(GameState *g, const PlayerColors player)
+std::function<void()> Trader::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret = [g] () { g->swap_main_player_hands(); };
 	return ret;

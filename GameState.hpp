@@ -88,12 +88,13 @@ public:
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
-	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
+	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool source_is_warp=false);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
 	void add_reinforcements(const PlayerColors player, const unsigned value);
 	void human_encounter_win_condition();
 	void start_game();
+	bool player_has_ship_in_warp(const PlayerColors player) const;
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

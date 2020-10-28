@@ -24,7 +24,7 @@ bool Human::check_for_game_event(const EncounterRole e, const TurnPhase t) const
 	return false;
 }
 
-std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player)
+std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret = [g,player] () { g->add_reinforcements(player,4); };
 	return ret;
