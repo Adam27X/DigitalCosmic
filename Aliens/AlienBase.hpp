@@ -26,9 +26,11 @@ public:
 	void set_description(const std::string &s) { description = s; }
 	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
-	//TODO: Make this a pure virtual function and make AlienBase an abstract base class?
+	//By default, Aliens cannot go on the stack (could change this to check for role/phase and have aliens that *can't* go on the stack override this function OR this function could be made pure virtual)
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
-	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player) { assert(0 && "Attempt to get resolution callback for AlienBase"); return nullptr; }
+	//Every Alien should uniquely define what happens when their power resolves
+	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player) = 0;
+	//By default, do nothing if countered (certain Aliens, like Human, will actually take an action if zapped)
 	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
 	const std::string& get_name() const { return name; }
 
