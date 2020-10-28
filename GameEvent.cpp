@@ -63,7 +63,15 @@ std::string to_string(const GameEventType &g)
 		break;
 
 		case GameEventType::SuccessfulNegotiation:
-			ret = "Successful Negotiation";
+			ret = "Successful Negotiation (not yet resolved)";
+		break;
+
+		case GameEventType::SuccessfulDeal:
+			ret = "Successful Negotiation resolved";
+		break;
+
+		case GameEventType::DefensiveEncounterWin:
+			ret = "Defense won the encounter";
 		break;
 
 		case GameEventType::None:

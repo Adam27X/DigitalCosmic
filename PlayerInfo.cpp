@@ -103,7 +103,6 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	else if(g.event_type == GameEventType::AlienPower)
 	{
 		//We can respond if we have a CosmicZap
-		//TODO: If Human is zapped then his side wins the encounter
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CosmicZap)
@@ -154,8 +153,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			//TODO: This functionality is specific to Remora and thus should be deduced there, if possible
-			ret.callback_if_resolved = [this] () { this->game->move_ship_to_colony(this->game->get_player(this->color),this->game->get_warp()); };
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
 			return ret;
 		}
 		return GameEvent(color,GameEventType::None);
@@ -290,7 +288,7 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 		return GameEvent(color,GameEventType::None);
 	}
-	else if(g.event_type == GameEventType::SuccessfulNegotiation)
+	else if(g.event_type == GameEventType::SuccessfulNegotiation) //Negotiation was successful, but hasn't resolved yet (can still be quashed)
 	{
 		//We can respond with a Quash
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -306,12 +304,33 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 		return GameEvent(color,GameEventType::None);
 	}
+	else if(g.event_type == GameEventType::SuccessfulDeal) //Negotiation was successful and has completed (was not quashed)
+	{
+		if(alien->can_respond(current_role,t,g,color))
+		{
+			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			return ret;
+		}
+		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::DefensiveEncounterWin)
+	{
+		if(alien->can_respond(current_role,t,g,color))
+		{
+			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color);
+			return ret;
+		}
+		return GameEvent(color,GameEventType::None);
+	}
 	else
 	{
 		assert(0);
 	}
 }
 
+//FIXME: This function may not even be necessary
 GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 {
 	if(g.event_type == GameEventType::DrawCard)
@@ -377,6 +396,14 @@ GameEvent PlayerInfo::must_respond(TurnPhase t, GameEvent g)
 		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::SuccessfulNegotiation)
+	{
+		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::SuccessfulDeal)
+	{
+		return GameEvent(color,GameEventType::None);
+	}
+	else if(g.event_type == GameEventType::DefensiveEncounterWin)
 	{
 		return GameEvent(color,GameEventType::None);
 	}

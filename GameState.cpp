@@ -1228,6 +1228,7 @@ void GameState::resolve_negotiation()
 	//See if a player can quash the deal
 	if(deal_params.successful)
 	{
+		//NOTE: This GameEvent is for just when the deal has been made, but not yet resolved
 		GameEvent g(assignments.offense,GameEventType::SuccessfulNegotiation); //NOTE: the color here is arbitrary
 		resolve_game_event(g);
 	}
@@ -1334,6 +1335,10 @@ void GameState::resolve_negotiation()
 		{
 			defense.hand.push_back(*i);
 		}
+
+		//The deal was actually successful, so we use a separate GameEventType for Tick-Tock triggers
+		GameEvent g(assignments.offense,GameEventType::SuccessfulDeal); //Color is arbitrary here
+		resolve_game_event(g);
 	}
 	else //Unsuccessful deal, each player loses 3 ships to the warp
 	{
@@ -1365,21 +1370,37 @@ void GameState::resolve_compensation()
 {
 	//The losing player's ships go to the warp
 	unsigned number_of_ships_lost = 0;
+
 	if(assignments.player_receiving_compensation == assignments.offense)
 	{
+		for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+		{
+			if(*i == assignments.player_receiving_compensation)
+			{
+				number_of_ships_lost++;
+			}
+		}
 		defense_win_resolution();
 	}
 	else
 	{
+		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
+		{
+			if(*i == assignments.player_receiving_compensation)
+			{
+				number_of_ships_lost++;
+			}
+		}
 		offense_win_resolution();
 	}
-
 
 	if(!assignments.stop_compensation_and_rewards)
 	{
 		//For each ship lost, the losing player receives a card from the opponent's hand chosen at random
 		PlayerInfo &player_giving_compensation = get_player(assignments.player_giving_compensation);
 		PlayerInfo &player_receiving_compensation = get_player(assignments.player_receiving_compensation);
+		std::cout << "The " << to_string(player_receiving_compensation.color) << " player will receive up to " << number_of_ships_lost << " cards from the " << to_string(player_giving_compensation.color) << " player as compensation\n";
 		for(unsigned i=0; i<number_of_ships_lost; i++)
 		{
 			if(player_giving_compensation.hand.empty())
@@ -1539,6 +1560,9 @@ void GameState::defense_win_resolution()
 			}
 		}
 	}
+
+	GameEvent g(assignments.defense,GameEventType::DefensiveEncounterWin);
+	resolve_game_event(g);
 
 	//TODO: Since the offense lost, they do not have a second encounter
 }
@@ -1810,7 +1834,6 @@ void GameState::execute_turn()
 
 	check_for_game_events(offense);
 
-	//TODO: Resolution Phase
 	state = TurnPhase::Resolution;
 
 	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
@@ -1832,8 +1855,6 @@ void GameState::execute_turn()
 	{
 		resolve_attack();
 	}
-
-	//TODO: Support Tick-Tock, Ionic Gas, and Quash
 }
 
 void GameState::swap_encounter_cards()
@@ -2013,7 +2034,9 @@ void GameState::resolve_game_event(const GameEvent g)
 
 	do
 	{
-		GameEvent can_respond = players[player_index].can_respond(state,g); //NOTE: This will eventually be a vector when multiple responses are valid
+		//FIXME: Support multiple responses for a single player
+		//FIXME: Handle *must* responses properly (only for Aliens so far)
+		GameEvent can_respond = players[player_index].can_respond(state,g);
 		if(can_respond.event_type != GameEventType::None) //If there is a valid response...
 		{
 			bool take_action = false;
@@ -2059,7 +2082,6 @@ void GameState::resolve_game_event(const GameEvent g)
 				//Red's response here is meaningless, and the break below prevents this prompt.
 				//You could imagine a similar stack with one more level: Alien Power <- CosmicZap <- CardZap with another player with a CardZap behind
 				//Assume this player does not want to CardZap the other CardZap that's already on the stack. They shouldn't be prompted to CardZap the CosmicZap after the CardZap on the stack resolves, because it's the CosmicZap has already been zapped (but hasn't actually been countered yet)
-				//if(stack.size() == 1 && invalidate_next_callback && (can_respond.event_type == GameEventType::CosmicZap || can_respond.event_type == GameEventType::CardZap))
 				if(invalidate_next_callback && (can_respond.event_type == GameEventType::CosmicZap || can_respond.event_type == GameEventType::CardZap))
 				{
 					break;

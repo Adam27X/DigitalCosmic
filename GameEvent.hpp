@@ -21,7 +21,9 @@ enum class GameEventType
 	Reinforcement5,
 	Quash,
 	IonicGas,
-	SuccessfulNegotiation,
+	SuccessfulNegotiation, //Negotiation has not yet resolved and can still be quashed
+	SuccessfulDeal, //Negotiation actually resolved
+	DefensiveEncounterWin,
 	None
 };
 

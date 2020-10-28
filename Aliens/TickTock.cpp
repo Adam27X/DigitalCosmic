@@ -3,6 +3,7 @@
 
 #include "TickTock.hpp"
 
+//TODO: If we implement a 4 planet variant then TickTock should only start with 8 tokens
 TickTock::TickTock() : num_tokens(10)
 {
 	set_name("Tick-Tock");
@@ -26,8 +27,11 @@ void TickTock::discard_token()
 
 bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
-	return false; //FIXME
-	//return AlienBase::can_respond(e,t,g,mycolor) && (g.player != mycolor); //We can't respond to our own draws/ships taken from the warp
+	if(g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::DefensiveEncounterWin)
+	{
+		return AlienBase::can_respond(e,t,g,mycolor); //Should always be true
+	}
+	return false;
 }
 
 bool TickTock::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
@@ -35,3 +39,8 @@ bool TickTock::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerCol
 	return false; //FIXME: HACK since this Alien is NYI...change to true once we're done
 }
 
+std::function<void()> TickTock::get_resolution_callback(GameState *g, const PlayerColors player)
+{
+	std::function<void()> ret = [this] () { this->discard_token(); };
+	return ret;
+}
