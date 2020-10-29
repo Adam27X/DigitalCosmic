@@ -21,17 +21,7 @@ void AlienBase::dump() const
 
 bool AlienBase::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
-	bool valid_phase_found = false;
-	for(auto i=valid_phases.begin(),e=valid_phases.end();i!=e;++i)
-	{
-		if(t == *i)
-		{
-			valid_phase_found = true;
-			break;
-		}
-	}
-
-	if(!valid_phase_found)
+	if(valid_phases.find(t) == valid_phases.end())
 	{
 		return false;
 	}

@@ -10,7 +10,7 @@ Sorcerer::Sorcerer()
 	set_power("Magic");
 	set_role(PlayerRole::MainPlayer);
 	set_mandatory(false);
-	valid_phases_push_back(TurnPhase::Planning_after_selection);
+	valid_phases_insert(TurnPhase::Planning_after_selection);
 	set_description("As a main player, after encounter cards are selected, but before they are revealed, you *may use* this power to switch encounter cards with your opponent so that he or she reveals your card and you reveal your opponent's card.");
 }
 

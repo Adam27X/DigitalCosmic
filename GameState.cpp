@@ -1048,7 +1048,6 @@ std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &po
 void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense)
 {
 	unsigned player_index = max_player_sentinel;
-	//FIXME: Write a PlayerColors -> PlayerID helper because this is used all over the place. Could even write an iterator that takes in a function to be executed in player order
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		if(players[i].color == assignments.offense)
@@ -1974,8 +1973,7 @@ void GameState::swap_main_player_hands()
 	defense.hand = tmp;
 }
 
-//FIXME: This should be const
-std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color)
+std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color) const
 {
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
 

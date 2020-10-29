@@ -111,7 +111,7 @@ private:
 	void free_all_ships_from_warp();
 	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
 	void check_for_game_events(PlayerInfo &offense);
-	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color);
+	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color) const;
 	void cast_plague(const PlayerColors casting_player);
 	void cast_force_field(const PlayerColors casting_player);
 	void plague_player();

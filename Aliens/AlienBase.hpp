@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <set>
 #include <string>
 #include <cassert>
 
@@ -22,7 +22,7 @@ public:
 	void set_role(const PlayerRole &r) { role = r; }
 	void set_mandatory(bool m) { mandatory = m; }
 	bool get_mandatory() const { return mandatory; }
-	void valid_phases_push_back(const TurnPhase &t) { valid_phases.push_back(t); }
+	void valid_phases_insert(const TurnPhase &t) { valid_phases.insert(t); }
 	void set_description(const std::string &s) { description = s; }
 	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
@@ -39,7 +39,6 @@ private:
 	std::string power; //You have the power of...
 	PlayerRole role; //Which role the player must have to use the alien power
 	bool mandatory; //Is the Alien power optional or mandatory?
-	//FIXME: This should be a std::set
-	std::vector<TurnPhase> valid_phases; //When can/must the player exercise the power?
+	std::set<TurnPhase> valid_phases; //When can/must the player exercise the power?
 	std::string description; //Actual text from Alien card
 };
