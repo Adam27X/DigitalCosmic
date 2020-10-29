@@ -134,6 +134,7 @@ private:
 	void resolve_human_encounter_win();
 	void update_player_scores();
 	void execute_turn();
+	std::vector<PlayerColors> get_player_order();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

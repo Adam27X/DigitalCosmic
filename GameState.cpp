@@ -498,28 +498,15 @@ void GameState::stop_allies()
 	allies_to_be_stopped.clear();
 }
 
-//TODO: Is this a good function to check player scores and aliens to see if someone won the game?
-//TODO: Once the defense is well-defined the player order here should actually be: offense, defense, clockwise from offense for remaining players
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
-	std::vector<GameEvent> valid_plays;
+	std::vector<PlayerColors> player_order = get_player_order();
 
-	unsigned player_index = max_player_sentinel;
-	for(unsigned i=0; i<players.size(); i++)
+	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
 	{
-		if(players[i].color == offense.color)
-		{
-			player_index = i;
-			break;
-		}
-	}
-	const unsigned int initial_player_index = player_index;
-
-	do
-	{
-		PlayerInfo &current_player = players[player_index];
+		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
-		valid_plays.clear();
+		std::vector<GameEvent> valid_plays;
 		for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
 		{
 			if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
@@ -616,9 +603,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 				break;
 			}
 		}
-
-		player_index = (player_index+1) % players.size();
-	} while(player_index != initial_player_index);
+	}
 
 	//Recalculate player scores
 	update_player_scores();
@@ -2143,46 +2128,73 @@ void GameState::dump_current_stack() const
 	assert(copy_stack.empty() && "Error printing stack!");
 }
 
-void GameState::resolve_game_event(const GameEvent g)
+std::vector<PlayerColors> GameState::get_player_order()
 {
-	stack.push(g);
-	dump_current_stack();
-
 	//Enforce player order during resolution
-	unsigned player_index = max_player_sentinel; //Sentinel value meant to be invalid
+	unsigned player_index = max_player_sentinel;
 	for(unsigned i=0; i<players.size(); i++)
 	{
-		if(players[i].color == g.player)
+		if(players[i].color == assignments.offense)
 		{
 			player_index = i;
 			break;
 		}
 	}
-	const unsigned int initial_player_index = player_index;
 
-	do
+	std::vector<PlayerColors> player_order;
+	player_order.push_back(assignments.offense); //Offense goes first
+	if(assignments.defense != PlayerColors::Invalid)
+	{
+		player_order.push_back(assignments.defense); //Then defense, if the defense has been assigned
+	}
+	//Then we proceed clockwise (aka in turn order) from the offense
+	while(player_order.size() < players.size())
+	{
+		player_index = (player_index+1) % players.size();
+		//If the current player isn't already accounted for, add them to the list
+		if(std::find(player_order.begin(),player_order.end(),players[player_index].color) == player_order.end())
+		{
+			player_order.push_back(players[player_index].color);
+		}
+	}
+
+	std::set<PlayerColors> player_order_check(player_order.begin(),player_order.end());
+	assert(player_order.size() == player_order_check.size() && "Error in determining player order!"); //Ensure the player_order vector elements are unique
+
+	return player_order;
+}
+
+void GameState::resolve_game_event(const GameEvent g)
+{
+	stack.push(g);
+	dump_current_stack();
+
+	std::vector<PlayerColors> player_order = get_player_order();
+
+	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
 	{
 		//FIXME: Support multiple responses for a single player
 		//FIXME: Handle *must* responses properly (only for Aliens so far)
-		GameEvent can_respond = players[player_index].can_respond(state,g);
+		PlayerInfo &current_player = get_player(player_order[current_player_index]);
+		GameEvent can_respond = current_player.can_respond(state,g);
 		if(can_respond.event_type != GameEventType::None) //If there is a valid response...
 		{
 			bool take_action = false;
-			GameEvent must_respond = players[player_index].must_respond(state,g);
+			GameEvent must_respond = current_player.must_respond(state,g);
 			if(must_respond.event_type != GameEventType::None)
 			{
-				std::cout << "The " << to_string(players[player_index].color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
+				std::cout << "The " << to_string(current_player.color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
 				take_action = true;
 			}
 			else
 			{
-				std::cout << "The " << to_string(players[player_index].color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
+				std::cout << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
 				std::string response;
 				do
 				{
 					std::stringstream response_prompt;
 					response_prompt << "Would you like to respond to the " << to_string(g.event_type) << " with your " << to_string(can_respond.event_type) << "? y/n\n";
-					response = prompt_player(players[player_index],response_prompt.str());
+					response = prompt_player(current_player,response_prompt.str());
 				} while(response.compare("y") != 0 && response.compare("n") != 0);
 				if(response.compare("y") == 0)
 				{
@@ -2217,8 +2229,7 @@ void GameState::resolve_game_event(const GameEvent g)
 			}
 		}
 
-		player_index = (player_index+1) % players.size();
-	} while(player_index != initial_player_index);
+	}
 
 	if(invalidate_next_callback) //Countered!
 	{

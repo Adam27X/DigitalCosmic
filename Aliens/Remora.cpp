@@ -50,3 +50,4 @@ std::function<void()> Remora::get_resolution_callback(GameState *g, const Player
 	}
 	return ret;
 }
+
