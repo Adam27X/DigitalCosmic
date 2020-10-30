@@ -516,13 +516,16 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 			}
 		}
 
-		//TODO: Handle events where we *must* use the Alien power
 		bool alien_power_used = false;
+		bool alien_power_available = false;
+		bool alien_power_mandatory = false;
 		GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
 		if(alien_power.event_type != GameEventType::None)
 		{
 			assert(alien_power.event_type == GameEventType::AlienPower);
 			valid_plays.push_back(alien_power);
+			alien_power_available = true;
+			alien_power_mandatory = current_player.alien->get_mandatory();
 		}
 
 		//List the valid plays and ask the player if they would like to do any. Note that if they choose one they can still play another
@@ -532,7 +535,12 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
 			for(unsigned i=0; i<valid_plays.size(); i++)
 			{
-				prompt << "Option " << i << ": " << to_string(valid_plays[i].event_type) << "\n";
+				prompt << "Option " << i << ": " << to_string(valid_plays[i].event_type);
+				if(valid_plays[i].event_type == GameEventType::AlienPower && alien_power_mandatory)
+				{
+					prompt << " (mandatory)";
+				}
+				prompt << "\n";
 			}
 			prompt << "Option " << valid_plays.size() << ": None\n";
 			unsigned chosen_option;
@@ -587,7 +595,6 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 					}
 				}
 
-				//TODO: Handle events where we *must* use the Alien power
 				if(!alien_power_used)
 				{
 					GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
@@ -600,7 +607,14 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 			}
 			else
 			{
-				break;
+				if(alien_power_available && alien_power_mandatory && !alien_power_used)
+				{
+					std::cout << "Mandatory alien power not yet chosen, try again.\n";
+				}
+				else
+				{
+					break;
+				}
 			}
 		}
 	}
