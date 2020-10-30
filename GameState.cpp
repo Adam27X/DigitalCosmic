@@ -2170,15 +2170,15 @@ void GameState::resolve_game_event(const GameEvent g)
 
 	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
 	{
-		//FIXME: Support multiple responses for a single player
 		//FIXME: Handle *must* responses properly (only for Aliens so far)
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
-		GameEvent can_respond = current_player.can_respond(state,g);
-		if(can_respond.event_type != GameEventType::None) //If there is a valid response...
+		std::vector<GameEvent> valid_plays = current_player.can_respond(state,g);
+		if(valid_plays.size()) //If there is a valid response...
 		{
 			bool take_action = false;
 			GameEvent must_respond = current_player.must_respond(state,g);
-			if(must_respond.event_type != GameEventType::None)
+			GameEvent can_respond = must_respond; //Arbitrary initialization value
+			if(must_respond.event_type != GameEventType::None) //FIXME
 			{
 				std::cout << "The " << to_string(current_player.color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
 				take_action = true;
@@ -2186,16 +2186,23 @@ void GameState::resolve_game_event(const GameEvent g)
 			else
 			{
 				std::cout << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
-				std::string response;
+				unsigned chosen_option;
 				do
 				{
-					std::stringstream response_prompt;
-					response_prompt << "Would you like to respond to the " << to_string(g.event_type) << " with your " << to_string(can_respond.event_type) << "? y/n\n";
-					response = prompt_player(current_player,response_prompt.str());
-				} while(response.compare("y") != 0 && response.compare("n") != 0);
-				if(response.compare("y") == 0)
+					for(unsigned i=0; i<valid_plays.size(); i++)
+					{
+						std::cout << i << ": " << to_string(valid_plays[i].event_type) << "\n";
+					}
+					std::cout << valid_plays.size() << ": None (Resolve " << to_string(g.event_type) << ")\n";
+					std::cout << "Please choose one of the above options.\n";
+					std::cout << to_string(current_player.color) << ">>";
+					std::cin >> chosen_option;
+				} while(chosen_option > valid_plays.size());
+
+				if(chosen_option < valid_plays.size())
 				{
 					take_action = true;
+					can_respond = valid_plays[chosen_option];
 				}
 			}
 

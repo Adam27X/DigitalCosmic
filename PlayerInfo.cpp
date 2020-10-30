@@ -86,19 +86,18 @@ CosmicCardType PlayerInfo::choose_encounter_card()
 	assert(0 && "Should never get here");
 }
 
-//TODO: In general multiple responses are possible...return a vector here
 //FIXME: If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
-GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
+std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
+	std::vector<GameEvent> vret;
 	if(g.event_type == GameEventType::DrawCard)
 	{
 		if(alien->can_respond(current_role,t,g,color))
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			return ret;
+			vret.push_back(ret);
 		}
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::AlienPower)
 	{
@@ -110,11 +109,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::CosmicZap)
 	{
@@ -126,11 +123,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::CardZap)
 	{
@@ -142,11 +137,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::RetrieveWarpShip)
 	{
@@ -154,9 +147,8 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			return ret;
+			vret.push_back(ret);
 		}
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::MobiusTubes)
 	{
@@ -168,11 +160,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::Plague)
 	{
@@ -184,11 +174,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::ForceField)
 	{
@@ -200,11 +188,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::EmotionControl)
 	{
@@ -216,11 +202,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::Reinforcement2 || g.event_type == GameEventType::Reinforcement3 || g.event_type == GameEventType::Reinforcement5)
 	{
@@ -229,32 +213,29 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 			{
-				//FIXME: Support multiple valid responses
 				if(*i == CosmicCardType::Reinforcement2)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
 					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-					return ret;
+					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement3)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
 					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-					return ret;
+					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement5)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
 					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-					return ret;
+					vret.push_back(ret);
 				}
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::Quash)
 	{
@@ -266,11 +247,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::IonicGas)
 	{
@@ -282,11 +261,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::SuccessfulNegotiation) //Negotiation was successful, but hasn't resolved yet (can still be quashed)
 	{
@@ -298,11 +275,9 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				GameEvent ret = GameEvent(color,GameEventType::Quash);
 				ret.callback_if_resolved = [this] () { this->game->get_deal_params().successful = false; };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
-				return ret;
+				vret.push_back(ret);
 			}
 		}
-
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::SuccessfulDeal) //Negotiation was successful and has completed (was not quashed)
 	{
@@ -310,9 +285,8 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			return ret;
+			vret.push_back(ret);
 		}
-		return GameEvent(color,GameEventType::None);
 	}
 	else if(g.event_type == GameEventType::DefensiveEncounterWin)
 	{
@@ -320,14 +294,15 @@ GameEvent PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			return ret;
+			vret.push_back(ret);
 		}
-		return GameEvent(color,GameEventType::None);
 	}
 	else
 	{
 		assert(0);
 	}
+
+	return vret;
 }
 
 //FIXME: This function may not even be necessary
