@@ -28,6 +28,7 @@ public:
 	void set_game_state(GameState *g) { game = g; }
 	CosmicCardType choose_encounter_card();
 	GameEvent can_use_alien_with_empty_stack(const TurnPhase t);
+	bool alien_enabled() const;
 
 	//Does this need a forward decl?
 	GameState *game; //Intended for callbacks and should be used sparingly

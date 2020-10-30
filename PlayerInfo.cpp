@@ -86,13 +86,40 @@ CosmicCardType PlayerInfo::choose_encounter_card()
 	assert(0 && "Should never get here");
 }
 
-//FIXME: If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
+
+//If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
+bool PlayerInfo::alien_enabled() const
+{
+	unsigned num_home_colonies = 0;
+	for(unsigned planet=0; planet<planets.size(); planet++)
+	{
+		for(unsigned ship=0; ship<planets[planet].size(); ship++)
+		{
+			if(planets[planet][ship] == color)
+			{
+				num_home_colonies++;
+				break;
+			}
+		}
+	}
+
+	if(num_home_colonies < 3)
+	{
+		std::cout << "The " << to_string(color) << " player cannot use their alien power because they do not control at least three of their home planets!\n";
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}
+
 std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	std::vector<GameEvent> vret;
 	if(g.event_type == GameEventType::DrawCard)
 	{
-		if(alien->can_respond(current_role,t,g,color))
+		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 		{
 			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
@@ -143,7 +170,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	}
 	else if(g.event_type == GameEventType::RetrieveWarpShip)
 	{
-		if(alien->can_respond(current_role,t,g,color))
+		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
@@ -281,7 +308,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	}
 	else if(g.event_type == GameEventType::SuccessfulDeal) //Negotiation was successful and has completed (was not quashed)
 	{
-		if(alien->can_respond(current_role,t,g,color))
+		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
@@ -290,7 +317,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	}
 	else if(g.event_type == GameEventType::DefensiveEncounterWin)
 	{
-		if(alien->can_respond(current_role,t,g,color))
+		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 		{
 			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
 			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
@@ -307,7 +334,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 
 GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 {
-	if(alien->check_for_game_event(current_role,t))
+	if(alien->check_for_game_event(current_role,t) && alien_enabled())
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 		GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
