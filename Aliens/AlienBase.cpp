@@ -71,7 +71,3 @@ bool AlienBase::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerCol
 	return false;
 }
 
-bool AlienBase::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
-{
-	return can_respond(e,t,g,mycolor) && mandatory;
-}

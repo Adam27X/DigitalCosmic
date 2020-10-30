@@ -2184,20 +2184,31 @@ void GameState::resolve_game_event(const GameEvent g)
 
 	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
 	{
-		//FIXME: Handle *must* responses properly (only for Aliens so far)
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		std::vector<GameEvent> valid_plays = current_player.can_respond(state,g);
+		//NOTE: As of right now there's never a need to actually respond to an event more than once (even with reinforcements you can cast one and then respond to that one)
+		//In general this property probably isn't true so this if stmt should eventually become a while stmt
+		//If we do make that change, be sure to recalculate valid_plays after taking an action
 		if(valid_plays.size()) //If there is a valid response...
 		{
 			bool take_action = false;
-			GameEvent must_respond = current_player.must_respond(state,g);
-			GameEvent can_respond = must_respond; //Arbitrary initialization value
-			if(must_respond.event_type != GameEventType::None) //FIXME
+			GameEvent can_respond(current_player.color,GameEventType::None); //Arbitrary initialization value
+			for(unsigned i=0; i<valid_plays.size(); i++)
 			{
-				std::cout << "The " << to_string(current_player.color) << " player *must* respond to the " << to_string(g.event_type) << " action.\n";
-				take_action = true;
+				if(valid_plays[i].event_type == GameEventType::AlienPower && current_player.alien->get_mandatory())
+				{
+					//If an alien power is mandatory we'll automatically respond with it
+					can_respond = valid_plays[i];
+					take_action = true;
+					break;
+				}
 			}
-			else
+
+			if(take_action)
+			{
+				std::cout << "The " << to_string(current_player.color) << " player must respond to the " << to_string(g.event_type) << " action with their alien power\n";
+			}
+			else //If we haven't already forced the alien power play
 			{
 				std::cout << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
 				unsigned chosen_option;
@@ -2222,7 +2233,6 @@ void GameState::resolve_game_event(const GameEvent g)
 
 			if(take_action)
 			{
-				//FIXME: Check if must respond is valid and if so, take that action
 				if(can_respond.callback_if_action_taken)
 				{
 					can_respond.callback_if_action_taken();

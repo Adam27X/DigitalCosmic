@@ -32,11 +32,6 @@ bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors
 	return false;
 }
 
-bool Remora::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
-{
-	return false; //Remora is an optional Alien
-}
-
 std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret;

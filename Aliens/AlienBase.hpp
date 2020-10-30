@@ -25,7 +25,6 @@ public:
 	void valid_phases_insert(const TurnPhase &t) { valid_phases.insert(t); }
 	void set_description(const std::string &s) { description = s; }
 	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
-	virtual bool must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
 	//By default, Aliens cannot go on the stack (could change this to check for role/phase and have aliens that *can't* go on the stack override this function OR this function could be made pure virtual)
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const { return false; }
 	//Every Alien should uniquely define what happens when their power resolves

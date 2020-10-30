@@ -34,11 +34,6 @@ bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColo
 	return false;
 }
 
-bool TickTock::must_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
-{
-	return false; //FIXME: HACK since this Alien is NYI...change to true once we're done
-}
-
 std::function<void()> TickTock::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret = [this] () { this->discard_token(); };
