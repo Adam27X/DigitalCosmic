@@ -20,6 +20,7 @@ public:
 	std::unique_ptr<AlienBase> alien;
 	std::vector<CosmicCardType> hand;
 	EncounterRole current_role;
+	bool alien_zapped;
 
 	void make_default_player(const PlayerColors c);
 	void dump_hand() const;

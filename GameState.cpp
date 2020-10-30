@@ -1966,7 +1966,14 @@ void GameState::execute_turn()
 		resolve_attack();
 	}
 
+	//Clean ups
 	update_player_scores();
+
+	//If an Alien was zapped this turn it can now be used again
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		players[i].alien_zapped = false;
+	}
 }
 
 void GameState::swap_encounter_cards()
@@ -2111,6 +2118,13 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool sour
 		GameEvent g(p.color,GameEventType::RetrieveWarpShip);
 		resolve_game_event(g);
 	}
+}
+
+//When an Alien is hit by a CosmicZap, it is disabled for the rest of the encounter
+void GameState::zap_alien(const PlayerColors player)
+{
+	PlayerInfo &p = get_player(player);
+	p.alien_zapped = true;
 }
 
 std::string GameState::prompt_player(PlayerInfo &p, const std::string &prompt) const

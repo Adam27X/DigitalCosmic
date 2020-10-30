@@ -22,6 +22,7 @@ void PlayerInfo::make_default_player(const PlayerColors c)
 			planets[i].push_back(color);
 		}
 	}
+	alien_zapped = false;
 }
 
 void PlayerInfo::dump_hand() const
@@ -86,10 +87,15 @@ CosmicCardType PlayerInfo::choose_encounter_card()
 	assert(0 && "Should never get here");
 }
 
-
 //If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
+//The alien is also disabled for the remainder of an encounter in which it was zapped
 bool PlayerInfo::alien_enabled() const
 {
+	if(alien_zapped)
+	{
+		return false;
+	}
+
 	unsigned num_home_colonies = 0;
 	for(unsigned planet=0; planet<planets.size(); planet++)
 	{
@@ -129,12 +135,13 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	else if(g.event_type == GameEventType::AlienPower)
 	{
 		//We can respond if we have a CosmicZap
+		//If the zap resolves, the zapped alien is invalid until the next encounter
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
 			if(*i == CosmicCardType::CosmicZap)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
 				vret.push_back(ret);
 			}

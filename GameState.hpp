@@ -95,6 +95,7 @@ public:
 	void human_encounter_win_condition();
 	void start_game();
 	bool player_has_ship_in_warp(const PlayerColors player) const;
+	void zap_alien(const PlayerColors player);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
