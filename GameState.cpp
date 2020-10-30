@@ -1011,10 +1011,9 @@ void GameState::send_in_ships(const PlayerColors player)
 		}
 	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
 
-	//FIXME: Does the offense *have* to send in a ship if they have one?
-	if((player != assignments.offense) && (launched_ships == 0))
+	if(launched_ships == 0 && !valid_colonies.empty())
 	{
-		std::cout << "Allies *must* commit at least one ship to the encounter. Try again.\n";
+		std::cout << "The offense and allies *must* commit at least one ship to the encounter if able. Try again.\n";
 		send_in_ships(player);
 	}
 }
