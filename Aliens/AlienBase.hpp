@@ -27,7 +27,8 @@ public:
 	void set_description(const std::string &s) { description = s; }
 	bool check_encounter_role(const EncounterRole e) const;
 	//Can this Alien respond to a given GameEvent?
-	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const;
+	virtual bool can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const = 0;
+	bool check_role_and_phase(const EncounterRole e, const TurnPhase t) const;
 	//By default, Aliens can go on the stack if their Player's role and the turn phase are valid for the Alien's power (Aliens that can only respond to stack actions should override this function and return false, see Remora)
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const;
 	//Every Alien should uniquely define what happens when their power resolves

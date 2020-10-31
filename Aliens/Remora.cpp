@@ -8,7 +8,7 @@ Remora::Remora()
 {
 	set_name("Remora");
 	set_power("Cling");
-	set_role( PlayerRole::AnyPlayer);
+	set_role(PlayerRole::AnyPlayer);
 	set_mandatory(false);
 	valid_phases_insert(TurnPhase::StartTurn);
 	valid_phases_insert(TurnPhase::Regroup);
@@ -24,14 +24,22 @@ Remora::Remora()
 
 bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
-	if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip)
+	if(!check_role_and_phase(e,t))
 	{
-		return AlienBase::can_respond(e,t,g,mycolor) && (g.player != mycolor); //We can't respond to our own draws/ships taken from the warp
+		return false;
 	}
 
-	return false;
+	if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip)
+	{
+		return (g.player != mycolor); //We can't respond to our own draws/ships taken from the warp
+	}
+	else
+	{
+		return false;
+	}
 }
 
+//FIXME: Remora may not retrieve a ship from the warp on the same encounter that it went to the warp...how do we check that?
 std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret;

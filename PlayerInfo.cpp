@@ -123,16 +123,14 @@ bool PlayerInfo::alien_enabled() const
 std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	std::vector<GameEvent> vret;
-	if(g.event_type == GameEventType::DrawCard)
+	if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 	{
-		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
-		{
-			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			vret.push_back(ret);
-		}
+		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
+		ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
+		vret.push_back(ret);
 	}
-	else if(g.event_type == GameEventType::AlienPower)
+
+	if(g.event_type == GameEventType::AlienPower)
 	{
 		//We can respond if we have a CosmicZap
 		//If the zap resolves, the zapped alien is invalid until the next encounter
@@ -173,15 +171,6 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
 				vret.push_back(ret);
 			}
-		}
-	}
-	else if(g.event_type == GameEventType::RetrieveWarpShip)
-	{
-		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
-		{
-			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			vret.push_back(ret);
 		}
 	}
 	else if(g.event_type == GameEventType::MobiusTubes)
@@ -313,23 +302,9 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			}
 		}
 	}
-	else if(g.event_type == GameEventType::SuccessfulDeal) //Negotiation was successful and has completed (was not quashed)
+	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::DefensiveEncounterWin) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
 	{
-		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
-		{
-			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			vret.push_back(ret);
-		}
-	}
-	else if(g.event_type == GameEventType::DefensiveEncounterWin)
-	{
-		if(alien->can_respond(current_role,t,g,color) && alien_enabled())
-		{
-			GameEvent ret = GameEvent(color,GameEventType::AlienPower);
-			ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
-			vret.push_back(ret);
-		}
+		//Nothing to do here, these events can only be responded to by Alien powers and that's already been taken care of
 	}
 	else
 	{

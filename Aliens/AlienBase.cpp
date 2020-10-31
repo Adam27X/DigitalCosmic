@@ -93,7 +93,8 @@ bool AlienBase::check_encounter_role(const EncounterRole e) const
 	}
 }
 
-bool AlienBase::check_for_game_event(const EncounterRole e, const TurnPhase t) const
+//"Safe" function that won't be overriden
+bool AlienBase::check_role_and_phase(const EncounterRole e, const TurnPhase t) const
 {
 	if(check_encounter_role(e) && valid_phases.find(t) != valid_phases.end())
 	{
@@ -103,56 +104,9 @@ bool AlienBase::check_for_game_event(const EncounterRole e, const TurnPhase t) c
 	return false;
 }
 
-bool AlienBase::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
+//Default behavior to see if the Alien can be played with an empty stack; other functions that want to do a similar test should call check_role_and_phase() directly
+bool AlienBase::check_for_game_event(const EncounterRole e, const TurnPhase t) const
 {
-	if(valid_phases.find(t) == valid_phases.end())
-	{
-		return false;
-	}
-
-	//TODO: Use check_encounter_role() here? The logic is essentially the same as check_for_game_event() above but this case is strictly for responses where the above is for an empty stack...
-	switch(e)
-	{
-		case EncounterRole::Offense:
-			if(role == PlayerRole::AnyPlayer || role == PlayerRole::MainPlayer || role == PlayerRole::Offense || role == PlayerRole::MainPlayerOrAlly)
-			{
-				return true;
-			}
-		break;
-
-		case EncounterRole::Defense:
-			if(role == PlayerRole::AnyPlayer || role == PlayerRole::MainPlayer || role == PlayerRole::MainPlayerOrAlly || role == PlayerRole::NotOffense)
-			{
-				return true;
-			}
-		break;
-
-		case EncounterRole::OffensiveAlly:
-			if(role == PlayerRole::AnyPlayer || role == PlayerRole::MainPlayerOrAlly || role == PlayerRole::NotMainPlayer || role == PlayerRole::NotOffense)
-			{
-				return true;
-			}
-		break;
-
-		case EncounterRole::DefensiveAlly:
-			if(role == PlayerRole::AnyPlayer || role == PlayerRole::MainPlayerOrAlly || role == PlayerRole::NotMainPlayer || role == PlayerRole::NotOffense)
-			{
-				return true;
-			}
-		break;
-
-		case EncounterRole::None:
-			if(role == PlayerRole::AnyPlayer)
-			{
-				return true;
-			}
-		break;
-
-		default:
-			assert(0 && "Invalid Encounter role!");
-		break;
-	}
-
-	return false;
+	return check_role_and_phase(e,t);
 }
 

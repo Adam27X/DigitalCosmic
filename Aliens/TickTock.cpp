@@ -27,11 +27,19 @@ void TickTock::discard_token()
 
 bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
+	if(!check_role_and_phase(e,t))
+	{
+		return false;
+	}
+
 	if(g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::DefensiveEncounterWin)
 	{
-		return AlienBase::can_respond(e,t,g,mycolor); //Should always be true
+		return true;
 	}
-	return false;
+	else
+	{
+		return false;
+	}
 }
 
 std::function<void()> TickTock::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
