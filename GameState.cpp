@@ -1201,89 +1201,97 @@ void GameState::setup_negotiation()
 
 	if(deal_params.successful) //Collect the terms of the deal
 	{
-		std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
-		std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.offense); //A list of planet colors and indices
-
-		if(defense_valid_colonies.empty())
+		bool valid_deal = false;
+		do
 		{
-			std::cout << "Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n";
-		}
-		else
-		{
-			do
-			{
-				std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
-				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
+			std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
+			std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.offense); //A list of planet colors and indices
 
-			if(response.compare("y") == 0)
+			if(defense_valid_colonies.empty())
 			{
-				deal_params.offense_receives_colony = true;
+				std::cout << "Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n";
 			}
-			response = "";
-		}
-
-		if(offense_valid_colonies.empty())
-		{
-			std::cout << "Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n";
-		}
-		else
-		{
-			do
+			else
 			{
-				std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
-				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
+				do
+				{
+					std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
 
-			if(response.compare("y") == 0)
-			{
-				deal_params.defense_receives_colony = true;
+				if(response.compare("y") == 0)
+				{
+					deal_params.offense_receives_colony = true;
+				}
+				response = "";
 			}
-			response = "";
-		}
 
-		std::cout << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
-		std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-		std::cin >> deal_params.num_cards_to_offense;
-
-		if(deal_params.num_cards_to_offense > 0)
-		{
-			do
+			if(offense_valid_colonies.empty())
 			{
-				std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
-				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
-
-			if(response.compare("y") == 0)
-			{
-				deal_params.cards_to_offense_chosen_randomly = true;
+				std::cout << "Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n";
 			}
-			response = "";
-		}
-
-		std::cout << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
-		std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-		std::cin >> deal_params.num_cards_to_defense;
-
-		if(deal_params.num_cards_to_defense > 0)
-		{
-			do
+			else
 			{
-				std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.offense) << " player (offense).\n";
-				std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
+				do
+				{
+					std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
 
-			if(response.compare("y") == 0)
-			{
-				deal_params.cards_to_defense_chosen_randomly = true;
+				if(response.compare("y") == 0)
+				{
+					deal_params.defense_receives_colony = true;
+				}
+				response = "";
 			}
-		}
 
-		//TODO: Add a check to ensure that something was exchange? Otherwise you could force a failed deal or re-prompt the players...
+			std::cout << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
+			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+			std::cin >> deal_params.num_cards_to_offense;
+
+			if(deal_params.num_cards_to_offense > 0)
+			{
+				do
+				{
+					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+				if(response.compare("y") == 0)
+				{
+					deal_params.cards_to_offense_chosen_randomly = true;
+				}
+				response = "";
+			}
+
+			std::cout << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
+			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+			std::cin >> deal_params.num_cards_to_defense;
+
+			if(deal_params.num_cards_to_defense > 0)
+			{
+				do
+				{
+					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.offense) << " player (offense).\n";
+					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
+					std::cin >> response;
+				} while(response.compare("y") != 0 && response.compare("n") != 0);
+
+				if(response.compare("y") == 0)
+				{
+					deal_params.cards_to_defense_chosen_randomly = true;
+				}
+			}
+
+			valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
+			if(!valid_deal)
+			{
+				std::cout << "Error: Successful deal chosen but nothing was exchanged. Try again.\n";
+			}
+		} while(!valid_deal);
 	}
 }
 
@@ -1403,6 +1411,8 @@ void GameState::resolve_negotiation()
 		//The deal was actually successful, so we use a separate GameEventType for Tick-Tock triggers
 		GameEvent g(assignments.offense,GameEventType::SuccessfulDeal); //Color is arbitrary here
 		resolve_game_event(g);
+
+		assignments.successful_encounter = true;
 	}
 	else //Unsuccessful deal, each player loses 3 ships to the warp
 	{
@@ -1561,7 +1571,7 @@ void GameState::offense_win_resolution()
 		i=hyperspace_gate.erase(i);
 	}
 
-	assignments.offense_won_encounter = true;
+	assignments.successful_encounter = true;
 }
 
 void GameState::defense_win_resolution()
@@ -1759,7 +1769,7 @@ void GameState::start_game()
 	while(1)
 	{
 		bool go_to_next_player;
-		if(assignments.offense_won_encounter && !is_second_encounter_for_offense)
+		if(assignments.successful_encounter && !is_second_encounter_for_offense)
 		{
 			//The offense has the option of having a second encounter
 			std::string response;
@@ -1782,7 +1792,7 @@ void GameState::start_game()
 				go_to_next_player = true;
 			}
 		}
-		else if(assignments.offense_won_encounter)
+		else if(assignments.successful_encounter)
 		{
 			std::cout << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
 			is_second_encounter_for_offense = false;

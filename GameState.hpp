@@ -32,7 +32,7 @@ public:
 	unsigned defense_attack_value;
 	bool human_wins_encounter;
 	bool stop_compensation_and_rewards;
-	bool offense_won_encounter;
+	bool successful_encounter;
 
 	void clear()
 	{
@@ -50,7 +50,7 @@ public:
 		defense_attack_value = 0;
 		human_wins_encounter = false;
 		stop_compensation_and_rewards = false;
-		offense_won_encounter = false;
+		successful_encounter = false;
 	}
 };
 
