@@ -39,7 +39,6 @@ bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors
 	}
 }
 
-//FIXME: Remora may not retrieve a ship from the warp on the same encounter that it went to the warp...how do we check that?
 std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
 {
 	std::function<void()> ret;
@@ -49,7 +48,7 @@ std::function<void()> Remora::get_resolution_callback(GameState *g, const Player
 	}
 	else if(ge.event_type == GameEventType::RetrieveWarpShip)
 	{
-		ret = [g,player] () { if(g->player_has_ship_in_warp(player)) { g->move_ship_to_colony(g->get_player(player),g->get_warp(),true); } };
+		ret = [g,player] () { if(g->player_has_ship_in_warp_from_prior_encounter(player)) { g->move_ship_from_warp_to_colony(g->get_player(player)); } };
 	}
 	return ret;
 }

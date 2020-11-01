@@ -8,7 +8,7 @@
 
 #include "GameState.hpp"
 
-GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false)
+GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
@@ -39,7 +39,7 @@ void GameState::dump() const
 {
 	dump_planets();
 	dump_PlanetInfo(hyperspace_gate,"Hyperspace gate");
-	dump_PlanetInfo(warp,"Warp");
+	dump_warp();
 }
 
 void GameState::dump_planets() const
@@ -80,6 +80,26 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 		std::cout << to_string(*i);
 	}
 	if(source.size())
+	{
+		std::cout << "}\n\n";
+	}
+}
+
+void GameState::dump_warp() const
+{
+	if(warp.size())
+	{
+		std::cout << "Warp: {";
+	}
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(i!=warp.begin())
+		{
+			std::cout << ",";
+		}
+		std::cout << to_string(i->first);
+	}
+	if(warp.size())
 	{
 		std::cout << "}\n\n";
 	}
@@ -236,7 +256,7 @@ void GameState::free_all_ships_from_warp()
 {
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		move_ship_to_colony(get_player(*i),warp,true);
+		move_ship_from_warp_to_colony(get_player(i->first));
 	}
 }
 
@@ -308,6 +328,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
+					warp.push_back(std::make_pair(*i,encounter_num));
 					hyperspace_gate.erase(i);
 					break;
 				}
@@ -321,7 +342,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
-					warp.push_back(*i);
+					warp.push_back(std::make_pair(*i,encounter_num));
 					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
 					break;
 				}
@@ -822,7 +843,7 @@ void GameState::draw_from_destiny_deck()
 				num_ships_in_warp[PlayerColors::Green] = 0;
 			for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 			{
-				num_ships_in_warp[*i]++;
+				num_ships_in_warp[i->first]++;
 			}
 			//Tiebreak with the player closest in ascending player order
 			//Start with the player closest to the offense and keep the old result during ties
@@ -1519,7 +1540,7 @@ void GameState::offense_win_resolution()
 	{
 		if(*i == assignments.defense)
 		{
-			warp.push_back(*i);
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i = encounter_planet.erase(i);
 		}
 		else
@@ -1529,7 +1550,7 @@ void GameState::offense_win_resolution()
 	}
 	for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 	{
-		warp.push_back(*i);
+		warp.push_back(std::make_pair(*i,encounter_num));
 		i=defensive_ally_ships.erase(i);
 	}
 
@@ -1548,7 +1569,7 @@ void GameState::defense_win_resolution()
 	//Offense and offensive ally ships go to the warp
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
-		warp.push_back(*i);
+		warp.push_back(std::make_pair(*i,encounter_num));
 		i=hyperspace_gate.erase(i);
 	}
 	//Defensive allies return each of their ships to one of their colonies
@@ -1568,7 +1589,7 @@ void GameState::defense_win_resolution()
 				bool ship_exists_in_warp = false;
 				for(auto ii=warp.begin(),ee=warp.end();ii!=ee;++ii)
 				{
-					if(*ii == i->first)
+					if(ii->first == i->first)
 					{
 						ship_exists_in_warp = true;
 					}
@@ -1593,7 +1614,7 @@ void GameState::defense_win_resolution()
 
 					if(choice == 0)
 					{
-						move_ship_to_colony(get_player(i->first),warp,true);
+						move_ship_from_warp_to_colony(get_player(i->first));
 					}
 					else
 					{
@@ -1615,7 +1636,7 @@ void GameState::resolve_attack()
 		//Send all ships involved to the warp
 		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 		{
-			warp.push_back(*i);
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i=hyperspace_gate.erase(i);
 		}
 		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
@@ -1623,7 +1644,7 @@ void GameState::resolve_attack()
 		{
 			if(*i == assignments.defense)
 			{
-				warp.push_back(*i);
+				warp.push_back(std::make_pair(*i,encounter_num));
 				i = encounter_planet.erase(i);
 			}
 			else
@@ -1633,7 +1654,7 @@ void GameState::resolve_attack()
 		}
 		for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 		{
-			warp.push_back(*i);
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i=defensive_ally_ships.erase(i);
 		}
 
@@ -1733,6 +1754,7 @@ void GameState::start_game()
 	execute_turn();
 
 	dump(); //Dump after each turn for sanity
+	encounter_num++;
 
 	while(1)
 	{
@@ -1802,6 +1824,7 @@ void GameState::start_game()
 		execute_turn();
 
 		dump(); //Dump after each turn for sanity
+		encounter_num++;
 	}
 }
 
@@ -1838,10 +1861,10 @@ void GameState::execute_turn()
 	//If the offense has any ships in the warp, they retrieve one of them
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		if(*i == offense.color)
+		if(i->first == offense.color)
 		{
 			std::cout << "The " << to_string(assignments.offense) << " player will now regroup\n";
-			move_ship_to_colony(offense,warp,true);
+			move_ship_from_warp_to_colony(offense);
 			break;
 		}
 	}
@@ -2035,11 +2058,11 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 	return valid_colonies[chosen_option];
 }
 
-bool GameState::player_has_ship_in_warp(const PlayerColors player) const
+bool GameState::player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const
 {
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		if(*i == player)
+		if((i->first == player) && (i->second < encounter_num))
 		{
 			return true;
 		}
@@ -2048,8 +2071,8 @@ bool GameState::player_has_ship_in_warp(const PlayerColors player) const
 	return false;
 }
 
-//Source = warp, hyperspace_gate, defensive_ally_ships, etc.
-void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool source_is_warp)
+//Source = hyperspace_gate, defensive_ally_ships, etc. but not the warp (see move_ship_from_warp_to_colony instead)
+void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 {
 	//Check that at least one ship of the specified color resides in the source; if not, return
 	bool ship_exists_in_source = false;
@@ -2067,12 +2090,18 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool sour
 	//Gather the valid options and present them to the player
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(p.color); //A list of planet colors and indices
 
-	//If the player has no colonies the ship goes directly onto the hyperspace gate. It's unclear if this should really happen for players who aren't the offense, but it's a corner case and is a reasonable solution.
-	//Chances are if you're even thinking about this scenario as player you are pretty screwed
 	if(!valid_colonies.size())
 	{
-		std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
-		hyperspace_gate.push_back(p.color);
+		if(p.color == assignments.offense)
+		{
+			std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			hyperspace_gate.push_back(p.color);
+		}
+		else
+		{
+			//No colony to return the ship to!
+			return;
+		}
 	}
 	else
 	{
@@ -2112,12 +2141,80 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool sour
 			break;
 		}
 	}
+}
 
-	if(source_is_warp)
+void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
+{
+	//Check that at least one ship of the specified color resides in the source; if not, return
+	bool ship_exists_in_source = false;
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
-		GameEvent g(p.color,GameEventType::RetrieveWarpShip);
-		resolve_game_event(g);
+		if(i->first == p.color)
+		{
+			ship_exists_in_source = true;
+		}
 	}
+
+	if(!ship_exists_in_source)
+		return;
+
+	//Gather the valid options and present them to the player
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(p.color); //A list of planet colors and indices
+
+	if(!valid_colonies.size())
+	{
+		if(p.color == assignments.offense)
+		{
+			std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			hyperspace_gate.push_back(p.color);
+		}
+		else
+		{
+			//No colony to return the ship to!
+			return;
+		}
+	}
+	else
+	{
+		const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(p.color,valid_colonies);
+
+		//Now actually add the colony
+		bool colony_found = false; //paranoia
+		for(auto player_begin=players.begin(),player_end=players.end();player_begin!=player_end;++player_begin)
+		{
+			if(player_begin->color != chosen_colony.first)
+				continue;
+			PlanetInfo &chosen_planet = player_begin->planets[chosen_colony.second];
+			for(auto i=chosen_planet.begin(),e=chosen_planet.end();i!=e; ++i)
+			{
+				if(*i == p.color)
+				{
+					colony_found = true;
+					break;
+				}
+			}
+			if(colony_found)
+			{
+				chosen_planet.push_back(p.color);
+				break;
+			}
+		}
+
+		assert(colony_found && "Failed to find colony to place ship!");
+	}
+
+	//Remove the ship from the source
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(i->first == p.color)
+		{
+			warp.erase(i);
+			break;
+		}
+	}
+
+	GameEvent g(p.color,GameEventType::RetrieveWarpShip);
+	resolve_game_event(g);
 }
 
 //When an Alien is hit by a CosmicZap, it is disabled for the rest of the encounter
@@ -2294,13 +2391,13 @@ void GameState::resolve_game_event(const GameEvent g)
 void GameState::debug_send_ship_to_warp()
 {
 	PlayerColors victim = PlayerColors::Yellow;
-	warp.push_back(victim);
+	warp.push_back(std::make_pair(victim,encounter_num));
 
 	PlayerInfo &yellow = get_player(victim);
 	yellow.planets[0].erase(yellow.planets[0].begin());
 
 	PlayerColors victim2 = PlayerColors::Red;
-	warp.push_back(victim2);
+	warp.push_back(std::make_pair(victim2,encounter_num));
 	PlayerInfo &red = get_player(victim2);
 	red.planets[2].erase(red.planets[2].begin());
 }

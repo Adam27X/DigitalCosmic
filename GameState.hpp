@@ -75,6 +75,7 @@ public:
 	void dump() const;
 	void dump_planets() const;
 	void dump_PlanetInfo(const PlanetInfo &source, const std::string name) const;
+	void dump_warp() const;
 	void dump_destiny_deck() const;
 	void dump_cosmic_deck() const;
 	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
@@ -88,18 +89,19 @@ public:
 	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
-	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source, bool source_is_warp=false);
+	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
+	void move_ship_from_warp_to_colony(PlayerInfo &p);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
 	void add_reinforcements(const PlayerColors player, const unsigned value);
 	void human_encounter_win_condition();
 	void start_game();
-	bool player_has_ship_in_warp(const PlayerColors player) const;
+	bool player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const;
 	void zap_alien(const PlayerColors player);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
-	PlanetInfo& get_warp() { return warp; }
+	std::vector< std::pair<PlayerColors,unsigned> >& get_warp() { return warp; }
 	DealParameters& get_deal_params() { return deal_params; }
 
 	//Methods only meant for testing
@@ -147,12 +149,13 @@ private:
 	bool invalidate_next_callback;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	unsigned player_to_be_plagued;
-	PlanetInfo warp; //The warp operates similarly to a planet
-	PlanetInfo hyperspace_gate; //As does the hyperspace gate
+	std::vector< std::pair<PlayerColors,unsigned> >  warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
+	PlanetInfo hyperspace_gate;
 	PlanetInfo defensive_ally_ships;
 	PlayerAssignments assignments;
 	std::set<PlayerColors> allies_to_be_stopped; //Allies to be prevented by the player casting force field (if it resolves)
 	DealParameters deal_params;
 	bool is_second_encounter_for_offense;
+	unsigned encounter_num;
 };
 
