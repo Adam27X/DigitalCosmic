@@ -8,6 +8,11 @@
 
 #include "GameState.hpp"
 
+bool is_only_digits(const std::string &s)
+{
+	        return std::all_of(s.begin(),s.end(),::isdigit);
+}
+
 GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
@@ -262,19 +267,14 @@ void GameState::free_all_ships_from_warp()
 
 void GameState::cast_plague(const PlayerColors casting_player)
 {
-	std::cout << "Which player would you like to harm?\n";
+	std::vector<std::string> options;
 	for(unsigned i=0; i<players.size(); i++)
 	{
-		std::cout << i << ": " << to_string(players[i].color) << "\n";
+		options.push_back(to_string(players[i].color));
 	}
 
-	unsigned chosen_option;
-	do
-	{
-		std::cout << "Please choose one of the option numbers above.\n";
-		std::cout << to_string(casting_player) << ">>";
-		std::cin >> chosen_option;
-	} while(chosen_option > players.size());
+	std::string prompt("Which player would you like to harm?\n");
+	unsigned chosen_option = prompt_player(casting_player,prompt,options);
 
 	assert(player_to_be_plagued == max_player_sentinel);
 	player_to_be_plagued = chosen_option;
@@ -285,15 +285,14 @@ void GameState::cast_force_field(const PlayerColors casting_player)
 	std::cout << "Which alliances would you like to end?\n";
 	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
 	{
-		std::cout << to_string(i->first) << "? y/n (allied with the offense)\n";
-		std::string response;
-		do
-		{
-			std::cout << to_string(casting_player) << ">>";
-			std::cin >> response;
-		} while(response.compare("y") != 0 && response.compare("n") != 0);
+		std::stringstream prompt;
+		prompt << to_string(i->first) << "? (allied with the offense)\n";
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned choice = prompt_player(casting_player,prompt.str(),options);
 
-		if(response.compare("y") == 0)
+		if(choice == 0)
 		{
 			allies_to_be_stopped.insert(i->first);
 		}
@@ -301,15 +300,14 @@ void GameState::cast_force_field(const PlayerColors casting_player)
 
 	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
 	{
-		std::cout << to_string(i->first) << "? y/n (allied with the defense)\n";
-		std::string response;
-		do
-		{
-			std::cout << to_string(casting_player) << ">>";
-			std::cin >> response;
-		} while(response.compare("y") != 0 && response.compare("n") != 0);
+		std::stringstream prompt;
+		prompt << to_string(i->first) << "? (allied with the defense)\n";
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned choice = prompt_player(casting_player,prompt.str(),options);
 
-		if(response.compare("y") == 0)
+		if(choice == 0)
 		{
 			allies_to_be_stopped.insert(i->first);
 		}
@@ -372,17 +370,14 @@ void GameState::plague_player()
 	}
 	if(valid_artifacts.size())
 	{
-		std::cout << "The " << to_string(victim.color) << " player has the following artifacts. Choose one to discard.\n";
+		std::stringstream prompt;
+		prompt << "The " << to_string(victim.color) << " player has the following artifacts. Choose one to discard.\n";
+		std::vector<std::string> options;
 		for(unsigned i=0; i<valid_artifacts.size(); i++)
 		{
-			std::cout << i << ": " << to_string(valid_artifacts[i]) << "\n";
+			options.push_back(to_string(valid_artifacts[i]));
 		}
-		do
-		{
-			std::cout << "Please choose one of the option numbers above.\n";
-			std::cout << to_string(victim.color) << ">>";
-			std::cin >> chosen_option;
-		} while(chosen_option >= valid_artifacts.size());
+		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_artifacts[chosen_option];
 		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
 		{
@@ -405,17 +400,14 @@ void GameState::plague_player()
 	}
 	if(valid_attacks.size())
 	{
-		std::cout << "The " << to_string(victim.color) << " player has the following attack cards. Choose one to discard.\n";
+		std::stringstream prompt;
+		prompt << "The " << to_string(victim.color) << " player has the following attack cards. Choose one to discard.\n";
+		std::vector<std::string> options;
 		for(unsigned i=0; i<valid_attacks.size(); i++)
 		{
-			std::cout << i << ": " << to_string(valid_attacks[i]) << "\n";
+			options.push_back(to_string(valid_attacks[i]));
 		}
-		do
-		{
-			std::cout << "Please choose one of the option numbers above.\n";
-			std::cout << to_string(victim.color) << ">>";
-			std::cin >> chosen_option;
-		} while(chosen_option >= valid_attacks.size());
+		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_attacks[chosen_option];
 		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
 		{
@@ -458,17 +450,14 @@ void GameState::plague_player()
 	}
 	if(valid_reinforcements.size())
 	{
-		std::cout << "The " << to_string(victim.color) << " player has the following reinforcement cards. Choose one to discard.\n";
+		std::stringstream prompt;
+		prompt << "The " << to_string(victim.color) << " player has the following reinforcement cards. Choose one to discard.\n";
+		std::vector<std::string> options;
 		for(unsigned i=0; i<valid_reinforcements.size(); i++)
 		{
-			std::cout << i << ": " << to_string(valid_reinforcements[i]) << "\n";
+			options.push_back(to_string(valid_reinforcements[i]));
 		}
-		do
-		{
-			std::cout << "Please choose one of the option numbers above.\n";
-			std::cout << to_string(victim.color) << ">>";
-			std::cin >> chosen_option;
-		} while(chosen_option >= valid_reinforcements.size());
+		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_reinforcements[chosen_option];
 		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
 		{
@@ -554,24 +543,19 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 		{
 			std::stringstream prompt;
 			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
+			std::vector<std::string> options;
 			for(unsigned i=0; i<valid_plays.size(); i++)
 			{
-				prompt << "Option " << i << ": " << to_string(valid_plays[i].event_type);
+				std::stringstream opt;
+				opt << to_string(valid_plays[i].event_type);
 				if(valid_plays[i].event_type == GameEventType::AlienPower && alien_power_mandatory)
 				{
-					prompt << " (mandatory)";
+					opt << " (mandatory)";
 				}
-				prompt << "\n";
+				options.push_back(opt.str());
 			}
-			prompt << "Option " << valid_plays.size() << ": None\n";
-			unsigned chosen_option;
-			do
-			{
-				std::cout << prompt.str();
-				std::cout << "Please choose one of the option numbers above.\n";
-				std::cout << to_string(current_player.color) << ">>";
-				std::cin >> chosen_option;
-			} while(chosen_option > valid_plays.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt. Take in a string instead and filter it
+			options.push_back("None");
+			unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
 
 			if(chosen_option != valid_plays.size()) //An action was taken
 			{
@@ -775,23 +759,19 @@ void GameState::draw_from_destiny_deck()
 			}
 			else
 			{
-				std::cout << "The offense may either have an encounter with a player in his or her own system or draw another destiny card\n";
+				std::string prompt("The offense may either have an encounter with a player in his or her own system or draw another destiny card\n");
+				std::vector<std::string> options;
 				unsigned option = 0;
 				//TODO: It's probably better to let the offense choose between some sort of home system encounter and redrawing now and then letting them choose the specific home system encounter during launch should they go that route
 				//	In practice I'm not sure that this timing will ever matter
 				for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
 				{
-					std::cout << option << ": Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)\n";
-					option++;
+					std::stringstream opt;
+					opt << "Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)";
+					options.push_back(opt.str());
 				}
-				std::cout << option << ": Draw another destiny card\n";
-				unsigned chosen_option;
-				do
-				{
-					std::cout << "Please choose one of the above options.\n";
-					std::cout << to_string(off) << ">>";
-					std::cin >> chosen_option;
-				} while(chosen_option > valid_home_system_encounters.size());
+				options.push_back("Draw another destiny card");
+				unsigned chosen_option = prompt_player(off,prompt,options);
 
 				if(chosen_option == valid_home_system_encounters.size())
 				{
@@ -950,21 +930,16 @@ void GameState::draw_from_destiny_deck()
 		}
 		else if(dest == DestinyCardType::Wild)
 		{
-			std::cout << "The offense has drawn a wild destiny card and may have an encounter with the player of his or her choice in their home system.\n";
+			std::string prompt("The offense has drawn a wild destiny card and may have an encounter with the player of his or her choice in their home system.\n");
+			std::vector<std::string> options;
 			for(unsigned i=0; i<players.size(); i++)
 			{
 				if(players[i].color != off)
 				{
-					std::cout << i << ": " << to_string(players[i].color) << "\n";
+					options.push_back(to_string(players[i].color));
 				}
 			}
-			unsigned chosen_option;
-			do
-			{
-				std::cout << "Please choose which player you would like to attack.\n";
-				std::cout << to_string(off) << ">>";
-				std::cin >> chosen_option;
-			} while((chosen_option >= players.size()) || (players[chosen_option].color == off));
+			unsigned chosen_option = prompt_player(off,prompt,options);
 
 			assignments.defense = players[chosen_option].color;
 			assignments.planet_location = players[chosen_option].color;
@@ -984,38 +959,41 @@ void GameState::choose_opponent_planet()
 	if(assignments.planet_location == assignments.offense)
 		return;
 
-	std::cout << "The offense has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
+	std::stringstream prompt;
+	prompt << "The offense has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
+	std::vector<std::string> options;
 	const PlayerInfo &host = get_player(assignments.planet_location);
-	unsigned chosen_option;
-	do
+	for(unsigned i=0; i<host.planets.size(); i++)
 	{
-		//TODO: Dump planet info here to help the player make his or her choice
-		std::cout << "Please choose which planet you would like to attack (0-" << host.planets.size()-1 << ").\n";
-		std::cout << to_string(assignments.offense) << ">>";
-		std::cin >> chosen_option;
-	} while(chosen_option > (host.planets.size()-1));
+		std::stringstream opt;
+		opt << to_string(host.color) << " Planet " << i;
+		options.push_back(opt.str());
+	}
+	unsigned chosen_option = prompt_player(assignments.offense,prompt.str(),options);
 	assignments.planet_id = chosen_option;
 }
 
 void GameState::send_in_ships(const PlayerColors player)
 {
 	//List the player's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
-	std::cout << "The " << to_string(player) << " player can choose up to four ships from any of their valid colonies\n";
+	std::stringstream prompt;
+	prompt << "The " << to_string(player) << " player can choose up to four ships from any of their valid colonies\n";
 	unsigned launched_ships = 0;
 	unsigned choice;
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
 	do
 	{
 		valid_colonies = get_valid_colonies(player);
+		std::vector<std::string> options;
 		for(unsigned i=0; i<valid_colonies.size(); i++)
 		{
-			std::cout << i << ": " << to_string(valid_colonies[i].first) << " planet " << valid_colonies[i].second << "\n";
+			std::stringstream opt;
+			opt << to_string(valid_colonies[i].first) << " planet " << valid_colonies[i].second;
+			options.push_back(opt.str());
 		}
-		std::cout << valid_colonies.size() << ": None\n";
+		options.push_back("None");
 
-		std::cout << "Please choose one of the above options.\n";
-		std::cout << to_string(player) << ">>";
-		std::cin >> choice;
+		choice = prompt_player(player,prompt.str(),options);
 		if(choice < valid_colonies.size())
 		{
 			if(assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
@@ -1059,18 +1037,15 @@ std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &po
 	std::string inviter = offense ? "offense" : "defense";
 	for(auto i=potential_allies.begin(),e=potential_allies.end();i!=e;++i)
 	{
-		std::string response;
-		do
-		{
-			std::cout << "Would the " << inviter << " like to invite the " << to_string(*i) << " player as an ally? y/n\n";
-			if(offense)
-				std::cout << to_string(assignments.offense) << ">>";
-			else
-				std::cout << to_string(assignments.defense) << ">>";
-			std::cin >> response;
-		} while(response.compare("y") != 0 && response.compare("n") != 0);
+		std::stringstream prompt;
+		prompt << "Would the " << inviter << " like to invite the " << to_string(*i) << " player as an ally?\n";
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		PlayerColors inviter_color = offense ? assignments.offense : assignments.defense;
+		unsigned response = prompt_player(inviter_color,prompt.str(),options);
 
-		if(response.compare("y") == 0)
+		if(response == 0)
 		{
 			invited.insert(*i);
 		}
@@ -1103,15 +1078,14 @@ void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::
 
 		if(invited_by_offense.find(current_player_color) != invited_by_offense.end())
 		{
-			std::string response;
-			do
-			{
-				std::cout << "Would the " << to_string(current_player_color) << " like to join with the offense? y/n\n";
-				std::cout << to_string(current_player_color) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
+			std::stringstream prompt;
+			prompt << "Would the " << to_string(current_player_color) << " like to join with the offense?\n";
+			std::vector<std::string> options;
+			options.push_back("Y");
+			options.push_back("N");
+			unsigned response = prompt_player(current_player_color,prompt.str(),options);
 
-			if(response.compare("y") == 0)
+			if(response == 0)
 			{
 				assignments.offensive_allies.insert(std::make_pair(current_player_color,0));
 				PlayerInfo &ally = get_player(current_player_color);
@@ -1126,15 +1100,14 @@ void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::
 
 		if(invited_by_defense.find(current_player_color) != invited_by_defense.end())
 		{
-			std::string response;
-			do
-			{
-				std::cout << "Would the " << to_string(current_player_color) << " like to join with the defense? y/n\n";
-				std::cout << to_string(current_player_color) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") != 0 && response.compare("n") != 0);
+			std::stringstream prompt;
+			prompt << "Would the " << to_string(current_player_color) << " like to join with the defense?\n";
+			std::vector<std::string> options;
+			options.push_back("Y");
+			options.push_back("N");
+			unsigned response = prompt_player(current_player_color,prompt.str(),options);
 
-			if(response.compare("y") == 0)
+			if(response == 0)
 			{
 				assignments.defensive_allies.insert(std::make_pair(current_player_color,0));
 				PlayerInfo &ally = get_player(current_player_color);
@@ -1185,19 +1158,16 @@ void GameState::setup_negotiation()
 	//Need to know how many cards will be exchanged by each player and if either (or both) players will receive a colony
 	//Players cannot see each other's cards during a deal. They can say whatever they want about their hand and it does not have to be true or false.
 	//Technically players can offer specific cards but if they do they *must* actually have the card. TODO: We could support this behavior at some point and enforce trading specific types of cards
-	std::string response;
-	do
-	{
-		std::cout << "Was the deal successful?\n";
-		std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-		std::cin >> response;
-	} while(response.compare("y") != 0 && response.compare("n") != 0);
+	std::stringstream prompt("Was the deal successful?\n");
+	std::vector<std::string> options;
+	options.push_back("Y");
+	options.push_back("N");
+	unsigned response = prompt_player(assignments.offense,prompt.str(),options); //FIXME: Prompt both the offense and defense here?
 
-	if(response.compare("y") == 0)
+	if(response == 0)
 	{
 		deal_params.successful = true;
 	}
-	response = "";
 
 	if(deal_params.successful) //Collect the terms of the deal
 	{
@@ -1213,18 +1183,14 @@ void GameState::setup_negotiation()
 			}
 			else
 			{
-				do
-				{
-					std::cout << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony? y/n\n";
-					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-					std::cin >> response;
-				} while(response.compare("y") != 0 && response.compare("n") != 0);
+				prompt.str(std::string());
+				prompt << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony?\n";
+				response = prompt_player(assignments.offense,prompt.str(),options);
 
-				if(response.compare("y") == 0)
+				if(response == 0)
 				{
 					deal_params.offense_receives_colony = true;
 				}
-				response = "";
 			}
 
 			if(offense_valid_colonies.empty())
@@ -1233,54 +1199,61 @@ void GameState::setup_negotiation()
 			}
 			else
 			{
-				do
-				{
-					std::cout << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony? y/n\n";
-					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-					std::cin >> response;
-				} while(response.compare("y") != 0 && response.compare("n") != 0);
+				prompt.str(std::string());
+				prompt << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.offense) << " player (offense) has a colony?\n";
+				response = prompt_player(assignments.offense,prompt.str(),options);
 
-				if(response.compare("y") == 0)
+				if(response == 0)
 				{
 					deal_params.defense_receives_colony = true;
 				}
-				response = "";
 			}
 
-			std::cout << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
-			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-			std::cin >> deal_params.num_cards_to_offense;
+			prompt.str(std::string());
+			prompt << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
+			options.clear();
+			options.push_back("0");
+			for(unsigned i=0; i<get_player(assignments.defense).hand.size(); i++)
+			{
+				options.push_back(std::to_string(i+1));
+			}
+			deal_params.num_cards_to_offense = prompt_player(assignments.offense,prompt.str(),options);
 
 			if(deal_params.num_cards_to_offense > 0)
 			{
-				do
-				{
-					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
-					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-					std::cin >> response;
-				} while(response.compare("y") != 0 && response.compare("n") != 0);
+				prompt.str(std::string());
+				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
+				options.clear();
+				options.push_back("Y");
+				options.push_back("N");
+				response = prompt_player(assignments.offense,prompt.str(),options);
 
-				if(response.compare("y") == 0)
+				if(response == 0)
 				{
 					deal_params.cards_to_offense_chosen_randomly = true;
 				}
-				response = "";
 			}
 
-			std::cout << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
-			std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-			std::cin >> deal_params.num_cards_to_defense;
+			prompt.str(std::string());
+			prompt << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
+			options.clear();
+			options.push_back("0");
+			for(unsigned i=0; i<get_player(assignments.offense).hand.size(); i++)
+			{
+				options.push_back(std::to_string(i+1));
+			}
+			deal_params.num_cards_to_defense = prompt_player(assignments.offense,prompt.str(),options);
 
 			if(deal_params.num_cards_to_defense > 0)
 			{
-				do
-				{
-					std::cout << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.offense) << " player (offense).\n";
-					std::cout << to_string(assignments.offense) << "/" << to_string(assignments.defense) << ">>";
-					std::cin >> response;
-				} while(response.compare("y") != 0 && response.compare("n") != 0);
+				prompt.str(std::string());
+				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.offense) << " player (offense).\n";
+				options.clear();
+				options.push_back("Y");
+				options.push_back("N");
+				response = prompt_player(assignments.offense,prompt.str(),options);
 
-				if(response.compare("y") == 0)
+				if(response == 0)
 				{
 					deal_params.cards_to_defense_chosen_randomly = true;
 				}
@@ -1343,20 +1316,16 @@ void GameState::resolve_negotiation()
 			}
 			else
 			{
+				std::stringstream prompt;
+				prompt << "The " << to_string(assignments.defense) << " player has the following cards. Choose one to give to the offense.\n";
 				for(unsigned i=0; i<deal_params.num_cards_to_offense; i++)
 				{
-					std::cout << "The " << to_string(assignments.defense) << " player has the following cards. Choose one to give to the offense.\n";
+					std::vector<std::string> options;
 					for(unsigned i=0; i<defense.hand.size(); i++)
 					{
-						std::cout << i << ": " << to_string(defense.hand[i]) << "\n";
+						options.push_back(to_string(defense.hand[i]));
 					}
-					unsigned chosen_option;
-					do
-					{
-						std::cout << "Please choose one of the option numbers above.\n";
-						std::cout << to_string(assignments.defense) << ">>";
-						std::cin >> chosen_option;
-					} while(chosen_option >= defense.hand.size());
+					unsigned chosen_option = prompt_player(assignments.defense,prompt.str(),options);
 					cards_to_offense.push_back(defense.hand[chosen_option]);
 					defense.hand.erase(defense.hand.begin()+chosen_option);
 				}
@@ -1379,20 +1348,16 @@ void GameState::resolve_negotiation()
 			}
 			else
 			{
+				std::stringstream prompt;
+				prompt << "The " << to_string(assignments.offense) << " player has the following cards. Choose one to give to the defense.\n";
 				for(unsigned i=0; i<deal_params.num_cards_to_defense; i++)
 				{
-					std::cout << "The " << to_string(assignments.offense) << " player has the following cards. Choose one to give to the defense.\n";
+					std::vector<std::string> options;
 					for(unsigned i=0; i<offense.hand.size(); i++)
 					{
-						std::cout << i << ": " << to_string(offense.hand[i]) << "\n";
+						options.push_back(to_string(offense.hand[i]));
 					}
-					unsigned chosen_option;
-					do
-					{
-						std::cout << "Please choose one of the option numbers above.\n";
-						std::cout << to_string(assignments.offense) << ">>";
-						std::cin >> chosen_option;
-					} while(chosen_option >= offense.hand.size());
+					unsigned chosen_option = prompt_player(assignments.offense,prompt.str(),options);
 					cards_to_defense.push_back(offense.hand[chosen_option]);
 					offense.hand.erase(offense.hand.begin()+chosen_option);
 				}
@@ -1612,15 +1577,11 @@ void GameState::defense_win_resolution()
 				}
 				else
 				{
-					unsigned choice;
-					do
-					{
-						std::cout << "Defender rewards. Choose one of the options below.\n";
-						std::cout << "0: Retrieve one of your ships from the warp.\n";
-						std::cout << "1: Draw a card from the Cosmic deck.\n";
-						std::cout << to_string(i->first) << ">>";
-						std::cin >> choice;
-					} while(choice != 0 && choice != 1);
+					std::string prompt("Choose which defender reward you would like to receieve.\n");
+					std::vector<std::string> options;
+					options.push_back("Retrieve one of your ships from the warp.");
+					options.push_back("Draw a card from the Cosmic deck.");
+					unsigned choice = prompt_player(i->first,prompt,options);
 
 					if(choice == 0)
 					{
@@ -1697,24 +1658,21 @@ void GameState::add_reinforcements(const PlayerColors player, const unsigned val
 		assert(0 && "Invalid player casted reinforcement card!");
 	}
 
-	unsigned choice;
-	do
+	std::stringstream prompt;
+	prompt << "Would you like to add reinforcements to the offense or defense? (You are fighting with the ";
+	if(player_is_offense)
 	{
-		std::cout << "Would you like to add reinforcements to the offense or defense? (You are fighting with the ";
-		if(player_is_offense)
-		{
-			std::cout << "offense)\n";
-		}
-		else
-		{
-			std::cout << "defense)\n";
-		}
-		std::cout << "0: Offense\n";
-		std::cout << "1: Defense\n";
-		std::cout << to_string(player) << ">>";
-		std::cin >> choice;
+		prompt << "offense)\n";
 	}
-	while(choice != 0 && choice != 1);
+	else
+	{
+		prompt << "defense)\n";
+	}
+	std::vector<std::string> options;
+	options.push_back("Offense");
+	options.push_back("Defense");
+
+	unsigned choice = prompt_player(player,prompt.str(),options);
 
 	if(choice == 0)
 	{
@@ -1772,15 +1730,13 @@ void GameState::start_game()
 		if(assignments.successful_encounter && !is_second_encounter_for_offense)
 		{
 			//The offense has the option of having a second encounter
-			std::string response;
-			do
-			{
-				std::cout << "The offense just had their first successful encounter of the turn. Would they like to have a second encounter? y/n\n";
-				std::cout << to_string(assignments.offense) << ">>";
-				std::cin >> response;
-			} while(response.compare("y") !=0 && response.compare("n") != 0);
+			std::string prompt("The offense just had their first successful encounter of the turn. Would they like to have a second encounter?\n");
+			std::vector<std::string> options;
+			options.push_back("Y");
+			options.push_back("N");
+			unsigned response = prompt_player(assignments.offense,prompt,options);
 
-			if(response.compare("y") == 0)
+			if(response == 0)
 			{
 				std::cout << "The offense has elected to have a second encounter this turn.\n";
 				is_second_encounter_for_offense = true;
@@ -2052,18 +2008,14 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 {
 	std::stringstream prompt;
 	prompt << "The " << to_string(color) << " player has the following valid colonies to choose from:\n";
+	std::vector<std::string> options;
 	for(unsigned i=0; i<valid_colonies.size(); i++)
 	{
-		prompt << "Option " << i << ": " << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second << "\n";
+		std::stringstream opt;
+		opt << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second;
+		options.push_back(opt.str());
 	}
-	unsigned chosen_option;
-	do
-	{
-		std::cout << prompt.str();
-		std::cout << "Please choose one of the option numbers above.\n";
-		std::cout << to_string(color) << ">>";
-		std::cin >> chosen_option;
-	} while(chosen_option >= valid_colonies.size()); //TODO: What's the proper way to protect bad input here? We don't want to crash, we just want to retry the prompt
+	unsigned chosen_option = prompt_player(color,prompt.str(),options);
 
 	return valid_colonies[chosen_option];
 }
@@ -2234,14 +2186,31 @@ void GameState::zap_alien(const PlayerColors player)
 	p.alien_zapped = true;
 }
 
-std::string GameState::prompt_player(PlayerInfo &p, const std::string &prompt) const
+unsigned GameState::prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const
 {
-	std::cout << prompt;
-	std::cout << to_string(p.color) << ">>";
 	std::string response;
-	std::cin >> response;
+	unsigned choice;
+	while(1)
+	{
+		std::cout << prompt;
+		for(unsigned i=0; i<options.size(); i++)
+		{
+			std::cout << i << ": " << options[i] << "\n";
+		}
+		std::cout << "Please chosoe one of the above options.\n";
+		std::cout << to_string(player) << ">>";
+		std::cin >> response;
+		if(is_only_digits(response))
+		{
+			choice = std::stoi(response);
+			if(choice < options.size())
+			{
+				break;
+			}
+		}
+	}
 
-	return response;
+	return choice;
 }
 
 void GameState::dump_current_stack() const
@@ -2331,19 +2300,18 @@ void GameState::resolve_game_event(const GameEvent g)
 			}
 			else //If we haven't already forced the alien power play
 			{
-				std::cout << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
-				unsigned chosen_option;
-				do
+				std::stringstream prompt;
+				prompt << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
+				std::vector<std::string> options;
+				for(unsigned i=0; i<valid_plays.size(); i++)
 				{
-					for(unsigned i=0; i<valid_plays.size(); i++)
-					{
-						std::cout << i << ": " << to_string(valid_plays[i].event_type) << "\n";
-					}
-					std::cout << valid_plays.size() << ": None (Resolve " << to_string(g.event_type) << ")\n";
-					std::cout << "Please choose one of the above options.\n";
-					std::cout << to_string(current_player.color) << ">>";
-					std::cin >> chosen_option;
-				} while(chosen_option > valid_plays.size());
+					options.push_back(to_string(valid_plays[i].event_type));
+				}
+				std::stringstream opt;
+				opt << "None (Resolve " << to_string(g.event_type) << ")";
+				options.push_back(opt.str());
+
+				unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
 
 				if(chosen_option < valid_plays.size())
 				{

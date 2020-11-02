@@ -6,12 +6,15 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <algorithm>
 
 #include "DestinyDeck.hpp"
 #include "CosmicDeck.hpp"
 #include "AlienBase.hpp"
 #include "PlayerInfo.hpp"
 #include "GameEvent.hpp"
+
+bool is_only_digits(const std::string &s);
 
 class PlayerAssignments
 {
@@ -86,7 +89,7 @@ public:
 	PlayerInfo& get_player(const PlayerColors &c);
 	void discard_and_draw_new_hand(PlayerInfo &player);
 	void resolve_game_event(const GameEvent g);
-	std::string prompt_player(PlayerInfo &p, const std::string &prompt) const;
+	unsigned prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
 	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
