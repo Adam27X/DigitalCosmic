@@ -13,6 +13,7 @@
 #include "AlienBase.hpp"
 #include "PlayerInfo.hpp"
 #include "GameEvent.hpp"
+#include "CosmicServer.hpp"
 
 bool is_only_digits(const std::string &s);
 
@@ -74,7 +75,7 @@ public:
 class GameState
 {
 public:
-	GameState(unsigned nplayers);
+	GameState(unsigned nplayers, CosmicServer &serv);
 	void dump() const;
 	void dump_planets() const;
 	void dump_PlanetInfo(const PlanetInfo &source, const std::string name) const;
@@ -160,5 +161,6 @@ private:
 	DealParameters deal_params;
 	bool is_second_encounter_for_offense;
 	unsigned encounter_num;
+	CosmicServer &server;
 };
 

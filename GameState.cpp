@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::cout << "Starting Game with " << num_players << " players\n";
@@ -2199,7 +2199,16 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		}
 		std::cout << "Please chosoe one of the above options.\n";
 		std::cout << to_string(player) << ">>";
-		std::cin >> response;
+		if(player == PlayerColors::Red)
+		{
+			std::string message("[needs_response] Respond to server console.");
+			server.send_message_to_client(message);
+			response = server.receive_message_from_client();
+		}
+		else
+		{
+			std::cin >> response;
+		}
 		if(is_only_digits(response))
 		{
 			choice = std::stoi(response);

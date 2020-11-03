@@ -32,29 +32,8 @@ int main(int argc, char *argv[])
 	server.accept_client();
 	server.close_listening_socket();
 
-	//TODO: Come up with a message protocol that tells the client whether or not they need to respond
-	//	Could do something like: [info] The Blue player is the offense
-	//	using the '[info]' tag to designate that a response is not needed or
-	//	[needs_response] Please choose one of the above options
-	//	using the '[needs_response]' tag to desginate that a response is necessary
-	server.send_message_to_client("Welcome!");
-	std::string response;
-	do
-	{
-		std::string message("[needs_response] Which player color would you like?\n");
-		server.send_message_to_client(message);
-		response = server.receive_message_from_client();
-
-	} while(response.compare("Purple") != 0);
-
-	//A special message that tells the client that they no longer need to listen
-	std::string message("END");
-	server.send_message_to_client(message);
-
-	server.close_client();
-
     	std::cout << "Textual Cosmic\n\n";
-    	GameState game(5);
+	GameState game(5,server);
     	game.dump();
 
 	std::unique_ptr<AlienBase> alien(new TickTock());
@@ -73,6 +52,8 @@ int main(int argc, char *argv[])
 	game.choose_first_player();
 
 	game.start_game();
+
+	server.close_client();
 
     	return 0;
 }
