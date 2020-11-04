@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		std::string buf = read_message_from_server(s0);
-		std::cout << "Server: " << buf << "\n";
+		std::cout << buf << "\n";
 
 		bool needs_response = false;
 		if(buf.compare("END") == 0)

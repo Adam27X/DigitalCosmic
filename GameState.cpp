@@ -2192,16 +2192,20 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 	unsigned choice;
 	while(1)
 	{
+		std::stringstream outgoing;
 		std::cout << prompt;
+		outgoing << prompt;
 		for(unsigned i=0; i<options.size(); i++)
 		{
 			std::cout << i << ": " << options[i] << "\n";
+			outgoing << i << ": " << options[i] << "\n";
 		}
-		std::cout << "Please chosoe one of the above options.\n";
+		std::cout << "Please choose one of the above options.\n";
 		std::cout << to_string(player) << ">>";
 		if(player == PlayerColors::Red)
 		{
-			std::string message("[needs_response] Respond to server console.");
+			server.send_message_to_client(outgoing.str());
+			std::string message("[needs_response] Please choose one of the above options.\n");
 			server.send_message_to_client(message);
 			response = server.receive_message_from_client();
 		}

@@ -56,8 +56,9 @@ void CosmicServer::listen()
 void CosmicServer::accept_client()
 {
 	socklen_t client_addr_len; //Not sure what we do with this field...
-	m_client_socket = accept(m_listen_socket, (sockaddr*)&m_client_addr, &client_addr_len);
-	check_error(m_client_socket,"accepting connection");
+	int client_socket = accept(m_listen_socket, (sockaddr*)&m_client_addr, &client_addr_len);
+	check_error(client_socket,"accepting connection");
+	m_client_socket_map.insert(std::pair<PlayerColors,int>(PlayerColors::Red,client_socket));
 
 	//At this point we've accepted a connection
 	std::cout << "Accepted connection from "
@@ -77,7 +78,7 @@ void CosmicServer::close_listening_socket()
 void CosmicServer::send_message_to_client(const std::string &message)
 {
 	unsigned msg_size = message.size()+1;
-	int res = write(m_client_socket, message.c_str(), msg_size);
+	int res = write(m_client_socket_map[PlayerColors::Red], message.c_str(), msg_size);
 	check_error(res,"writing message to client");
 }
 
@@ -85,7 +86,7 @@ std::string CosmicServer::receive_message_from_client()
 {
 	//TODO: How can we tell if the message is complete? Technically clients only need to send a byte at a time, but still
 	char buffer[1024];
-	int res = read(m_client_socket, buffer, 1023);
+	int res = read(m_client_socket_map[PlayerColors::Red], buffer, 1023);
 	check_error(res,"reading message from client");
 	if(res > 1023)
 	{
@@ -108,7 +109,7 @@ std::string CosmicServer::receive_message_from_client()
 
 void CosmicServer::close_client()
 {
-	int res = close(m_client_socket);
+	int res = close(m_client_socket_map[PlayerColors::Red]);
 	check_error(res,"closing client socket");
 }
 

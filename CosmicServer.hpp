@@ -8,6 +8,9 @@
 #include <arpa/inet.h>
 
 #include <string>
+#include <map>
+
+#include "PlayerColors.hpp"
 
 std::string find_local_ip_address();
 
@@ -33,6 +36,6 @@ private:
 	int m_listen_port;
 	int m_listen_socket;
 	sockaddr_in m_server_addr;
-	sockaddr_in m_client_addr; //TODO: Support multiple clients
-	int m_client_socket;
+	sockaddr_in m_client_addr;
+	std::map<PlayerColors,int> m_client_socket_map;
 };
