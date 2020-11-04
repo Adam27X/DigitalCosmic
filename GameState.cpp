@@ -16,7 +16,9 @@ bool is_only_digits(const std::string &s)
 GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
-	std::cout << "Starting Game with " << num_players << " players\n";
+	std::stringstream announce;
+	announce << "Starting Game with " << num_players << " players\n";
+	server.broadcast_message(announce.str());
 
 	//For now assign colors in a specific order...TODO: let the user choose colors
 	players[0].make_default_player(PlayerColors::Red);
@@ -49,65 +51,71 @@ void GameState::dump() const
 
 void GameState::dump_planets() const
 {
-	std::cout << "Current scores:\n";
+	std::stringstream announce;
+	announce << "Current scores:\n";
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
-		std::cout << to_string(i->color) << " Player score: " << i->score << "\n";
-		std::cout << "Planets: {";
+		announce << to_string(i->color) << " Player score: " << i->score << "\n";
+		announce << "Planets: {";
 		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
 		{
 			if(ii != i->planets.begin())
-				std::cout << ",";
-			std::cout << "{";
+				announce << ",";
+			announce << "{";
 			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
 			{
 				if(iii != ii->begin())
-					std::cout << ",";
-				std::cout << to_string(*iii);
+					announce << ",";
+				announce << to_string(*iii);
 			}
-			std::cout << "}";
+			announce << "}";
 		}
-		std::cout << "}\n";
+		announce << "}\n";
 	}
-	std::cout << "\n";
+	announce << "\n";
+	server.broadcast_message(announce.str());
 }
 
 void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name) const
 {
+	std::stringstream announce;
 	if(source.size())
 	{
-		std::cout << name << ": {";
+		announce << name << ": {";
 	}
 	for(auto i=source.begin(),e=source.end();i!=e;++i)
 	{
 		if(i!=source.begin())
-			std::cout << ",";
-		std::cout << to_string(*i);
+			announce << ",";
+		announce << to_string(*i);
 	}
 	if(source.size())
 	{
-		std::cout << "}\n\n";
+		announce << "}\n\n";
 	}
+	server.broadcast_message(announce.str());
 }
 
 void GameState::dump_warp() const
 {
+	std::stringstream announce;
 	if(warp.size())
 	{
-		std::cout << "Warp: {";
+		announce << "Warp: {";
 	}
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
 	{
 		if(i!=warp.begin())
 		{
-			std::cout << ",";
+			announce << ",";
 		}
-		std::cout << to_string(i->first);
+		announce << to_string(i->first);
 	}
 	if(warp.size())
 	{
-		std::cout << "}\n\n";
+		announce << "}\n\n";
 	}
+	server.broadcast_message(announce.str());
 }
 
 void GameState::dump_destiny_deck() const
@@ -203,8 +211,10 @@ void GameState::dump_player_hand(const PlayerInfo &p) const
 void GameState::choose_first_player()
 {
 	PlayerColors first_player = destiny_deck.draw_for_first_player_and_shuffle();
-	std::cout << "The " << to_string(first_player) << " player will go first\n";
+	std::stringstream announce;
+	announce << "The " << to_string(first_player) << " player will go first\n";
 	assignments.offense = first_player;
+	server.broadcast_message(announce.str());
 }
 
 PlayerInfo& GameState::get_player(const PlayerColors &c)
@@ -282,7 +292,7 @@ void GameState::cast_plague(const PlayerColors casting_player)
 
 void GameState::cast_force_field(const PlayerColors casting_player)
 {
-	std::cout << "Which alliances would you like to end?\n";
+	server.send_message_to_client(casting_player,"Which alliances would you like to end?\n");
 	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
 	{
 		std::stringstream prompt;
@@ -614,7 +624,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 			{
 				if(alien_power_available && alien_power_mandatory && !alien_power_used)
 				{
-					std::cout << "Mandatory alien power not yet chosen, try again.\n";
+					server.send_message_to_client(current_player.color,"Mandatory alien power not yet chosen, try again.\n");
 				}
 				else
 				{
@@ -660,7 +670,9 @@ void GameState::update_player_scores()
 		if(i->score >= 5)
 		{
 			game_over = true;
-			std::cout << "The " << to_string(i->color) << " player has won the game!\n";
+			std::stringstream announce;
+			announce << "The " << to_string(i->color) << " player has won the game!\n";
+			server.broadcast_message(announce.str());
 		}
 	}
 
@@ -731,7 +743,8 @@ void GameState::draw_from_destiny_deck()
 
 		if(drawn == off)
 		{
-			std::cout << "The " << to_string(off) << " player has drawn his or her own color.\n";
+			std::stringstream announce;
+			announce << "The " << to_string(off) << " player has drawn his or her own color.\n";
 
 			PlayerInfo &offense = get_player(off);
 			std::map< std::pair<PlayerColors,unsigned>, unsigned > valid_home_system_encounters; //Map <opponent,planet number> -> number of opponent ships on that planet
@@ -754,11 +767,13 @@ void GameState::draw_from_destiny_deck()
 			}
 			if(valid_home_system_encounters.empty())
 			{
-				std::cout << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
+				announce << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
+				server.broadcast_message(announce.str());
 				draw_from_destiny_deck();
 			}
 			else
 			{
+				server.broadcast_message(announce.str());
 				std::string prompt("The offense may either have an encounter with a player in his or her own system or draw another destiny card\n");
 				std::vector<std::string> options;
 				unsigned option = 0;
@@ -775,7 +790,8 @@ void GameState::draw_from_destiny_deck()
 
 				if(chosen_option == valid_home_system_encounters.size())
 				{
-					std::cout << "The offense has chosen to redraw\n";
+					announce.str("The offense has chosen to redraw\n");
+					server.broadcast_message(announce.str());
 					draw_from_destiny_deck();
 				}
 				else
@@ -1026,7 +1042,7 @@ void GameState::send_in_ships(const PlayerColors player)
 
 	if(launched_ships == 0 && !valid_colonies.empty())
 	{
-		std::cout << "The offense and allies *must* commit at least one ship to the encounter if able. Try again.\n";
+		server.send_message_to_client(player,"The offense and allies *must* commit at least one ship to the encounter if able. Try again.\n");
 		send_in_ships(player);
 	}
 }
@@ -1179,12 +1195,13 @@ void GameState::setup_negotiation()
 
 			if(defense_valid_colonies.empty())
 			{
-				std::cout << "Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n";
+				server.broadcast_message("Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n");
 			}
 			else
 			{
 				prompt.str(std::string());
 				prompt << "Will the " << to_string(assignments.offense) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony?\n";
+				//TODO: Prompt both the offense and defense and refuse to move on until they agree? That seems fairer
 				response = prompt_player(assignments.offense,prompt.str(),options);
 
 				if(response == 0)
@@ -1195,7 +1212,7 @@ void GameState::setup_negotiation()
 
 			if(offense_valid_colonies.empty())
 			{
-				std::cout << "Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n";
+				server.broadcast_message("Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n");
 			}
 			else
 			{
@@ -1262,7 +1279,7 @@ void GameState::setup_negotiation()
 			valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
 			if(!valid_deal)
 			{
-				std::cout << "Error: Successful deal chosen but nothing was exchanged. Try again.\n";
+				server.broadcast_message("Error: Successful deal chosen but nothing was exchanged. Try again.\n");
 			}
 		} while(!valid_deal);
 	}
@@ -1402,7 +1419,9 @@ void GameState::setup_compensation()
 		assignments.player_giving_compensation = assignments.offense;
 	}
 
-	std::cout << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encoutner, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
+	std::stringstream announce;
+	announce << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encountner, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
+	server.broadcast_message(announce.str());
 }
 
 void GameState::resolve_compensation()
@@ -1439,7 +1458,9 @@ void GameState::resolve_compensation()
 		//For each ship lost, the losing player receives a card from the opponent's hand chosen at random
 		PlayerInfo &player_giving_compensation = get_player(assignments.player_giving_compensation);
 		PlayerInfo &player_receiving_compensation = get_player(assignments.player_receiving_compensation);
-		std::cout << "The " << to_string(player_receiving_compensation.color) << " player will receive up to " << number_of_ships_lost << " cards from the " << to_string(player_giving_compensation.color) << " player as compensation\n";
+		std::stringstream announce;
+		announce << "The " << to_string(player_receiving_compensation.color) << " player will receive up to " << number_of_ships_lost << " cards from the " << to_string(player_giving_compensation.color) << " player as compensation\n";
+		server.broadcast_message(announce.str());
 		for(unsigned i=0; i<number_of_ships_lost; i++)
 		{
 			if(player_giving_compensation.hand.empty())
@@ -1458,7 +1479,7 @@ void GameState::setup_attack()
 	if(assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Morph)
 	{
 		//There's only one Morph card in the deck, but the rules explicitly state that *both* players lose the encounter should this scenario somehow occur
-		std::cout << "Both players revealed a Morph card! Both players lose the encounter and all ships involved will go to the warp. Yes, this scenario is explicitly laid out in the rules.\n";
+		server.broadcast_message("Both players revealed a Morph card! Both players lose the encounter and all ships involved will go to the warp. Yes, this scenario is explicitly laid out in the rules.\n");
 		return;
 	}
 	else if(assignments.offensive_encounter_card == CosmicCardType::Morph)
@@ -1477,14 +1498,17 @@ void GameState::setup_attack()
 		assignments.defense_attack_value = static_cast<unsigned>(assignments.defensive_encounter_card);
 	}
 
-	std::cout << "Initial scores from encounter cards: Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	std::stringstream announce;
+	announce << "Initial scores from encounter cards: Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
 
 	//Add score from ships
+	announce.str("");
 	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end(); i!=e; ++i)
 	{
 		if(*i == assignments.offense || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
 		{
-			std::cout << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
+			announce << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
 			assignments.offense_attack_value++;
 		}
 	}
@@ -1494,17 +1518,18 @@ void GameState::setup_attack()
 	{
 		if(*i == assignments.defense)
 		{
-			std::cout << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
+			announce << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
 			assignments.defense_attack_value++;
 		}
 	}
 	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
 	{
-		std::cout << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
+		announce << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
 		assignments.defense_attack_value += i->second;
 	}
 
-	std::cout << "Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	announce << "Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
 }
 
 void GameState::offense_win_resolution()
@@ -1572,7 +1597,9 @@ void GameState::defense_win_resolution()
 
 				if(!ship_exists_in_warp) //The player has no ships in the warp and must draw a card
 				{
-					std::cout << "Defender rewards. Drawing a card for the " << to_string(i->first) << " player.\n";
+					std::stringstream announce;
+					announce << "Defender rewards. Drawing a card for the " << to_string(i->first) << " player.\n";
+					server.broadcast_message(announce.str());
 					draw_cosmic_card(get_player(i->first));
 				}
 				else
@@ -1683,12 +1710,15 @@ void GameState::add_reinforcements(const PlayerColors player, const unsigned val
 		assignments.defense_attack_value += value;
 	}
 
-	std::cout << "After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	std::stringstream announce;
+	announce << "After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
 }
 
 void GameState::human_encounter_win_condition()
 {
-	std::cout << "The human was zapped! Their side will automatically win the encounter!\n";
+
+	server.broadcast_message("The human was zapped! Their side will automatically win the encounter!\n");
 	assignments.human_wins_encounter = true;
 }
 
@@ -1727,6 +1757,7 @@ void GameState::start_game()
 	while(1)
 	{
 		bool go_to_next_player;
+		std::stringstream announce;
 		if(assignments.successful_encounter && !is_second_encounter_for_offense)
 		{
 			//The offense has the option of having a second encounter
@@ -1738,28 +1769,29 @@ void GameState::start_game()
 
 			if(response == 0)
 			{
-				std::cout << "The offense has elected to have a second encounter this turn.\n";
+				announce << "The offense has elected to have a second encounter this turn.\n";
 				is_second_encounter_for_offense = true;
 				go_to_next_player = false;
 			}
 			else
 			{
-				std::cout << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
+				announce << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
 				go_to_next_player = true;
 			}
 		}
 		else if(assignments.successful_encounter)
 		{
-			std::cout << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
+			announce << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
 			is_second_encounter_for_offense = false;
 			go_to_next_player = true;
 		}
 		else
 		{
-			std::cout << "The offense did not win the last encounter. Play proceeds to the next player.\n";
+			announce << "The offense did not win the last encounter. Play proceeds to the next player.\n";
 			is_second_encounter_for_offense = false;
 			go_to_next_player = true;
 		}
+		server.broadcast_message(announce.str());
 
 		const PlayerColors last_offense = assignments.offense;
 		assignments.clear();
@@ -1808,15 +1840,15 @@ void GameState::execute_turn()
 	offense.current_role = EncounterRole::Offense;
 	bool offense_needs_discard = !offense.has_encounter_cards_in_hand();
 
-	std::cout << "The " << to_string(assignments.offense) << " Player is now the offense.\n";
+	std::stringstream announce;
+	announce << "The " << to_string(assignments.offense) << " Player is now the offense.\n";
+	server.broadcast_message(announce.str());
 	if(offense_needs_discard)
 	{
-		std::cout << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
+		announce.str("");
+		announce << "The offense has no encounter cards in hand. They now must discard their hand and draw eight cards\n";
+		server.broadcast_message(announce.str());
 		discard_and_draw_new_hand(offense);
-
-		//This implementations treats the dump and discard operation as one draw action, even if the player is forced to draw and discard multiple times
-		//Hence Remora will only draw once for this action, which seems appropriate
-		dump_player_hand(offense);
 	}
 
 	check_for_game_events(offense);
@@ -1829,7 +1861,9 @@ void GameState::execute_turn()
 	{
 		if(i->first == offense.color)
 		{
-			std::cout << "The " << to_string(assignments.offense) << " player will now regroup\n";
+			announce.str("");
+			announce << "The " << to_string(assignments.offense) << " player will now regroup\n";
+			server.broadcast_message(announce.str());
 			move_ship_from_warp_to_colony(offense);
 			break;
 		}
@@ -1903,8 +1937,59 @@ void GameState::execute_turn()
 	//Before cards are selected effects can now resolve
 	check_for_game_events(offense);
 
-	assignments.offensive_encounter_card = offense.choose_encounter_card();
-	assignments.defensive_encounter_card = defense.choose_encounter_card();
+	std::string prompt("Which encounter card would you like to play?\n");
+	std::vector<std::string> options;
+	for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			options.push_back(to_string(*i));
+		}
+	}
+	unsigned response = prompt_player(assignments.offense,prompt,options);
+
+	unsigned option = 0;
+	for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			if(option == response)
+			{
+				assignments.offensive_encounter_card = *i;
+				offense.hand.erase(i);
+				break;
+			}
+			option++;
+		}
+	}
+
+	options.clear();
+	for(auto i=defense.hand.begin(),e=defense.hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			options.push_back(to_string(*i));
+		}
+	}
+	response = prompt_player(assignments.defense,prompt,options);
+
+	option = 0;
+	for(auto i=defense.hand.begin(),e=defense.hand.end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			if(option == response)
+			{
+				assignments.defensive_encounter_card = *i;
+				defense.hand.erase(i);
+				break;
+			}
+			option++;
+		}
+	}
+
+	assert(assignments.offensive_encounter_card != CosmicCardType::None && "Failed to obtain offensive encounter card!");
+	assert(assignments.defensive_encounter_card != CosmicCardType::None && "Failed to obtain defensive encounter card!");
 
 	//After cards are selected effects can now resolve
 	state = TurnPhase::Planning_after_selection;
@@ -1913,8 +1998,10 @@ void GameState::execute_turn()
 	//Reveal Phase
 	state = TurnPhase::Reveal;
 
-	std::cout << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
-	std::cout << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
+	announce.str("");
+	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
+	announce << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
+	server.broadcast_message(announce.str());
 
 	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
@@ -2056,12 +2143,15 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 	{
 		if(p.color == assignments.offense)
 		{
-			std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			std::stringstream announce;
+			announce << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			server.broadcast_message(announce.str());
 			hyperspace_gate.push_back(p.color);
 		}
 		else
 		{
 			//No colony to return the ship to!
+			//FIXME: What if a player has one remaining ship on one colony and then used it to ally and then a force field was played? Where does the ship go?
 			return;
 		}
 	}
@@ -2127,7 +2217,9 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 	{
 		if(p.color == assignments.offense)
 		{
-			std::cout << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			std::stringstream announce;
+			announce << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+			server.broadcast_message(announce.str());
 			hyperspace_gate.push_back(p.color);
 		}
 		else
@@ -2193,26 +2285,18 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 	while(1)
 	{
 		std::stringstream outgoing;
-		std::cout << prompt;
 		outgoing << prompt;
 		for(unsigned i=0; i<options.size(); i++)
 		{
-			std::cout << i << ": " << options[i] << "\n";
 			outgoing << i << ": " << options[i] << "\n";
 		}
-		std::cout << "Please choose one of the above options.\n";
 		std::cout << to_string(player) << ">>";
-		if(player == PlayerColors::Red)
-		{
-			server.send_message_to_client(outgoing.str());
-			std::string message("[needs_response] Please choose one of the above options.\n");
-			server.send_message_to_client(message);
-			response = server.receive_message_from_client();
-		}
-		else
-		{
-			std::cin >> response;
-		}
+
+		server.send_message_to_client(player,outgoing.str());
+		std::string message("[needs_response] Please choose one of the above options.\n");
+		server.send_message_to_client(player,message);
+		response = server.receive_message_from_client(player);
+
 		if(is_only_digits(response))
 		{
 			choice = std::stoi(response);
@@ -2230,15 +2314,16 @@ void GameState::dump_current_stack() const
 {
 	std::stack<GameEvent> copy_stack = stack;
 
-	std::cout << "Current game stack:\n";
+	std::stringstream announce;
+	announce << "Current game stack:\n";
 	while(!copy_stack.empty())
 	{
 		GameEvent g = copy_stack.top();
 		unsigned depth = copy_stack.size()-1;
-		std::cout << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "\n";
+		announce << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "\n";
 		copy_stack.pop();
 	}
-
+	server.broadcast_message(announce.str());
 	assert(copy_stack.empty() && "Error printing stack!");
 }
 
@@ -2309,7 +2394,9 @@ void GameState::resolve_game_event(const GameEvent g)
 
 			if(take_action)
 			{
-				std::cout << "The " << to_string(current_player.color) << " player must respond to the " << to_string(g.event_type) << " action with their alien power\n";
+				std::stringstream announce;
+				announce << "The " << to_string(current_player.color) << " player must respond to the " << to_string(g.event_type) << " action with their alien power\n";
+				server.broadcast_message(announce.str());
 			}
 			else //If we haven't already forced the alien power play
 			{

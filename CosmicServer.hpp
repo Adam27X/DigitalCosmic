@@ -24,11 +24,12 @@ public:
 	void bind_listening_socket();
 	void set_linger_opts_for_listening_socket();
 	void listen();
-	void accept_client();
+	void accept_client(const PlayerColors color);
 	void close_listening_socket();
-	void send_message_to_client(const std::string &message);
-	std::string receive_message_from_client();
-	void close_client();
+	void send_message_to_client(const PlayerColors color, const std::string &message);
+	void broadcast_message(const std::string &message);
+	std::string receive_message_from_client(const PlayerColors color);
+	void close_client(const PlayerColors color);
 	std::string find_local_ip_address();
 
 private:

@@ -10,16 +10,24 @@
 
 int main(int argc, char *argv[])
 {
+	if(argc < 2)
+	{
+		std::cout << "Usage: " << argv[0] << " <number of players> [seed]\n";
+	}
+	unsigned num_players;
+
 	if(argc == 2)
 	{
-		std::srand(std::stoi(argv[1]));
+		num_players = std::stoi(argv[1]);
+		std::srand(unsigned (std::time(0)));
 	}
 	else
 	{
-		std::srand(unsigned (std::time(0)));
+		num_players = std::stoi(argv[1]);
+		std::srand(std::stoi(argv[2]));
 	}
 
-	std::cout << "Local IP address: " << find_local_ip_address() << "\n";
+	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
 
 	//TODO: Add a password just for paranoia?
 	int listen_port = 8080; //3074; //Commonly used port for games
@@ -30,11 +38,18 @@ int main(int argc, char *argv[])
 	server.bind_listening_socket();
 	server.set_linger_opts_for_listening_socket();
 	server.listen();
-	server.accept_client();
+	server.accept_client(PlayerColors::Red);
+	server.accept_client(PlayerColors::Blue);
+	if(num_players > 2)
+		server.accept_client(PlayerColors::Purple);
+	if(num_players > 3)
+		server.accept_client(PlayerColors::Yellow);
+	if(num_players > 4)
+		server.accept_client(PlayerColors::Green);
 	server.close_listening_socket();
 
     	std::cout << "Textual Cosmic\n\n";
-	GameState game(5,server);
+	GameState game(num_players,server);
     	game.dump();
 
 	std::unique_ptr<AlienBase> alien(new TickTock());
@@ -54,7 +69,14 @@ int main(int argc, char *argv[])
 
 	game.start_game();
 
-	server.close_client();
+	server.close_client(PlayerColors::Red);
+	server.close_client(PlayerColors::Blue);
+	if(num_players > 2)
+		server.close_client(PlayerColors::Purple);
+	if(num_players > 3)
+		server.close_client(PlayerColors::Yellow);
+	if(num_players > 4)
+		server.close_client(PlayerColors::Green);
 
     	return 0;
 }

@@ -53,12 +53,12 @@ void CosmicServer::listen()
 	check_error(res,"listening");
 }
 
-void CosmicServer::accept_client()
+void CosmicServer::accept_client(const PlayerColors color)
 {
 	socklen_t client_addr_len; //Not sure what we do with this field...
 	int client_socket = accept(m_listen_socket, (sockaddr*)&m_client_addr, &client_addr_len);
 	check_error(client_socket,"accepting connection");
-	m_client_socket_map.insert(std::pair<PlayerColors,int>(PlayerColors::Red,client_socket));
+	m_client_socket_map.insert(std::pair<PlayerColors,int>(color,client_socket));
 
 	//At this point we've accepted a connection
 	std::cout << "Accepted connection from "
@@ -74,20 +74,35 @@ void CosmicServer::close_listening_socket()
 	check_error(res,"closing listening socket");
 }
 
-//TODO: Support multiple clients
-void CosmicServer::send_message_to_client(const std::string &message)
+void CosmicServer::send_message_to_client(const PlayerColors color, const std::string &message)
 {
 	unsigned msg_size = message.size()+1;
-	int res = write(m_client_socket_map[PlayerColors::Red], message.c_str(), msg_size);
+	int res = write(m_client_socket_map[color], message.c_str(), msg_size);
 	check_error(res,"writing message to client");
 }
 
-std::string CosmicServer::receive_message_from_client()
+//Send to all clients
+void CosmicServer::broadcast_message(const std::string &message)
+{
+	unsigned msg_size = message.size()+1;
+	for(auto i=m_client_socket_map.begin(),e=m_client_socket_map.end();i!=e;++i)
+	{
+		int res = write(i->second, message.c_str(), msg_size);
+		check_error(res,"writing message to client");
+	}
+}
+
+std::string CosmicServer::receive_message_from_client(const PlayerColors color)
 {
 	//TODO: How can we tell if the message is complete? Technically clients only need to send a byte at a time, but still
 	char buffer[1024];
-	int res = read(m_client_socket_map[PlayerColors::Red], buffer, 1023);
+	int res = read(m_client_socket_map[color], buffer, 1023);
 	check_error(res,"reading message from client");
+	if(res == 0)
+	{
+		std::cerr << "Error reading message from client\n";
+		std::exit(1);
+	}
 	if(res > 1023)
 	{
 		std::cerr << "Error: Message from client was too long!\n";
@@ -95,22 +110,16 @@ std::string CosmicServer::receive_message_from_client()
 	}
 	buffer[res] = 0;
 	std::string ret;
-	if(res > 0)
-	{
-		ret = std::string(buffer,res-1);
-	}
-	else
-	{
-		ret = std::string();
-	}
+	ret = std::string(buffer,res-1);
 	std::cout << "Received " << res << " bytes from client.\n";
 	return ret;
 }
 
-void CosmicServer::close_client()
+void CosmicServer::close_client(const PlayerColors color)
 {
-	int res = close(m_client_socket_map[PlayerColors::Red]);
+	int res = close(m_client_socket_map[color]);
 	check_error(res,"closing client socket");
+	m_client_socket_map.erase(color);
 }
 
 std::string find_local_ip_address()

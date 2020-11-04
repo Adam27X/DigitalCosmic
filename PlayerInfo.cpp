@@ -48,45 +48,6 @@ bool PlayerInfo::has_encounter_cards_in_hand() const
 	return false;
 }
 
-CosmicCardType PlayerInfo::choose_encounter_card()
-{
-	std::cout << "Which encounter card would you like to play?\n";
-	unsigned chosen_option;
-	unsigned num_encounter_cards_in_hand = 0;
-	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
-		{
-			std::cout << num_encounter_cards_in_hand << ": " << to_string(*i) << "\n";
-			num_encounter_cards_in_hand++;
-		}
-	}
-
-	do
-	{
-		std::cout << "Please choose one of the options above.\n";
-		std::cout << to_string(color) << ">>";
-		std::cin >> chosen_option;
-	} while(chosen_option >= num_encounter_cards_in_hand);
-
-	unsigned option = 0;
-	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
-		{
-			if(option == chosen_option)
-			{
-				CosmicCardType ret = *i;
-				hand.erase(i);
-				return ret;
-			}
-			option++;
-		}
-	}
-
-	assert(0 && "Should never get here");
-}
-
 //If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
 //The alien is also disabled for the remainder of an encounter in which it was zapped
 bool PlayerInfo::alien_enabled() const
@@ -111,6 +72,7 @@ bool PlayerInfo::alien_enabled() const
 
 	if(num_home_colonies < 3)
 	{
+		//TODO: Would be nice to broadcast this information
 		std::cout << "The " << to_string(color) << " player cannot use their alien power because they do not control at least three of their home planets!\n";
 		return false;
 	}
