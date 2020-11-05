@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
 
 	//TODO: Add a password just for paranoia?
-	int listen_port = 8080; //3074; //Commonly used port for games
+	int listen_port = 3074; //Commonly used port for games
 	CosmicServer server(listen_port);
 
 	server.create_listening_socket();
