@@ -16,3 +16,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 target_compile_options(textualcosmic PUBLIC -g -O3 -std=c++17 -Wall -pedantic)
 
 install(TARGETS textualcosmic DESTINATION bin)
+
+include(InstallRequiredSystemLibraries)
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/License.txt")
+set(CPACK_PACKAGE_VERSION_MAJOR "0")
+set(CPACK_PACKAGE_VERSION_MINOR "01")
+include(CPack)
