@@ -51,6 +51,8 @@ std::string read_message_from_server(int socket)
 	return ret;
 }
 
+//TODO: Support commands for players coming up with responses; commands that don't require state specific to the current game can be handled locally in this program
+
 int main(int argc, char *argv[])
 {
 	//Create socket

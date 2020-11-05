@@ -1,0 +1,5 @@
+add_library(Aliens AlienBase.cpp Human.cpp Remora.cpp Sorcerer.cpp TickTock.cpp Trader.cpp)
+target_include_directories(Aliens PUBLIC ..)
+target_include_directories(Aliens PUBLIC .)
+target_compile_options(Aliens PUBLIC -g -O3 -std=c++17 -Wall -pedantic)
+install(TARGETS Aliens DESTINATION lib)
