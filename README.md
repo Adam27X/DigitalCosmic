@@ -14,8 +14,11 @@ I call this version of the game "TextualCosmic" because, at the moment, the game
 Support for Windows is currently limited. Only Cygwin has been tested, but MinGW or other alternatives may also work. Whether you use one of those methods or build on a Unix OS, the process should essentially be the same. TextualCosmic uses CMake and therefore prefers an out of tree build:
 
 (Assume the current directory is the root directory of the repository)
+
 `$ mkdir build && cd build`
+
 `$ cmake ..`
+
 `$ make`
 
 Then to host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. Eventually I'll add support for installers for platforms of interest.
