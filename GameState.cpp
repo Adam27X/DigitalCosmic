@@ -957,8 +957,24 @@ void GameState::draw_from_destiny_deck()
 			}
 			unsigned chosen_option = prompt_player(off,prompt,options);
 
-			assignments.defense = players[chosen_option].color;
-			assignments.planet_location = players[chosen_option].color;
+			unsigned valid_option = 0;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				if(players[i].color != off)
+				{
+					if(chosen_option == valid_option)
+					{
+						assignments.defense = players[i].color;
+						assignments.planet_location = players[i].color;
+						break;
+					}
+					valid_option++;
+				}
+			}
+
+			assert(assignments.defense != PlayerColors::Invalid && "Failed to set defensive player after drawing wild destiny card");
+			assert(assignments.planet_location != PlayerColors::Invalid && "Failed to set defensive planet location after drawing wild destiny card");
+
 			PlayerInfo &def = get_player(assignments.defense);
 			def.current_role = EncounterRole::Defense;
 		}
@@ -2363,7 +2379,31 @@ std::vector<PlayerColors> GameState::get_player_order()
 	}
 
 	std::set<PlayerColors> player_order_check(player_order.begin(),player_order.end());
-	//FIXME: This assertion trips in a 3 player game when a wild destiny is drawn...investigate
+
+	if(player_order.size() != player_order_check.size()) //Extra info in the event the check below fails
+	{
+		std::cout << "Player order: {";
+		for(auto i=player_order.begin(),e=player_order.end();i!=e;++i)
+		{
+			if(i != player_order.begin())
+			{
+				std::cout << ",";
+			}
+			std::cout << to_string(*i);
+		}
+		std::cout << "}\n";
+
+		std::cout << "Player order check: {";
+		for(auto i=player_order_check.begin(),e=player_order_check.end();i!=e;++i)
+		{
+			if(i != player_order_check.begin())
+			{
+				std::cout << ",";
+			}
+			std::cout << to_string(*i);
+		}
+		std::cout << "}\n";
+	}
 	assert(player_order.size() == player_order_check.size() && "Error in determining player order!"); //Ensure the player_order vector elements are unique
 
 	return player_order;

@@ -17,6 +17,8 @@ int main(int argc, char *argv[])
 	}
 	unsigned num_players;
 
+	//TODO: Use getopt or descore for parameters
+	//TODO: Have the server's listening port be a param here
 	if(argc == 2)
 	{
 		num_players = std::stoi(argv[1]);

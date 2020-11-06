@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <sstream>
 
 #include "CosmicServer.hpp"
 
@@ -66,6 +67,10 @@ void CosmicServer::accept_client(const PlayerColors color)
 		  << ((ntohl(m_client_addr.sin_addr.s_addr) >> 16) & 0xff) << "."
 		  << ((ntohl(m_client_addr.sin_addr.s_addr) >> 8) & 0xff) << "."
 		  << (ntohl(m_client_addr.sin_addr.s_addr) & 0xff) << ", port " << ntohs(m_client_addr.sin_port) << "\n";
+
+	std::stringstream announce;
+	announce << "Welcome to the game. You have been assigned the " << to_string(color) << " player color.\n";
+	send_message_to_client(color,announce.str());
 }
 
 void CosmicServer::close_listening_socket()
