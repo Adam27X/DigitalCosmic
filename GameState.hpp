@@ -88,6 +88,7 @@ public:
 	void dump_player_hand(const PlayerInfo &p) const;
 	void choose_first_player();
 	PlayerInfo& get_player(const PlayerColors &c);
+	const PlayerInfo& get_player_const(const PlayerColors &c) const;
 	void discard_and_draw_new_hand(PlayerInfo &player);
 	void resolve_game_event(const GameEvent g);
 	unsigned prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const;

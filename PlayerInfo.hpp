@@ -24,6 +24,7 @@ public:
 
 	void make_default_player(const PlayerColors c);
 	void dump_hand() const;
+	std::string get_hand() const;
 	bool has_encounter_cards_in_hand() const;
 	std::vector<GameEvent> can_respond(TurnPhase t, GameEvent g);
 	void set_game_state(GameState *g) { game = g; }

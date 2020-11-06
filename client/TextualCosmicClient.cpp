@@ -87,10 +87,11 @@ std::string filter_response(const std::string &response)
 	return response;
 }
 
-void parse_command(const std::string &command)
+bool parse_command(int socket, const std::string &command)
 {
 	std::cout << "Command: " << command << "\n";
 	const std::string &card_delim("card ");
+	const std::string &hand_delim("hand");
 	if(command.rfind(card_delim,0) == 0) //CosmicCard command, can be handled locally by the client
 	{
 		std::string info_str;
@@ -164,11 +165,11 @@ void parse_command(const std::string &command)
 		}
 
 		std::cout << info_str << "\n";
+
+		return true;
 	}
-	else
-	{
-		std::cout << "Invalid command.\n";
-	}
+
+	return false;
 }
 
 int main(int argc, char *argv[])
@@ -231,7 +232,7 @@ int main(int argc, char *argv[])
 		if(needs_response)
 		{
 			std::string response;
-			bool command_sent = false;
+			bool local_command_handled = false;
 			do
 			{
 				std::cout << buf << "\n";
@@ -243,15 +244,14 @@ int main(int argc, char *argv[])
 				const std::string &command_delimeter("info ");
 				if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
 				{
-					command_sent = true;
 					std::string command(response.begin()+command_delimeter.size(),response.end());
-					parse_command(command);
+					local_command_handled = parse_command(s0,command);
 				}
 				else
 				{
-					command_sent = false;
+					local_command_handled = false;
 				}
-			} while(command_sent);
+			} while(local_command_handled);
 
 			send_message_to_server(s0,response);
 		}

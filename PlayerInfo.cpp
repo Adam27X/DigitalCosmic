@@ -3,6 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <sstream>
 
 #include "PlayerInfo.hpp"
 #include "GameState.hpp"
@@ -27,12 +28,21 @@ void PlayerInfo::make_default_player(const PlayerColors c)
 
 void PlayerInfo::dump_hand() const
 {
-	std::cout << "Hand for the " << to_string(color) << " player:\n";
+	std::string hand_info = get_hand();
+	std::cout << hand_info;
+}
+
+std::string PlayerInfo::get_hand() const
+{
+	std::stringstream ret;
+	ret << "Hand for the " << to_string(color) << " player:\n";
 	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 	{
-		std::cout << to_string(*i) << "\n";
+		ret << to_string(*i) << "\n";
 	}
-	std::cout << "\n";
+	ret << "\n";
+
+	return ret.str();
 }
 
 bool PlayerInfo::has_encounter_cards_in_hand() const

@@ -230,6 +230,19 @@ PlayerInfo& GameState::get_player(const PlayerColors &c)
 	assert(0 && "Unable to find player!");
 }
 
+const PlayerInfo& GameState::get_player_const(const PlayerColors &c) const
+{
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		if(i->color == c)
+		{
+			return *i;
+		}
+	}
+
+	assert(0 && "Unable to find player!");
+}
+
 void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 {
 	//Copy cards from the player's hand to discard
@@ -2325,6 +2338,12 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 			{
 				break;
 			}
+		}
+
+		if(response.compare("info hand") == 0)
+		{
+			const std::string player_hand = get_player_const(player).get_hand();
+			server.send_message_to_client(player,player_hand);
 		}
 	}
 
