@@ -976,7 +976,7 @@ void GameState::choose_opponent_planet()
 		return;
 
 	std::stringstream prompt;
-	prompt << "The offense has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
+	prompt << "The offense (" << to_string(assignments.offense) << ") has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
 	std::vector<std::string> options;
 	const PlayerInfo &host = get_player(assignments.planet_location);
 	for(unsigned i=0; i<host.planets.size(); i++)
@@ -987,6 +987,11 @@ void GameState::choose_opponent_planet()
 	}
 	unsigned chosen_option = prompt_player(assignments.offense,prompt.str(),options);
 	assignments.planet_id = chosen_option;
+
+	std::stringstream announce;
+	announce << "The offense (" << to_string(assignments.offense) << ") will have an encounter with the " << to_string(assignments.defense) << " player on " << to_string(assignments.planet_location) << " Planet " << assignments.planet_id << "\n";
+	//TODO: Show the status of the chosen planet location?
+	server.broadcast_message(announce.str());
 }
 
 void GameState::send_in_ships(const PlayerColors player)
@@ -2358,6 +2363,7 @@ std::vector<PlayerColors> GameState::get_player_order()
 	}
 
 	std::set<PlayerColors> player_order_check(player_order.begin(),player_order.end());
+	//FIXME: This assertion trips in a 3 player game when a wild destiny is drawn...investigate
 	assert(player_order.size() == player_order_check.size() && "Error in determining player order!"); //Ensure the player_order vector elements are unique
 
 	return player_order;

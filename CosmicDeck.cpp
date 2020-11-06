@@ -2,6 +2,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <sstream>
 
 #include "CosmicDeck.hpp"
 
@@ -330,6 +331,81 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			assert(0);
 		break;
 	}
+}
+
+std::string card_info(const CosmicCardType c)
+{
+	std::stringstream ret;
+	if(static_cast<unsigned>(c) <= 40) 
+	{
+		ret << "Attack N";
+	}
+	else if(c == CosmicCardType::Reinforcement2 || c == CosmicCardType::Reinforcement3 || c == CosmicCardType::Reinforcement5)
+	{
+		ret << "Reinforcement +N";
+	}
+	else
+	{
+		ret << to_string(c);
+	}
+	ret << ": ";
+
+	if(static_cast<unsigned>(c) <= 40) //Attack card
+	{
+		ret << "[Encounter card] Opposed by attack: Higher total (ships + N) wins. Opposed by Negotiate: Wins, but opponent collects compensation.";
+	}
+	else if(c == CosmicCardType::Negotiate)
+	{
+		ret << "[Encounter card] Opposed by attack: Loses, but collects compensation. Opposed by Negotiate: Players have one minute to make a deal or lose three ships to the warp.";
+	}
+	else if(c == CosmicCardType::Morph)
+	{
+		ret << "[Encounter card] Duplicates opponent's encounter card when revealed.";
+	}
+	else if(c == CosmicCardType::Reinforcement2 || c == CosmicCardType::Reinforcement3 || c == CosmicCardType::Reinforcement5)
+	{
+		ret << "[Reinforcement card] Adds N to either side's total. Play after encounter cards are revealed. [Play as a main player or ally only] [Play during the reveal phase only]";
+	}
+	else if(c == CosmicCardType::CardZap)
+	{
+		ret << "[Artifact card] Negates Cards. Play this card at any time to negate a flare or artifact card just as a player attempts to use it. The flare or artifact must then be discarded. [As any player] [During any turn phase]";
+	}
+	else if(c == CosmicCardType::CosmicZap)
+	{
+		ret << "[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien's power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]";
+	}
+	else if(c == CosmicCardType::MobiusTubes)
+	{
+		ret << "[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners' colonies. [Play as the offense only] [ Play during the regroup phase only]";
+	}
+	else if(c == CosmicCardType::Plague)
+	{
+		ret << "[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]";
+	}
+	else if(c == CosmicCardType::ForceField)
+	{
+		ret << "[Artifact card] Stops Allies. Play after alliances are formed during an encounter. You may cancel the alliances of any or all players. Cancelled allies return their ships to any of their colonies. [As any player] [Play during the alliance phase only]";
+	}
+	else if(c == CosmicCardType::EmotionControl)
+	{
+		ret << "[Artifact card] Alters Attack. Play after encounter cards are revealed to treat all attack cards played this encounter as negotiate cards. The main players must then attempt to make a deal. [As any player] [Play during the reveal phase only]";
+	}
+	else if(c == CosmicCardType::Quash)
+	{
+		ret << "[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]";
+	}
+	else if(c == CosmicCardType::IonicGas)
+	{
+		ret << "[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]";
+	}
+	else
+	{
+		std::cerr << "Unexpected CosmicCardType passed to card_info(): " << to_string(c) << "\n";
+		assert(0);
+	}
+
+	ret << "\n";
+	return ret.str();
 }
 
 CosmicDeck::CosmicDeck()

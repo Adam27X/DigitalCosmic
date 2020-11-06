@@ -45,6 +45,7 @@ std::string to_string(const CosmicCardType &c);
 bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role);
 GameEventType to_game_event_type(const CosmicCardType c);
 CosmicCardType to_cosmic_card_type(const GameEventType g);
+std::string card_info(const CosmicCardType c);
 
 class CosmicDeck
 {
