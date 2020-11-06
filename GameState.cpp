@@ -2302,7 +2302,7 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		server.send_message_to_client(player,message);
 		response = server.receive_message_from_client(player);
 
-		if(is_only_digits(response))
+		if(response.size() && is_only_digits(response))
 		{
 			choice = std::stoi(response);
 			if(choice < options.size())

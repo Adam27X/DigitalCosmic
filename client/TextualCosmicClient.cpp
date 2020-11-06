@@ -35,6 +35,8 @@ std::string read_message_from_server(int socket)
 	char buffer[1024];
 	int res = read(socket, buffer, 1023);
 	check_error(res,"reading message from server");
+
+	//At this point the client has received res bytes from the server
 	if(res > 1023)
 	{
 		std::cerr << "Error: Message from server was too long!\n";
@@ -50,14 +52,45 @@ std::string read_message_from_server(int socket)
 	{
 		ret = std::string();
 	}
-	std::cout << "Received " << res << " bytes from server.\n";
+
 	return ret;
+}
+
+std::string filter_response(const std::string &response)
+{
+	//NOTE: This filtering is generally dependent on the terminal rather than something we control in C++. I suppose we'll eventually want some sort of drop down menu
+	//Left arrow: 27 91 68
+	//Right arrow: 27 91 67
+	//Up arrow: 27 91 65
+	//Down arrow: 27 91 66
+	for(unsigned i=0; i<response.size(); i++)
+	{
+		if(static_cast<int>(response[i]) == 27)
+		{
+			if((i+2 < response.size()) && (static_cast<int>(response[i+1]) == 91) && (static_cast<int>(response[i+2]) <= 68) && (static_cast<int>(response[i+2]) >= 65))
+			{
+				//Found an arrow key, get rid of it
+				std::string subresponse;
+				if(i+3 < response.size())
+				{
+					subresponse = std::string(response.begin()+i+3,response.end());
+				}
+				else //Removing it hits the end of the string
+				{
+					return std::string("");
+				}
+				return filter_response(subresponse);
+			}
+		}
+	}
+
+	return response;
 }
 
 void parse_command(const std::string &command)
 {
 	std::cout << "Command: " << command << "\n";
-	const std::string &card_delim("card_");
+	const std::string &card_delim("card ");
 	if(command.rfind(card_delim,0) == 0) //CosmicCard command, can be handled locally by the client
 	{
 		std::string info_str;
@@ -203,9 +236,11 @@ int main(int argc, char *argv[])
 			{
 				std::cout << buf << "\n";
 				std::cout << "How would you like to respond?\n";
-				std::cin >> response;
+				std::getline(std::cin,response);
 
-				const std::string &command_delimeter("info_");
+				response = filter_response(response);
+
+				const std::string &command_delimeter("info ");
 				if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
 				{
 					command_sent = true;
