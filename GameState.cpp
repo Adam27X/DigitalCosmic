@@ -49,7 +49,16 @@ void GameState::dump() const
 	dump_warp();
 }
 
-void GameState::dump_planets() const
+const std::string GameState::get_game_board() const
+{
+	std::stringstream ret;
+	ret << get_planets();
+	ret << get_PlanetInfo(hyperspace_gate,"Hyperspace gate");
+	ret << get_warp();
+	return ret.str();
+}
+
+const std::string GameState::get_planets() const
 {
 	std::stringstream announce;
 	announce << "Current scores:\n";
@@ -73,10 +82,11 @@ void GameState::dump_planets() const
 		announce << "}\n";
 	}
 	announce << "\n";
-	server.broadcast_message(announce.str());
+
+	return announce.str();
 }
 
-void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name) const
+const std::string GameState::get_PlanetInfo(const PlanetInfo &source, const std::string name) const
 {
 	std::stringstream announce;
 	if(source.size())
@@ -93,10 +103,11 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 	{
 		announce << "}\n\n";
 	}
-	server.broadcast_message(announce.str());
+
+	return announce.str();
 }
 
-void GameState::dump_warp() const
+const std::string GameState::get_warp() const
 {
 	std::stringstream announce;
 	if(warp.size())
@@ -115,7 +126,26 @@ void GameState::dump_warp() const
 	{
 		announce << "}\n\n";
 	}
-	server.broadcast_message(announce.str());
+
+	return announce.str();
+}
+
+void GameState::dump_planets() const
+{
+	const std::string announce = get_planets();
+	server.broadcast_message(announce);
+}
+
+void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name) const
+{
+	const std::string announce = get_PlanetInfo(source,name);
+	server.broadcast_message(announce);
+}
+
+void GameState::dump_warp() const
+{
+	const std::string announce = get_warp();
+	server.broadcast_message(announce);
 }
 
 void GameState::dump_destiny_deck() const
@@ -2386,6 +2416,11 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		{
 			const std::string destiny_discard_pile = get_destiny_discard();
 			server.send_message_to_client(player,destiny_discard_pile);
+		}
+		else if(response.compare("info board") == 0)
+		{
+			const std::string game_board = get_game_board();
+			server.send_message_to_client(player,game_board);
 		}
 	}
 
