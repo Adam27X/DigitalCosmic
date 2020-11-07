@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	game.assign_alien(PlayerColors::Green, alien5);
 
 	game.deal_starting_hands();
-	game.dump_player_hands();
+	game.send_player_hands();
 	game.choose_first_player();
 
 	game.start_game();

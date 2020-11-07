@@ -165,6 +165,8 @@ void GameState::assign_alien(const PlayerColors color, std::unique_ptr<AlienBase
 		if(player.color == color)
 		{
 			player.alien = std::move(alien);
+			const std::string msg = player.get_alien_desc();
+			server.send_message_to_client(color,msg);
 			break;
 		}
 	}
@@ -223,6 +225,16 @@ void GameState::draw_cosmic_card(PlayerInfo &player)
 
 	GameEvent g(player.color,GameEventType::DrawCard);
 	resolve_game_event(g);
+}
+
+void GameState::send_player_hands() const
+{
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		const PlayerColors player = players[i].color;
+		const std::string player_hand = get_player_const(player).get_hand();
+		server.send_message_to_client(player,player_hand);
+	}
 }
 
 void GameState::dump_player_hands() const

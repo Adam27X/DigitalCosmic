@@ -20,7 +20,7 @@ const std::string AlienBase::get_desc() const
 		desc << to_string(*i);
 	}
 	desc << "}\n";
-	desc << "Description: " << description << "\n";
+	desc << "Description: " << description << "\n\n";
 
 	return desc.str();
 }

@@ -91,7 +91,7 @@ bool parse_command(int socket, const std::string &command)
 {
 	std::cout << "Command: " << command << "\n";
 	const std::string &card_delim("card ");
-	const std::string &hand_delim("hand");
+	const std::string &help_delim("help");
 	if(command.rfind(card_delim,0) == 0) //CosmicCard command, can be handled locally by the client
 	{
 		std::string info_str;
@@ -165,6 +165,27 @@ bool parse_command(int socket, const std::string &command)
 		}
 
 		std::cout << info_str << "\n";
+
+		return true;
+	}
+	else if(command.rfind(help_delim,0) == 0) //Provide list of valid commands
+	{
+		std::stringstream info_str;
+		info_str << "Valid player commands:\n";
+		info_str << "info help\n";
+		info_str << "\tReturns this message.\n";
+		info_str << "info board\n";
+		info_str << "\tReturns the current game scores, planets, warp, and hyperspace gate.\n";
+		info_str << "info hand\n";
+		info_str << "\tReturns the contents of the player's hand.\n";
+		info_str << "info alien\n";
+		info_str << "\tReturns the player's alien power.\n";
+		info_str << "info aliens\n";
+		info_str << "\tReturns any aliens that have been revealed so far.\n";
+		info_str << "info card <Cosmic Card Type>\n";
+		info_str << "\tReturns the description of <CosmicCardType>. For example: 'info card ForceField'.\n";
+
+		std::cout << info_str.str() << "\n";
 
 		return true;
 	}
