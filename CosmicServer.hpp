@@ -27,7 +27,7 @@ public:
 	void accept_client(const PlayerColors color);
 	void close_listening_socket();
 	void send_message_to_client(const PlayerColors color, const std::string &message);
-	void broadcast_message(const std::string &message);
+	void broadcast_message(const std::string &message) const;
 	std::string receive_message_from_client(const PlayerColors color);
 	void close_client(const PlayerColors color);
 	std::string find_local_ip_address();

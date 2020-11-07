@@ -15,7 +15,7 @@ class GameState;
 class AlienBase
 {
 public:
-	AlienBase() { };
+	AlienBase() : revealed(false) { };
 	virtual void dump() const;
 
 	void set_name(const std::string &n) { name = n; }
@@ -36,6 +36,7 @@ public:
 	//By default, do nothing if countered (certain Aliens, like Human, will actually take an action if zapped)
 	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
 	const std::string& get_name() const { return name; }
+	std::function<void()> get_callback_if_action_taken(GameState *g, const PlayerColors player);
 
 private:
 	std::string name;
@@ -44,4 +45,5 @@ private:
 	bool mandatory; //Is the Alien power optional or mandatory?
 	std::set<TurnPhase> valid_phases; //When can/must the player exercise the power?
 	std::string description; //Actual text from Alien card
+	bool revealed; //Has this Alien been revealed yet?
 };

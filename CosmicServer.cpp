@@ -87,7 +87,7 @@ void CosmicServer::send_message_to_client(const PlayerColors color, const std::s
 }
 
 //Send to all clients
-void CosmicServer::broadcast_message(const std::string &message)
+void CosmicServer::broadcast_message(const std::string &message) const
 {
 	unsigned msg_size = message.size()+1;
 	for(auto i=m_client_socket_map.begin(),e=m_client_socket_map.end();i!=e;++i)

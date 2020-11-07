@@ -99,6 +99,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 		ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
+		ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
 		vret.push_back(ret);
 	}
 
@@ -294,6 +295,7 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 		GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
 		ret.callback_if_resolved = alien->get_resolution_callback(game,color,bogus);
 		ret.callback_if_countered = alien->get_callback_if_countered(game,color);
+		ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
 		return ret;
 	}
 

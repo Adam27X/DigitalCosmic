@@ -1,6 +1,9 @@
 #include <cassert>
 #include <iostream>
+#include <sstream>
+
 #include "AlienBase.hpp"
+#include "GameState.hpp"
 
 void AlienBase::dump() const
 {
@@ -108,5 +111,35 @@ bool AlienBase::check_role_and_phase(const EncounterRole e, const TurnPhase t) c
 bool AlienBase::check_for_game_event(const EncounterRole e, const TurnPhase t) const
 {
 	return check_role_and_phase(e,t);
+}
+
+std::function<void()> AlienBase::get_callback_if_action_taken(GameState *g, const PlayerColors player)
+{
+	if(!revealed)
+	{
+		std::stringstream message;
+		message << "The " << to_string(player) << " player is the " << name << "!\n";
+		message << name << " has the power of " << power << "\n";
+		message << "Required player role for this power: " << to_string(role) << "\n";
+		message << "Is this power mandatory? " << mandatory << "\n";
+		message << "Valid phases for this power: {";
+		for(auto i=valid_phases.begin(),e=valid_phases.end();i!=e;++i)
+		{
+			if(i!=valid_phases.begin())
+				message << ",";
+			message << to_string(*i);
+		}
+		message << "}\n";
+		message << "Description: " << description << "\n";
+		const std::string msg = message.str();
+
+		std::function<void()> ret;
+		ret = [g,player,msg,this] () { g->get_server().broadcast_message(msg); this->revealed = true; };
+		return ret;
+	}
+	else
+	{
+		return nullptr;
+	}
 }
 
