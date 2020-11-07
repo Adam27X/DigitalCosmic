@@ -531,6 +531,15 @@ void GameState::stop_allies()
 	allies_to_be_stopped.clear();
 }
 
+//FIXME: This function can be called multiple times per turn
+//	 Consider the following scenario:
+//	 Blue player is offense during regroup and choose not to cast Mobius Tubes
+//	 The Green player, next to act, casts Plague on the Blue Player
+//	 The Blue player has another artifact card to discard and chooses to hang on to Mobius Tubes
+//	 Once plague has resolved, shouldn't the Blue player be able to play Mobius Tubes? It's still the regroup phase!
+//	 More generally, if anything resolves the first time this function is called we need to call it again (what's tricky here is that we also have to be sure that we don't allow events to resolve twice, such as Alien powers...we may have to mark them as 'used')
+//TODO: Prompt players even when they have no options here? Slows down the game a bit but does a better job of keeping players aware of what's going on
+//	Additionally, the "None" option should probably read 'Proceed to the <next_phase> Phase' (or 'Proceed to the next encounter' for resolution)
 void GameState::check_for_game_events(PlayerInfo &offense)
 {
 	std::vector<PlayerColors> player_order = get_player_order();
@@ -1990,6 +1999,7 @@ void GameState::execute_turn()
 			if(option == response)
 			{
 				assignments.offensive_encounter_card = *i;
+				cosmic_discard.push_back(*i);
 				offense.hand.erase(i);
 				break;
 			}
@@ -2015,6 +2025,7 @@ void GameState::execute_turn()
 			if(option == response)
 			{
 				assignments.defensive_encounter_card = *i;
+				cosmic_discard.push_back(*i);
 				defense.hand.erase(i);
 				break;
 			}
@@ -2312,6 +2323,26 @@ void GameState::zap_alien(const PlayerColors player)
 	p.alien_zapped = true;
 }
 
+const std::string GameState::get_cosmic_discard() const
+{
+	std::stringstream ret;
+	ret << "Cosmic discard pile: {";
+	for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
+	{
+		if(i != cosmic_discard.begin())
+			ret << ",";
+		ret << to_string(*i);
+	}
+	ret << "}\n";
+
+	return ret.str();
+}
+
+const std::string GameState::get_destiny_discard() const
+{
+	return destiny_deck.get_discard();
+}
+
 unsigned GameState::prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const
 {
 	std::string response;
@@ -2340,10 +2371,21 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 			}
 		}
 
+		//Check for valid player commands
 		if(response.compare("info hand") == 0)
 		{
 			const std::string player_hand = get_player_const(player).get_hand();
 			server.send_message_to_client(player,player_hand);
+		}
+		else if(response.compare("info discard cosmic") == 0)
+		{
+			const std::string cosmic_discard_pile = get_cosmic_discard();
+			server.send_message_to_client(player,cosmic_discard_pile);
+		}
+		else if(response.compare("info discard destiny") == 0)
+		{
+			const std::string destiny_discard_pile = get_destiny_discard();
+			server.send_message_to_client(player,destiny_discard_pile);
 		}
 	}
 

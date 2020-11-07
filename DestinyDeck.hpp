@@ -30,6 +30,7 @@ public:
 	void dump() const;
 	PlayerColors draw_for_first_player_and_shuffle();
 	DestinyCardType draw();
+	const std::string get_discard() const;
 private:
 	std::vector<DestinyCardType> deck;
 	std::vector<DestinyCardType> discard;

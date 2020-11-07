@@ -2,6 +2,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <sstream>
 
 #include "DestinyDeck.hpp"
 
@@ -171,4 +172,19 @@ DestinyCardType DestinyDeck::draw()
 	deck.erase(deck.begin());
 
 	return ret;
+}
+
+const std::string DestinyDeck::get_discard() const
+{
+	std::stringstream ret;
+	ret << "Destiny discard pile: {";
+	for(auto i=discard.begin(),e=discard.end();i!=e;++i)
+	{
+		if(i != discard.begin())
+			ret << ",";
+		ret << to_string(*i);
+	}
+	ret << "}\n";
+
+	return ret.str();
 }

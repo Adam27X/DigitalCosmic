@@ -103,6 +103,8 @@ public:
 	void start_game();
 	bool player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const;
 	void zap_alien(const PlayerColors player);
+	const std::string get_cosmic_discard() const;
+	const std::string get_destiny_discard() const;
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
