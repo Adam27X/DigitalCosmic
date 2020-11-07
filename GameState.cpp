@@ -2422,6 +2422,29 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 			const std::string game_board = get_game_board();
 			server.send_message_to_client(player,game_board);
 		}
+		else if(response.compare("info alien") == 0)
+		{
+			const std::string alien_desc = get_player_const(player).get_alien_desc();
+			server.send_message_to_client(player,alien_desc);
+		}
+		else if(response.compare("info aliens") == 0)
+		{
+			std::stringstream msg;
+			for(unsigned i=0; i<players.size(); i++)
+			{
+				//Only show the aliens that have been revealed!
+				if(get_player_const(players[i].color).alien_revealed())
+				{
+					msg << "Revealed alien for the " << to_string(players[i].color) << " player:\n";
+					msg << get_player_const(players[i].color).get_alien_desc();
+				}
+			}
+			if(msg.str().empty())
+			{
+				msg << "No aliens have been revealed yet.\n";
+			}
+			server.send_message_to_client(player,msg.str());
+		}
 	}
 
 	return choice;

@@ -5,21 +5,29 @@
 #include "AlienBase.hpp"
 #include "GameState.hpp"
 
-void AlienBase::dump() const
+const std::string AlienBase::get_desc() const
 {
-	std::cout << "===== " << name << " =====\n";
-	std::cout << "You have the power of " << power << "\n";
-	std::cout << "Required player role for this power: " << to_string(role) << "\n";
-	std::cout << "Is this power mandatory? " << mandatory << "\n";
-	std::cout << "Valid phases for this power: {";
+	std::stringstream desc;
+	desc << "===== " << name << " =====\n";
+	desc << "You have the power of " << power << "\n";
+	desc << "Required player role for this power: " << to_string(role) << "\n";
+	desc << "Is this power mandatory? " << mandatory << "\n";
+	desc << "Valid phases for this power: {";
 	for(auto i=valid_phases.begin(),e=valid_phases.end();i!=e;++i)
 	{
 		if(i!=valid_phases.begin())
-			std::cout << ",";
-		std::cout << to_string(*i);
+			desc << ",";
+		desc << to_string(*i);
 	}
-	std::cout << "}\n";
-	std::cout << "Description: " << description << "\n";
+	desc << "}\n";
+	desc << "Description: " << description << "\n";
+
+	return desc.str();
+}
+
+void AlienBase::dump() const
+{
+	std::cout << get_desc();
 }
 
 bool AlienBase::check_encounter_role(const EncounterRole e) const

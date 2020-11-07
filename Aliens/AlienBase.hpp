@@ -16,7 +16,9 @@ class AlienBase
 {
 public:
 	AlienBase() : revealed(false) { };
-	virtual void dump() const;
+
+	void dump() const;
+	const std::string get_desc() const;
 
 	void set_name(const std::string &n) { name = n; }
 	void set_power(const std::string &p) { power = p; }
@@ -37,6 +39,7 @@ public:
 	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
 	const std::string& get_name() const { return name; }
 	std::function<void()> get_callback_if_action_taken(GameState *g, const PlayerColors player);
+	bool get_revealed() const { return revealed; }
 
 private:
 	std::string name;

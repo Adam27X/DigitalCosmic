@@ -30,6 +30,8 @@ public:
 	void set_game_state(GameState *g) { game = g; }
 	GameEvent can_use_alien_with_empty_stack(const TurnPhase t);
 	bool alien_enabled() const;
+	const std::string get_alien_desc() const;
+	bool alien_revealed() const;
 
 	//Does this need a forward decl?
 	GameState *game; //Intended for callbacks and should be used sparingly

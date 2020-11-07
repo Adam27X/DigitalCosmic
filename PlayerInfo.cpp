@@ -92,6 +92,11 @@ bool PlayerInfo::alien_enabled() const
 	}
 }
 
+bool PlayerInfo::alien_revealed() const
+{
+	return alien->get_revealed();
+}
+
 std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	std::vector<GameEvent> vret;
@@ -301,3 +306,9 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 
 	return GameEvent(color,GameEventType::None);
 }
+
+const std::string PlayerInfo::get_alien_desc() const
+{
+	return alien->get_desc();
+}
+
