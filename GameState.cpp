@@ -2385,7 +2385,7 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		{
 			outgoing << i << ": " << options[i] << "\n";
 		}
-		std::cout << to_string(player) << ">>";
+		std::cout << "Waiting on response from the " << to_string(player) << " player..." << std::flush;
 
 		server.send_message_to_client(player,outgoing.str());
 		std::string message("[needs_response] Please choose one of the above options.\n");
