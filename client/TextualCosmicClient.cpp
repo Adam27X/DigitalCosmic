@@ -5,12 +5,21 @@
 #include <sstream>
 
 //Client/Server includes
-#include <errno.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <string.h>
+#ifdef __unix__
+	#include <errno.h>
+	#include <unistd.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <netdb.h>
+	#include <string.h>
+#elif _WIN32
+	#define _WIN32_WINNT 0x501 //Some dependency for ws2tcpip.h? WTF?
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
+	#pragma comment(lib, "Ws2_32.lib")
+#else
+	#error Unexpected platform
+#endif
 
 #include "CosmicDeck.hpp"
 
@@ -25,35 +34,75 @@ void check_error(int res, const std::string &context)
 
 void send_message_to_server(int socket, const std::string &message)
 {
-	unsigned msg_size = message.size()+1;
-	int res = write(socket, message.c_str(), msg_size);
-	check_error(res,"writing message to server");
+	#if __unix__
+		unsigned msg_size = message.size()+1;
+		int res = write(socket, message.c_str(), msg_size);
+		check_error(res,"writing message to server");
+	#elif _WIN32
+		unsigned msg_size = message.size()+1;
+		int res = send(socket, message.c_str(), msg_size, 0); //For successful writes, res will contain the number of bytes sent
+		if(res == SOCKET_ERROR)
+		{
+			std::cerr << "Error sending message: " << WSAGetLastError() << "\n";
+			closesocket(socket);
+			WSACleanup();
+			std::exit(1);
+		}
+	#endif
 }
 
 std::string read_message_from_server(int socket)
 {
-	char buffer[1024];
-	int res = read(socket, buffer, 1023);
-	check_error(res,"reading message from server");
+	#if __unix__
+		char buffer[1024];
+		int res = read(socket, buffer, 1023);
+		check_error(res,"reading message from server");
 
-	//At this point the client has received res bytes from the server
-	if(res > 1023)
-	{
-		std::cerr << "Error: Message from server was too long!\n";
-		std::exit(1);
-	}
-	buffer[res] = 0;
-	std::string ret;
-	if(res > 0)
-	{
-		ret = std::string(buffer,res-1);
-	}
-	else
-	{
-		ret = std::string();
-	}
+		//At this point the client has received res bytes from the server
+		if(res > 1023)
+		{
+			std::cerr << "Error: Message from server was too long!\n";
+			std::exit(1);
+		}
+		buffer[res] = 0;
+		std::string ret;
+		if(res > 0)
+		{
+			ret = std::string(buffer,res-1);
+		}
+		else
+		{
+			ret = std::string();
+		}
 
-	return ret;
+		return ret;
+	#elif _WIN32
+		char buffer[1024];
+		int res = recv(socket, buffer, 1023, 0);
+		if(res < 0)
+		{
+			std::cerr << "Receive failed: " << WSAGetLastError() << "\n";
+			std::exit(1);
+		}
+
+		if(res > 1023)
+		{
+			std::cerr << "Error: Message from server was too long!\n";
+			std::exit(1);
+		}
+		buffer[res] = 0;
+		std::string ret;
+		if(res > 0)
+		{
+			ret = std::string(buffer,res-1);
+		}
+		else
+		{
+			ret = std::string();
+		}
+
+		return ret;
+	#endif
 }
 
 std::string filter_response(const std::string &response)
@@ -87,7 +136,7 @@ std::string filter_response(const std::string &response)
 	return response;
 }
 
-bool parse_command(int socket, const std::string &command)
+bool parse_command(const std::string &command)
 {
 	std::cout << "Command: " << command << "\n";
 	const std::string &card_delim("card ");
@@ -195,6 +244,19 @@ bool parse_command(int socket, const std::string &command)
 
 int main(int argc, char *argv[])
 {
+	std::string peer_host("localhost");
+	if(argc > 1)
+	{
+		peer_host = argv[1];
+	}
+
+	short server_port = 1234;
+	if(argc > 2)
+	{
+		server_port = (short) atoi(argv[2]);
+	}
+
+#if __unix__
 	//Create socket
 	int s0 = socket(AF_INET, SOCK_STREAM, 0);
 	check_error(s0,"creating socket");
@@ -203,12 +265,6 @@ int main(int argc, char *argv[])
 	sockaddr_in server_addr;
 	//int server_addr_len;
 	memset(&server_addr, '\0', sizeof(server_addr));
-
-	std::string peer_host("localhost");
-	if(argc > 1)
-	{
-		peer_host = argv[1];
-	}
 
 	//Resolve server address (convert from symbolic name to IP)
 	hostent *host = gethostbyname(peer_host.c_str());
@@ -219,11 +275,6 @@ int main(int argc, char *argv[])
 	}
 
 	server_addr.sin_family = AF_INET;
-	short server_port = 1234;
-	if(argc >= 3)
-	{
-		server_port = (short) atoi(argv[2]);
-	}
 	server_addr.sin_port = htons(server_port);
 
 	//Write resolved IP address of the server to the address structure
@@ -232,6 +283,68 @@ int main(int argc, char *argv[])
 	//Connect to the remote server
 	int res = connect(s0, (sockaddr*)&server_addr, sizeof(server_addr));
 	check_error(res, "connecting to remote server");
+#elif _WIN32
+	//Initialize Winsock
+	WSAData wsaData;
+	int res = WSAStartup(MAKEWORD(2,2), &wsaData);
+	if(res != 0)
+	{
+		std::cerr << "WSAStartup failed: " << res << "\n";
+		std::exit(1);
+	}
+
+	//Create socket
+	addrinfo *result = nullptr;
+	addrinfo *ptr = nullptr;
+	addrinfo hints;
+
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_UNSPEC; //NOTE: May want to use AF_INET instead here
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	std::stringstream port_stream;
+	port_stream << server_port;
+	std::string port_str = port_stream.str();
+	res = getaddrinfo(peer_host.c_str(),port_str.c_str(),&hints,&result);
+	if(res != 0)
+	{
+		std::cerr << "getaddrinfo failed: " << res << "\n";
+		WSACleanup();
+		std::exit(1);
+	}
+
+	SOCKET s0 = INVALID_SOCKET;
+
+	//Attempt to connect to the first address returned by the call to getaddrinfo
+	ptr = result;
+
+	s0 = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+	if(s0 == INVALID_SOCKET)
+	{
+		std::cerr << "Error at socket(): " << WSAGetLastError() << "\n";
+		freeaddrinfo(result);
+		WSACleanup();
+		std::exit(1);
+	}
+
+	//Connect to the server
+	res = connect(s0, ptr->ai_addr, (int)ptr->ai_addrlen);
+	if(res == SOCKET_ERROR)
+	{
+		closesocket(s0);
+		s0 = INVALID_SOCKET;
+	}
+
+	freeaddrinfo(result);
+
+	if(s0 == INVALID_SOCKET)
+	{
+		std::cerr << "Unable to connect to server.\n";
+		WSACleanup();
+		std::exit(1);
+	}
+#endif
 
 	std::cout << "Connected to server. Reading message...\n";
 
@@ -256,7 +369,7 @@ int main(int argc, char *argv[])
 			bool local_command_handled = false;
 			do
 			{
-				std::cout << buf << "\n";
+				std::cout << buf << std::endl;
 				std::cout << "How would you like to respond?\n";
 				std::getline(std::cin,response);
 
@@ -266,7 +379,7 @@ int main(int argc, char *argv[])
 				if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
 				{
 					std::string command(response.begin()+command_delimeter.size(),response.end());
-					local_command_handled = parse_command(s0,command);
+					local_command_handled = parse_command(command);
 				}
 				else
 				{
@@ -278,11 +391,16 @@ int main(int argc, char *argv[])
 		}
 		else
 		{
-			std::cout << buf << "\n";
+			std::cout << buf << std::endl;
 		}
 	}
 
+#if __unix__
 	close(s0);
+#elif _WIN32
+	closesocket(s0);
+	WSACleanup();
+#endif
 
     	return 0;
 }
