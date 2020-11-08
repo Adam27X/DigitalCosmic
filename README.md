@@ -21,7 +21,7 @@ So far CMake is the only significant dependency of this project. The allure of a
 
 Only the client build is currently supported natively on windows. Both the client and server can be built on Windows using Cygwin, however. In that case you can simply follow the Unix instructions below.
 
-On Windows there are two build options: MinGW and Visual Studio. 
+On Windows there are two build options: MinGW and Visual Studio.
 
 ### 1. MinGW
 
@@ -43,7 +43,7 @@ This approach is very lightly tested so it's recommended users either use the Mi
 
 Open the CMake GUI on Windows. Fill in the "Where is the source code:" text box with a path to the root of a checkout of the repository. Create a directory called 'build' under that directory and fill in the "Where to build the binaries:" with a path to this newly created directory.
 
-Click configure, then assuming that succeeds click generate. Assuming the generation succeeds you can open the project in Visual Studio and then find 'client' in the Solution Explorer. Right-click client and choose Build to actually compile the code.
+Click configure, then assuming that succeeds click generate. Assuming the generation succeeds you can open the project in Visual Studio and then find 'client' in the Solution Explorer. Right-click client and choose Build to actually compile the code. Be sure to build it in "Release" mode so that the binary can be shared.
 
 ### Unix
 
@@ -55,4 +55,4 @@ Click configure, then assuming that succeeds click generate. Assuming the genera
 
 ## Running the project
 
-To host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. For Visual Studio source builds you'll have to right-click on 'client', select properties, and then choose Debugging under 'Configuration Properties' on the left hand side and set the appropriate parameters in the 'Command Arguments' text box. Eventually I'll add support for installers for platforms of interest.
+To host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. For Visual Studio source builds you should be able to do this step from a PowerShell. Eventually I'll add support for installers for platforms of interest.
