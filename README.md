@@ -13,9 +13,39 @@ I call this version of the game "TextualCosmic" because, at the moment, the game
 
 ## Building the project from source
 
-Support for Windows is currently limited. Only Cygwin has been tested, but MinGW or other alternatives may also work. Whether you use one of those methods or build on a Unix OS, the process should essentially be the same. TextualCosmic uses CMake and therefore prefers an out of tree build:
+TextualCosmic uses CMake, so building from source should follow a similar process regardless of OS. CMake projects are at their cleanest with an out of tree build, so that's how the following instructions will proceed. Assume the current working directory is the root directory of the repository.
 
-(Assume the current directory is the root directory of the repository)
+So far CMake is the only significant dependency of this project. The allure of a proper GUI may change the project dependencies in the future.
+
+### Windows (via Powershell)
+
+Only the client build is currently supported natively on windows. Both the client and server can be built on Windows using Cygwin, however. In that case you can simply follow the Unix instructions below.
+
+On Windows there are two build options: MinGW and Visual Studio. 
+
+### 1. MinGW
+
+Be sure to add CMake and MinGW to your path in PowerShell:
+
+`$ $env:Path += ";C:\Program Files\CMake\bin"`
+
+`$ $env:Path += ";C:\MinGW\bin"`
+
+`$ mkdir build && cd build`
+
+`$ cmake .. -G "MinGW Makefiles"`
+
+`$ mingw32-make client`
+
+### 2. Visual Studio
+
+This approach is very lightly tested so it's recommended users either use the MinGW approach above or obtain the client executable directly if possible. Still, the following steps should work:
+
+Open the CMake GUI on Windows. Fill in the "Where is the source code:" text box with a path to the root of a checkout of the repository. Create a directory called 'build' under that directory and fill in the "Where to build the binaries:" with a path to this newly created directory.
+
+Click configure, then assuming that succeeds click generate. Assuming the generation succeeds you can open the project in Visual Studio and then find 'client' in the Solution Explorer. Right-click client and choose Build to actually compile the code.
+
+### Unix
 
 `$ mkdir build && cd build`
 
@@ -23,4 +53,6 @@ Support for Windows is currently limited. Only Cygwin has been tested, but MinGW
 
 `$ make`
 
-Then to host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. Eventually I'll add support for installers for platforms of interest.
+## Running the project
+
+To host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. For Visual Studio source builds you'll have to right-click on 'client', select properties, and then choose Debugging under 'Configuration Properties' on the left hand side and set the appropriate parameters in the 'Command Arguments' text box. Eventually I'll add support for installers for platforms of interest.
