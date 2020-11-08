@@ -399,6 +399,8 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 		}
 		else
 		{
+			std::string msg("Choose a colony to lose a ship from.\n");
+			server.send_message_to_client(player,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(player,valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			for(auto i=player_with_chosen_colony.planets[chosen_colony.second].begin(),e=player_with_chosen_colony.planets[chosen_colony.second].end();i!=e;++i)
@@ -1389,6 +1391,8 @@ void GameState::resolve_negotiation()
 		{
 			assert(!defense_valid_colonies.empty());
 			//Choose from any of the valid defense colonies
+			std::string msg("Choose a location to establish a new colony\n");
+			server.send_message_to_client(assignments.offense,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.offense,defense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.offense);
@@ -1397,6 +1401,8 @@ void GameState::resolve_negotiation()
 		{
 			assert(!offense_valid_colonies.empty());
 			//Choose from any of the valid offense colonies
+			std::string msg("Choose a location to establish a new colony\n");
+			server.send_message_to_client(assignments.defense,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.defense);
@@ -2244,6 +2250,8 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 	}
 	else
 	{
+		std::string msg("Choose a colony to return a ship to.\n");
+		server.send_message_to_client(p.color,msg);
 		const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(p.color,valid_colonies);
 
 		//Now actually add the colony
@@ -2317,6 +2325,8 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 	}
 	else
 	{
+		std::string msg("Choose a colony to return a ship to.\n");
+		server.send_message_to_client(p.color,msg);
 		const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(p.color,valid_colonies);
 
 		//Now actually add the colony
