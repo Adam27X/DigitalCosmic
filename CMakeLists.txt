@@ -9,11 +9,11 @@ add_subdirectory(client)
 
 target_link_libraries(textualcosmic PUBLIC Aliens)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #Always build as debug for now?
-target_compile_options(textualcosmic PUBLIC -g -O3 -std=c++17 -Wall -pedantic)
+target_compile_options(textualcosmic PUBLIC -g -O3 -std=c++14 -Wall -pedantic)
 
 install(TARGETS textualcosmic DESTINATION bin)
 

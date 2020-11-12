@@ -5,7 +5,7 @@
 #include <sstream>
 
 //Client/Server includes
-#ifdef __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	#include <errno.h>
 	#include <unistd.h>
 	#include <sys/socket.h>
@@ -34,7 +34,7 @@ void check_error(int res, const std::string &context)
 
 void send_message_to_server(int socket, const std::string &message)
 {
-	#if __unix__
+	#if defined(__unix__) || defined(__APPLE__)
 		unsigned msg_size = message.size()+1;
 		int res = write(socket, message.c_str(), msg_size);
 		check_error(res,"writing message to server");
@@ -53,7 +53,7 @@ void send_message_to_server(int socket, const std::string &message)
 
 std::string read_message_from_server(int socket)
 {
-	#if __unix__
+	#if defined(__unix__) || defined(__APPLE__)
 		char buffer[1024];
 		int res = read(socket, buffer, 1023);
 		check_error(res,"reading message from server");
@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
 		server_port = (short) atoi(argv[2]);
 	}
 
-#if __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	//Create socket
 	int s0 = socket(AF_INET, SOCK_STREAM, 0);
 	check_error(s0,"creating socket");
@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#if __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	close(s0);
 #elif _WIN32
 	closesocket(s0);
