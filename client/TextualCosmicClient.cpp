@@ -4,6 +4,8 @@
 #include <memory>
 #include <sstream>
 
+#include "cpptk.h"
+
 //Client/Server includes
 #if defined(__unix__) || defined(__APPLE__)
 	#include <errno.h>
@@ -242,165 +244,187 @@ bool parse_command(const std::string &command)
 	return false;
 }
 
+//TODO: Create a GUI out of what we have here
+//	+1) Have an initial window where the user enters in the host and port
+//	2) Once the user has been connected, use a new window for the game itself
+//	3) Initially the game window can have a textbox of server messages (essentially moving client std::cout messages there) and radio buttons for any choices that need to be made
 int main(int argc, char *argv[])
 {
-	std::string peer_host("localhost");
-	if(argc > 1)
-	{
-		peer_host = argv[1];
-	}
+	Tk::init(argv[0]);
 
-	short server_port = 1234;
-	if(argc > 2)
+	std::string peer_host("localhost");
+	std::string server_port_str("1234");
+
+	auto connect_to_server = [&] ()
 	{
-		server_port = (short) atoi(argv[2]);
-	}
+		short server_port = std::stoi(server_port_str);
 
 #if defined(__unix__) || defined(__APPLE__)
-	//Create socket
-	int s0 = socket(AF_INET, SOCK_STREAM, 0);
-	check_error(s0,"creating socket");
+		//Create socket
+		int s0 = socket(AF_INET, SOCK_STREAM, 0);
+		check_error(s0,"creating socket");
 
-	//Fill in server IP address
-	sockaddr_in server_addr;
-	//int server_addr_len;
-	memset(&server_addr, '\0', sizeof(server_addr));
+		//Fill in server IP address
+		sockaddr_in server_addr;
+		//int server_addr_len;
+		memset(&server_addr, '\0', sizeof(server_addr));
 
-	//Resolve server address (convert from symbolic name to IP)
-	hostent *host = gethostbyname(peer_host.c_str());
-	if(host == nullptr)
-	{
-		std::cerr << "Error resolving server address: " << strerror(errno) << "\n";
-		std::exit(1);
-	}
+		//Resolve server address (convert from symbolic name to IP)
+		hostent *host = gethostbyname(peer_host.c_str());
+		if(host == nullptr)
+		{
+			std::cerr << "Error resolving server address: " << strerror(errno) << "\n";
+			std::exit(1);
+		}
 
-	server_addr.sin_family = AF_INET;
-	server_addr.sin_port = htons(server_port);
+		server_addr.sin_family = AF_INET;
+		server_addr.sin_port = htons(server_port);
 
-	//Write resolved IP address of the server to the address structure
-	memmove(&(server_addr.sin_addr.s_addr), host->h_addr_list[0], 4);
+		//Write resolved IP address of the server to the address structure
+		memmove(&(server_addr.sin_addr.s_addr), host->h_addr_list[0], 4);
 
-	//Connect to the remote server
-	int res = connect(s0, (sockaddr*)&server_addr, sizeof(server_addr));
-	check_error(res, "connecting to remote server");
+		//Connect to the remote server
+		int res = connect(s0, (sockaddr*)&server_addr, sizeof(server_addr));
+		check_error(res, "connecting to remote server");
 #elif _WIN32
-	//Initialize Winsock
-	WSAData wsaData;
-	int res = WSAStartup(MAKEWORD(2,2), &wsaData);
-	if(res != 0)
-	{
-		std::cerr << "WSAStartup failed: " << res << "\n";
-		std::exit(1);
-	}
+		//Initialize Winsock
+		WSAData wsaData;
+		int res = WSAStartup(MAKEWORD(2,2), &wsaData);
+		if(res != 0)
+		{
+			std::cerr << "WSAStartup failed: " << res << "\n";
+			std::exit(1);
+		}
 
-	//Create socket
-	addrinfo *result = nullptr;
-	addrinfo *ptr = nullptr;
-	addrinfo hints;
+		//Create socket
+		addrinfo *result = nullptr;
+		addrinfo *ptr = nullptr;
+		addrinfo hints;
 
-	ZeroMemory(&hints, sizeof(hints));
-	hints.ai_family = AF_UNSPEC; //NOTE: May want to use AF_INET instead here
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
+		ZeroMemory(&hints, sizeof(hints));
+		hints.ai_family = AF_UNSPEC; //NOTE: May want to use AF_INET instead here
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = IPPROTO_TCP;
 
-	std::stringstream port_stream;
-	port_stream << server_port;
-	std::string port_str = port_stream.str();
-	res = getaddrinfo(peer_host.c_str(),port_str.c_str(),&hints,&result);
-	if(res != 0)
-	{
-		std::cerr << "getaddrinfo failed: " << res << "\n";
-		WSACleanup();
-		std::exit(1);
-	}
+		std::stringstream port_stream;
+		port_stream << server_port;
+		std::string port_str = port_stream.str();
+		res = getaddrinfo(peer_host.c_str(),port_str.c_str(),&hints,&result);
+		if(res != 0)
+		{
+			std::cerr << "getaddrinfo failed: " << res << "\n";
+			WSACleanup();
+			std::exit(1);
+		}
 
-	SOCKET s0 = INVALID_SOCKET;
+		SOCKET s0 = INVALID_SOCKET;
 
-	//Attempt to connect to the first address returned by the call to getaddrinfo
-	ptr = result;
+		//Attempt to connect to the first address returned by the call to getaddrinfo
+		ptr = result;
 
-	s0 = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-	if(s0 == INVALID_SOCKET)
-	{
-		std::cerr << "Error at socket(): " << WSAGetLastError() << "\n";
+		s0 = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if(s0 == INVALID_SOCKET)
+		{
+			std::cerr << "Error at socket(): " << WSAGetLastError() << "\n";
+			freeaddrinfo(result);
+			WSACleanup();
+			std::exit(1);
+		}
+
+		//Connect to the server
+		res = connect(s0, ptr->ai_addr, (int)ptr->ai_addrlen);
+		if(res == SOCKET_ERROR)
+		{
+			closesocket(s0);
+			s0 = INVALID_SOCKET;
+		}
+
 		freeaddrinfo(result);
-		WSACleanup();
-		std::exit(1);
-	}
 
-	//Connect to the server
-	res = connect(s0, ptr->ai_addr, (int)ptr->ai_addrlen);
-	if(res == SOCKET_ERROR)
-	{
-		closesocket(s0);
-		s0 = INVALID_SOCKET;
-	}
-
-	freeaddrinfo(result);
-
-	if(s0 == INVALID_SOCKET)
-	{
-		std::cerr << "Unable to connect to server.\n";
-		WSACleanup();
-		std::exit(1);
-	}
+		if(s0 == INVALID_SOCKET)
+		{
+			std::cerr << "Unable to connect to server.\n";
+			WSACleanup();
+			std::exit(1);
+		}
 #endif
 
-	std::cout << "Connected to server. Reading message...\n";
+		std::cout << "Connected to server. Reading message...\n";
+		Tk::destroy("."); //Destroy the connection window once we've connected to the game
 
-	//TODO: Have the server send some sort of END message once we're done?
-	while(1)
-	{
-		std::string buf = read_message_from_server(s0);
+		//TODO: Have the server send some sort of END message once we're done?
+		while(1)
+		{
+			std::string buf = read_message_from_server(s0);
 
-		bool needs_response = false;
-		if(buf.compare("END") == 0)
-		{
-			break;
-		}
-		else if(buf.find("[needs_response]") != std::string::npos)
-		{
-			needs_response = true;
-		}
+			bool needs_response = false;
+			if(buf.compare("END") == 0)
+			{
+				break;
+			}
+			else if(buf.find("[needs_response]") != std::string::npos)
+			{
+				needs_response = true;
+			}
 
-		if(needs_response)
-		{
-			std::string response;
-			bool local_command_handled = false;
-			do
+			if(needs_response)
+			{
+				std::string response;
+				bool local_command_handled = false;
+				do
+				{
+					std::cout << buf << std::endl;
+					std::cout << "How would you like to respond?\n";
+					std::getline(std::cin,response);
+
+					response = filter_response(response);
+
+					const std::string &command_delimeter("info ");
+					if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
+					{
+						std::string command(response.begin()+command_delimeter.size(),response.end());
+						local_command_handled = parse_command(command);
+					}
+					else
+					{
+						local_command_handled = false;
+					}
+				} while(local_command_handled);
+
+				send_message_to_server(s0,response);
+			}
+			else
 			{
 				std::cout << buf << std::endl;
-				std::cout << "How would you like to respond?\n";
-				std::getline(std::cin,response);
-
-				response = filter_response(response);
-
-				const std::string &command_delimeter("info ");
-				if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
-				{
-					std::string command(response.begin()+command_delimeter.size(),response.end());
-					local_command_handled = parse_command(command);
-				}
-				else
-				{
-					local_command_handled = false;
-				}
-			} while(local_command_handled);
-
-			send_message_to_server(s0,response);
+			}
 		}
-		else
-		{
-			std::cout << buf << std::endl;
-		}
-	}
 
 #if defined(__unix__) || defined(__APPLE__)
-	close(s0);
+		close(s0);
 #elif _WIN32
-	closesocket(s0);
-	WSACleanup();
+		closesocket(s0);
+		WSACleanup();
 #endif
+	};
+
+	Tk::frame(".f");
+	Tk::grid(Tk::configure,".f") -Tk::column(0) -Tk::row(0);
+	Tk::label(".f.ip_label") -Tk::text("Server IP address:");
+	Tk::grid(Tk::configure,".f.ip_label") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
+	Tk::entry(".f.ip_entry") -Tk::textvariable(peer_host); //TODO: Could add fancy validation here
+	Tk::grid(Tk::configure,".f.ip_entry") -Tk::column(1) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
+	Tk::label(".f.port_label") -Tk::text("Server Port:");
+	Tk::grid(Tk::configure,".f.port_label") -Tk::column(0) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
+	Tk::entry(".f.port_entry") -Tk::textvariable(server_port_str); //TODO: More validation
+	Tk::grid(Tk::configure,".f.port_entry") -Tk::column(1) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
+	Tk::button(".f.connect") -Tk::text("Connect") -Tk::command(connect_to_server);
+	Tk::grid(Tk::configure,".f.connect") -Tk::column(0) -Tk::row(2) -Tk::padx(5) -Tk::pady(5) -Tk::columnspan(2);
+	Tk::bind(".", "<Return>", connect_to_server); //Allow the enter key to connect as well
+
+	//TODO: Figure out a way to return control to the event loop while the player waits on the server for more information
+	//Might need a separate dispatch thread (std::future?) to look for game information
+
+	Tk::runEventLoop();
 
     	return 0;
 }
