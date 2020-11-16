@@ -350,7 +350,19 @@ int main(int argc, char *argv[])
 #endif
 
 		std::cout << "Connected to server. Reading message...\n";
-		Tk::destroy("."); //Destroy the connection window once we've connected to the game
+		Tk::wm(Tk::withdraw, ".w"); //Have the window manager 'forget' about the connection window and remove it from the screen (for some reason attempting to delete the window doesn't work here...maybe we need more event loop calls?)
+
+		//Pop up the new window with server information
+		/*Tk::toplevel(".g");
+		Tk::wm(Tk::title, ".g", "Textual Cosmic");
+		Tk::frame(".g.f");
+		Tk::grid(Tk::configure,".g.f") -Tk::column(0) -Tk::row(0);
+		//TODO: Add a text box for whatever info we receive from the server
+		Tk::textw(".g.f.server_log") -Tk::width(200) -Tk::height(400) -Tk::state(Tk::disabled);
+		Tk::grid(Tk::configure,".g.f.server_log") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);*/
+
+		//TODO: Figure out a way to return control to the event loop while the player waits on the server for more information
+		//Might need a separate dispatch thread (std::future?) to look for game information
 
 		//TODO: Have the server send some sort of END message once we're done?
 		while(1)
@@ -407,22 +419,25 @@ int main(int argc, char *argv[])
 #endif
 	};
 
-	Tk::frame(".f");
-	Tk::grid(Tk::configure,".f") -Tk::column(0) -Tk::row(0);
-	Tk::label(".f.ip_label") -Tk::text("Server IP address:");
-	Tk::grid(Tk::configure,".f.ip_label") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
-	Tk::entry(".f.ip_entry") -Tk::textvariable(peer_host); //TODO: Could add fancy validation here
-	Tk::grid(Tk::configure,".f.ip_entry") -Tk::column(1) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
-	Tk::label(".f.port_label") -Tk::text("Server Port:");
-	Tk::grid(Tk::configure,".f.port_label") -Tk::column(0) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
-	Tk::entry(".f.port_entry") -Tk::textvariable(server_port_str); //TODO: More validation
-	Tk::grid(Tk::configure,".f.port_entry") -Tk::column(1) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
-	Tk::button(".f.connect") -Tk::text("Connect") -Tk::command(connect_to_server);
-	Tk::grid(Tk::configure,".f.connect") -Tk::column(0) -Tk::row(2) -Tk::padx(5) -Tk::pady(5) -Tk::columnspan(2);
-	Tk::bind(".", "<Return>", connect_to_server); //Allow the enter key to connect as well
+	//Hide the main window, as there's nothing to show there yet
+	Tk::wm(Tk::withdraw,".");
 
-	//TODO: Figure out a way to return control to the event loop while the player waits on the server for more information
-	//Might need a separate dispatch thread (std::future?) to look for game information
+	//Create a new window for the connection screen
+	Tk::toplevel(".w");
+	Tk::wm(Tk::title, ".w", "Textual Cosmic");
+	Tk::frame(".w.f");
+	Tk::grid(Tk::configure,".w.f") -Tk::column(0) -Tk::row(0);
+	Tk::label(".w.f.ip_label") -Tk::text("Server IP address:");
+	Tk::grid(Tk::configure,".w.f.ip_label") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
+	Tk::entry(".w.f.ip_entry") -Tk::textvariable(peer_host); //TODO: Could add fancy validation here
+	Tk::grid(Tk::configure,".w.f.ip_entry") -Tk::column(1) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
+	Tk::label(".w.f.port_label") -Tk::text("Server Port:");
+	Tk::grid(Tk::configure,".w.f.port_label") -Tk::column(0) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
+	Tk::entry(".w.f.port_entry") -Tk::textvariable(server_port_str); //TODO: More validation
+	Tk::grid(Tk::configure,".w.f.port_entry") -Tk::column(1) -Tk::row(1) -Tk::padx(5) -Tk::pady(5);
+	Tk::button(".w.f.connect") -Tk::text("Connect") -Tk::command(connect_to_server);
+	Tk::grid(Tk::configure,".w.f.connect") -Tk::column(0) -Tk::row(2) -Tk::padx(5) -Tk::pady(5) -Tk::columnspan(2);
+	Tk::bind(".w", "<Return>", connect_to_server); //Allow the enter key to connect as well
 
 	Tk::runEventLoop();
 
