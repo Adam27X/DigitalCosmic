@@ -101,7 +101,7 @@ std::string CosmicServer::receive_message_from_client(const PlayerColors color)
 {
 	//TODO: How can we tell if the message is complete? Technically clients only need to send a byte at a time, but still
 	char buffer[1024];
-	int res = read(m_client_socket_map[color], buffer, 1023);
+	int res = read(m_client_socket_map[color], buffer, 1024);
 	check_error(res,"reading message from client");
 	if(res == 0)
 	{
@@ -115,7 +115,7 @@ std::string CosmicServer::receive_message_from_client(const PlayerColors color)
 	}
 	buffer[res] = 0;
 	std::string ret;
-	ret = std::string(buffer,res-1);
+	ret = std::string(buffer,res); //NOTE: For the C++ client, we needed to use 'res-1' here, ugh. Instead we should use 'res' but check the last character for a null-terminating string and act accordingly. For now we'll assume a python client
 	std::cout << "Received " << res << " bytes from client.\n";
 	return ret;
 }
