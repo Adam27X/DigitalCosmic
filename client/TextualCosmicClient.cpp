@@ -3,6 +3,8 @@
 #include <ctime>
 #include <memory>
 #include <sstream>
+#include <future>
+#include <mutex>
 
 #include "cpptk.h"
 
@@ -246,7 +248,7 @@ bool parse_command(const std::string &command)
 
 //TODO: Create a GUI out of what we have here
 //	+1) Have an initial window where the user enters in the host and port
-//	2) Once the user has been connected, use a new window for the game itself
+//	+2) Once the user has been connected, use a new window for the game itself
 //	3) Initially the game window can have a textbox of server messages (essentially moving client std::cout messages there) and radio buttons for any choices that need to be made
 int main(int argc, char *argv[])
 {
@@ -255,13 +257,109 @@ int main(int argc, char *argv[])
 	std::string peer_host("localhost");
 	std::string server_port_str("1234");
 
+#if defined(__unix__) || defined(__APPLE__)
+	int s0;
+#elif _WIN32
+	SOCKET s0;
+#endif
+
+	std::future<void> transactions;
+	std::string server_buf;
+	std::mutex mtx; //Exclusive access to the server_buf
+
+	//Is it safe to call Tk commands here? Or should this function only set shared variables that then apply to Tk widgets?
+	//Perhaps we could use virtual events somehow? This functions triggers the virtual event which causes the main thread to take care of the Tk-related changes
+	auto transact_with_server = [&] ()
+	{
+		//TODO: Have the server send some sort of END message once we're done?
+		while(1)
+		{
+			std::string buf = read_message_from_server(s0);
+			mtx.lock();
+			server_buf += buf;
+			mtx.unlock();
+
+			bool needs_response = false;
+			if(buf.compare("END") == 0)
+			{
+				break;
+			}
+			else if(buf.find("[needs_response]") != std::string::npos)
+			{
+				needs_response = true;
+			}
+
+			if(needs_response)
+			{
+				std::string response;
+				bool local_command_handled = false;
+				do
+				{
+					std::cout << buf << std::endl;
+					std::cout << "How would you like to respond?\n";
+					std::getline(std::cin,response);
+
+					response = filter_response(response);
+
+					const std::string &command_delimeter("info ");
+					if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
+					{
+						std::string command(response.begin()+command_delimeter.size(),response.end());
+						local_command_handled = parse_command(command);
+					}
+					else
+					{
+						local_command_handled = false;
+					}
+				} while(local_command_handled);
+
+				send_message_to_server(s0,response);
+			}
+			else
+			{
+				std::cout << buf << std::endl;
+			}
+		}
+
+#if defined(__unix__) || defined(__APPLE__)
+		close(s0);
+#elif _WIN32
+		closesocket(s0);
+		WSACleanup();
+#endif
+	};
+
+	auto dump_to_server_log = [&] ()
+	{
+		mtx.lock();
+		std::istringstream iss(server_buf);
+		std::string line;
+		while(std::getline(iss,line))
+		{
+			if(line.empty())
+			{
+				std::cout << "Skipping empty line\n";
+				continue;
+			}
+			".g.f.server_log" << Tk::configure() -Tk::state(Tk::normal);
+			std::cout << "Inserting line: " << line << "\n";
+			line.append("\n"); //Ensure the line is never empty and always ends with a newline
+			".g.f.server_log" << Tk::insert(Tk::end, line);
+			".g.f.server_log" << Tk::configure() -Tk::state(Tk::disabled);
+		}
+		server_buf = std::string("");
+		mtx.unlock();
+
+		//TODO: Need a recursive callback to after here!
+	};
+
 	auto connect_to_server = [&] ()
 	{
 		short server_port = std::stoi(server_port_str);
 
 #if defined(__unix__) || defined(__APPLE__)
 		//Create socket
-		int s0 = socket(AF_INET, SOCK_STREAM, 0);
+		s0 = socket(AF_INET, SOCK_STREAM, 0);
 		check_error(s0,"creating socket");
 
 		//Fill in server IP address
@@ -317,7 +415,7 @@ int main(int argc, char *argv[])
 			std::exit(1);
 		}
 
-		SOCKET s0 = INVALID_SOCKET;
+		s0 = INVALID_SOCKET;
 
 		//Attempt to connect to the first address returned by the call to getaddrinfo
 		ptr = result;
@@ -350,73 +448,22 @@ int main(int argc, char *argv[])
 #endif
 
 		std::cout << "Connected to server. Reading message...\n";
-		Tk::wm(Tk::withdraw, ".w"); //Have the window manager 'forget' about the connection window and remove it from the screen (for some reason attempting to delete the window doesn't work here...maybe we need more event loop calls?)
+		Tk::destroy(".w");
+
+		//Spawn a new thread to handle server communication so that it doesn't interrupt the Tk event loop
+		transactions = std::async(std::launch::async,transact_with_server);
 
 		//Pop up the new window with server information
-		/*Tk::toplevel(".g");
+		Tk::toplevel(".g");
 		Tk::wm(Tk::title, ".g", "Textual Cosmic");
 		Tk::frame(".g.f");
 		Tk::grid(Tk::configure,".g.f") -Tk::column(0) -Tk::row(0);
-		//TODO: Add a text box for whatever info we receive from the server
-		Tk::textw(".g.f.server_log") -Tk::width(200) -Tk::height(400) -Tk::state(Tk::disabled);
-		Tk::grid(Tk::configure,".g.f.server_log") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);*/
+		Tk::textw(".g.f.server_log") -Tk::width(40) -Tk::height(10) -Tk::state(Tk::disabled);
+		Tk::grid(Tk::configure,".g.f.server_log") -Tk::column(0) -Tk::row(0) -Tk::padx(5) -Tk::pady(5);
 
-		//TODO: Figure out a way to return control to the event loop while the player waits on the server for more information
-		//Might need a separate dispatch thread (std::future?) to look for game information
-
-		//TODO: Have the server send some sort of END message once we're done?
-		while(1)
-		{
-			std::string buf = read_message_from_server(s0);
-
-			bool needs_response = false;
-			if(buf.compare("END") == 0)
-			{
-				break;
-			}
-			else if(buf.find("[needs_response]") != std::string::npos)
-			{
-				needs_response = true;
-			}
-
-			if(needs_response)
-			{
-				std::string response;
-				bool local_command_handled = false;
-				do
-				{
-					std::cout << buf << std::endl;
-					std::cout << "How would you like to respond?\n";
-					std::getline(std::cin,response);
-
-					response = filter_response(response);
-
-					const std::string &command_delimeter("info ");
-					if(response.rfind(command_delimeter,0) == 0) //The player responded with a command
-					{
-						std::string command(response.begin()+command_delimeter.size(),response.end());
-						local_command_handled = parse_command(command);
-					}
-					else
-					{
-						local_command_handled = false;
-					}
-				} while(local_command_handled);
-
-				send_message_to_server(s0,response);
-			}
-			else
-			{
-				std::cout << buf << std::endl;
-			}
-		}
-
-#if defined(__unix__) || defined(__APPLE__)
-		close(s0);
-#elif _WIN32
-		closesocket(s0);
-		WSACleanup();
-#endif
+		//FIXME: The text widget in cpptk seems extraordinarily weak...try a big label here instead? Ugh
+		//TODO: How do we continuously add text to the text widget?
+		Tk::after(1000,dump_to_server_log); //Not really sure how often we need to update this log. If the UI is laggy we can increase the first arg here so that it updates less often
 	};
 
 	//Hide the main window, as there's nothing to show there yet
