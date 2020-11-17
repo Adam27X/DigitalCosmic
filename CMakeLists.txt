@@ -5,7 +5,6 @@ project(textualcosmic)
 add_executable(textualcosmic CosmicDeck.cpp CosmicServer.cpp DestinyDeck.cpp GameEvent.cpp GameState.cpp PlayerColors.cpp PlayerInfo.cpp PlayerRole.cpp TextualCosmic.cpp TurnPhase.cpp)
 
 add_subdirectory(Aliens)
-add_subdirectory(client)
 
 target_link_libraries(textualcosmic PUBLIC Aliens)
 
