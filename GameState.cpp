@@ -44,9 +44,8 @@ GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplaye
 
 void GameState::dump() const
 {
-	dump_planets();
-	dump_PlanetInfo(hyperspace_gate,"Hyperspace gate");
-	dump_warp();
+	const std::string announce = get_game_board();
+	server.broadcast_message(announce);
 }
 
 const std::string GameState::get_game_board() const
