@@ -39,9 +39,26 @@ class CosmicClient:
         self.conn.destroy()
         root.state('normal')
         root.title("Textual Cosmic")
-        #TODO: Add options as radio buttons and then we can actually get rid of the console altogether!
+
+        #TODO: Add a frame here for organization?
         self.server_log = Text(root, state='disabled', width=80, height=24, wrap='none') #TODO: Do we want to wrap text? TODO: Scrollbars
-        self.server_log.grid()
+        self.server_log.grid(column=1,row=0,rowspan=5)
+
+        #TODO: Add a label to tell the user that they have a choice (and what they're choosing?)
+        #TODO: Hide the radiobuttons and choice when it isn't the client's turn
+        self.client_choice = StringVar()
+        self.choice0 = ttk.Radiobutton(root, text='Blue Planet 0', variable=self.client_choice, value='0')
+        self.choice1 = ttk.Radiobutton(root, text='Blue Planet 1', variable=self.client_choice, value='1')
+        self.choice2 = ttk.Radiobutton(root, text='Blue Planet 2', variable=self.client_choice, value='2')
+        self.choice3 = ttk.Radiobutton(root, text='Blue Planet 3', variable=self.client_choice, value='3')
+        self.choice4 = ttk.Radiobutton(root, text='Blue Planet 4', variable=self.client_choice, value='4')
+        #self.radio_select = ttk.Button(root, text='Confirm choice', command=self.send_message_to_server) #TODO: How do we integrate this with the other thread? Perhaps this process even creates a thread?
+        self.choice0.grid(column=0,row=0)
+        self.choice1.grid(column=0,row=1)
+        self.choice2.grid(column=0,row=2)
+        self.choice3.grid(column=0,row=3)
+        self.choice4.grid(column=0,row=4)
+        self.choice2.grid_forget()
 
         comm_thread = threading.Thread(target=self.server_loop)
         comm_thread.daemon = True #If the user kills the GUI then the server thread should die too
