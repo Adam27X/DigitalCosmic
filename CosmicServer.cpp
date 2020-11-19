@@ -81,6 +81,10 @@ void CosmicServer::close_listening_socket()
 
 void CosmicServer::send_message_to_client(const PlayerColors color, const std::string &message)
 {
+	if(message.empty())
+	{
+		return;
+	}
 	unsigned msg_size = message.size()+1;
 	int res = write(m_client_socket_map[color], message.c_str(), msg_size);
 	check_error(res,"writing message to client");

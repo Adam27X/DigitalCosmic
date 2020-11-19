@@ -1,11 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import socket
 import sys
-from Tkinter import *
-import ttk
-import threading #NOTE: For Python3 we may want asyncio here instead
-import Queue
+from tkinter import *
+from tkinter import ttk
+import threading
 
 class CosmicClient:
     def __init__(self,root):
@@ -34,48 +33,32 @@ class CosmicClient:
         self.conn.bind("<Return>", self.connect_to_server)
 
         self.s0 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.queue = Queue.Queue()
 
     def connect_to_server(self,*args):
         self.s0.connect((self.server_ip.get(),int(self.server_port.get())))
         self.conn.destroy()
         root.state('normal')
         root.title("Textual Cosmic")
+        #TODO: Add options as radio buttons and then we can actually get rid of the console altogether!
         self.server_log = Text(root, state='disabled', width=80, height=24, wrap='none') #TODO: Do we want to wrap text? TODO: Scrollbars
         self.server_log.grid()
-        root.bind('<<server_message>>', self.write_to_server_log)
 
-        #Recipe for specifying a string param to a callback function
-        #cmd = root.register(self.write_to_server_log)
-        #root.tk.call("bind", root, "<<server_message>>", cmd + " %d")
-
-        #TODO: Create a new window for the actual game state...we probably don't want to use the root window for making connections either
-        #      We can probably use the root window for game state and just hide it until we've connected
         comm_thread = threading.Thread(target=self.server_loop)
         comm_thread.daemon = True #If the user kills the GUI then the server thread should die too
         comm_thread.start()
 
-    #In our case the server sends and receives strings directly, so there's no need to use repr() or other methods to change the sent/received data to a string format
     def read_message_from_server(self):
         buf = self.s0.recv(4096) #The initial server messages are actually sometimes larger than 1 kB
-        return buf
+        return buf.decode("utf-8")
 
     def send_message_to_server(self,msg):
-        self.s0.sendall(msg)
+        self.s0.sendall(msg.encode("utf-8"))
 
+    #TODO: Use asyncio for this event loop?
     def server_loop(self):
         while True:
             buf = self.read_message_from_server()
-            #NOTE: The queue + event_generate should be better than calling multiple tk commands from this side thread
-            #self.write_to_server_log(buf)
-            print 'Placing buf into queue: ' + buf
-            self.queue.put(buf)
-            root.event_generate('<<server_message>>') #TODO: Is there a way to move this generated event outside of this thread?
-            #TODO: Figure out why the entire buffer doesn't make it to the text log
-            #      It looks like text with blank lines in it messes up stuff here too (we saw something similar in the old C++ client)...try reworking the server to send separate messages instead of messages with blank lines
-            #      This also seems to work when responses are needed but not otherwise. Note that the last player to join actually receives fewer messages
-            #      The blank spaces could actually be a sign of separate messages that are somehow lost here rather than some issue specific to actual blank lines (indeed a quick test shows no issues with blank lines)
-            #TODO: To ensure we don't have any thread safety issues here we can switch to Python3, where Tkinter is thread safe by default
+            self.write_to_server_log(buf)
             needs_response = False
             if buf == 'END':
                 break
@@ -83,18 +66,19 @@ class CosmicClient:
                 needs_response = True
 
             if needs_response:
-                print buf
-                response = raw_input('How would you like to respond?\n')
+                print(buf)
+                response = input('How would you like to respond?\n')
                 self.send_message_to_server(response)
             else:
-                print buf
+                print(buf)
 
         sys.exit(0)
 
-    def write_to_server_log(self,*args):
-        msg = self.queue.get()
+    def write_to_server_log(self,msg,*args):
+        #For some reason not all of the text will show up in the server log if we try to jam it all in there at once, hence the line by line insertion
         self.server_log['state'] = 'normal'
-        self.server_log.insert('end',msg)
+        for line in msg:
+            self.server_log.insert('end',line)
         self.server_log['state'] = 'disabled'
 
 
