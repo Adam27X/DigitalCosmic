@@ -5,6 +5,7 @@ import sys
 from tkinter import *
 from tkinter import ttk
 import threading
+import re
 
 class CosmicClient:
     def __init__(self,root):
@@ -45,20 +46,8 @@ class CosmicClient:
         self.server_log.grid(column=1,row=0,rowspan=5)
 
         #TODO: Add a label to tell the user that they have a choice (and what they're choosing?)
-        #TODO: Hide the radiobuttons and choice when it isn't the client's turn
         self.client_choice = StringVar()
-        self.choice0 = ttk.Radiobutton(root, text='Blue Planet 0', variable=self.client_choice, value='0')
-        self.choice1 = ttk.Radiobutton(root, text='Blue Planet 1', variable=self.client_choice, value='1')
-        self.choice2 = ttk.Radiobutton(root, text='Blue Planet 2', variable=self.client_choice, value='2')
-        self.choice3 = ttk.Radiobutton(root, text='Blue Planet 3', variable=self.client_choice, value='3')
-        self.choice4 = ttk.Radiobutton(root, text='Blue Planet 4', variable=self.client_choice, value='4')
-        #self.radio_select = ttk.Button(root, text='Confirm choice', command=self.send_message_to_server) #TODO: How do we integrate this with the other thread? Perhaps this process even creates a thread?
-        self.choice0.grid(column=0,row=0)
-        self.choice1.grid(column=0,row=1)
-        self.choice2.grid(column=0,row=2)
-        self.choice3.grid(column=0,row=3)
-        self.choice4.grid(column=0,row=4)
-        self.choice2.grid_forget()
+        self.choice_list = []
 
         comm_thread = threading.Thread(target=self.server_loop)
         comm_thread.daemon = True #If the user kills the GUI then the server thread should die too
@@ -84,19 +73,45 @@ class CosmicClient:
 
             if needs_response:
                 print(buf)
+                self.convert_options_to_buttons(buf)
                 response = input('How would you like to respond?\n')
                 self.send_message_to_server(response)
+                self.hide_options()
             else:
                 print(buf)
 
         sys.exit(0)
 
-    def write_to_server_log(self,msg,*args):
+    def write_to_server_log(self,msg):
         #For some reason not all of the text will show up in the server log if we try to jam it all in there at once, hence the line by line insertion
+        #I wonder if adding root.update() would help here too? Still, for these functions it's probably best to use a virtual event and let the main thread handle the GUI changes
         self.server_log['state'] = 'normal'
         for line in msg:
             self.server_log.insert('end',line)
         self.server_log['state'] = 'disabled'
+
+    def convert_options_to_buttons(self,buf):
+        for line in buf.splitlines():
+            #FIXME: The game stack will also trip this regex, ugh
+            option_match = re.match('([0-9]): (.*)',line)
+            if line.find('[needs_response]') != -1: #This line is delivered after the options
+                break
+            if option_match:
+                option_num = option_match.group(1)
+                prompt = option_match.group(2)
+                print('Found option ' + option_num + ' with desc ' + prompt)
+                self.choice_list.append(ttk.Radiobutton(root, text=prompt, variable=self.client_choice, value=option_num))
+                self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
+                #TODO: Ensure these options display before we attempt to send a message back to the server!
+                #Using root.update helps, but we may need to use something like after or some other loop that executes every n milliseconds...
+        #self.radio_select = ttk.Button(root, text='Confirm choice', command=self.send_message_to_server) #TODO: How do we integrate this with the other thread? Perhaps this process even creates a thread?
+        root.update()
+
+    def hide_options(self):
+        for option in self.choice_list:
+            option.grid_forget()
+        self.choice_list = []
+        root.update()
 
 
 root = Tk()
