@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import tkinter
+from tkinter import *
+from tkinter import ttk
 import time
 import threading
 import random
@@ -11,10 +12,10 @@ class GuiPart(object):
     def __init__(self, master, queue, endCommand):
         self.queue = queue
         # Set up the GUI
-        tkinter.Button(master, text='Done', command=endCommand).pack()
+        Button(master, text='Done', command=endCommand).grid(column=0,row=1)
         # Add more GUI stuff here depending on your specific needs
-        self.text = tkinter.Text(master, state='disabled', width=80, height=24)
-        self.text.pack()
+        self.text = Text(master, state='disabled', width=80, height=24)
+        self.text.grid(column=0,row=0)
         
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
@@ -60,12 +61,14 @@ class ThreadedClient(object):
 
     def periodicCall(self):
         """ Check every 200 ms if there is something new in the queue. """
-        self.master.after(200, self.periodicCall) #TODO: Why is this before the call to process the GUI?
         self.gui.processIncoming()
         if not self.running:
             # This is the brutal stop of the system. You may want to do
             # some cleanup before actually shutting it down.
             sys.exit(0)
+        #NOTE: The original recipe calls this first, but I think calling it later is slightly better because we can catch errors before recursing
+        #      Also, we the 200ms here is really a parameter. The smaller we make it the more resource intensive we make the application
+        self.master.after(200, self.periodicCall)
 
     def workerThread1(self):
         """
@@ -80,10 +83,11 @@ class ThreadedClient(object):
             msg = rand.random( )
             self.queue.put(msg)
 
+    #TODO: This should also be called when the user clicks the 'X' in the game window
     def endApplication(self):
         self.running = False
 
 rand = random.Random()
-root = tkinter.Tk()
+root = Tk()
 client = ThreadedClient(root)
 root.mainloop()
