@@ -21,11 +21,11 @@ class GuiPart(object):
         self.master.withdraw()
         self.text = Text(self.master, state='disabled', width=80, height=24)
         self.text.grid(column=1,row=0)
-        #ttk.Button(self.master, text='Done', command=endCommand).grid(column=0,row=1)
-        #ttk.Button(self.master, text='Push Me', command=lambda: print('Pushed')).grid(column=0,row=1)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
         self.choice_list = []
         self.client_choice = StringVar()
+
+        self.confirmation_button = ttk.Button(self.master, text='Confirm choice', command=self.hide_options)
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -73,6 +73,7 @@ class GuiPart(object):
                 # Check contents of message and do whatever is needed. As a
                 # simple example, let's print it (in real life, you would
                 # suitably update the GUI's display in a richer fashion).
+                print('From queue:\n')
                 print(msg)
                 #Update the server log
                 self.text['state'] = 'normal'
@@ -82,7 +83,7 @@ class GuiPart(object):
                 if msg.find('[needs_response]') != -1:
                     option_num = None
                     for line in msg.splitlines():
-                        option_match = re.match('([0-9]): (.*)',line) #TODO: Does this regex not work for simple 0: Y, 1: N style prompts?
+                        option_match = re.match('([0-9]): (.*)',line)
                         if line.find('[needs_response]') != -1: #This line is delivered after the options
                             break
                         if option_match:
@@ -92,9 +93,13 @@ class GuiPart(object):
                             self.choice_list.append(ttk.Radiobutton(self.master, text=prompt, variable=self.client_choice, value=option_num))
                             self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
                     if option_num == None:
+                        #FIXME: Sometimes individual server messages will be caught by select.select() in the worker thread such that they're incomplete. In this case the options can be put into the queue without the needs_response tag, causing this exception.
+                        #Instead, server messages should have some sentinel ending that is known by the client. This way, as the worker thread reads in data it can stitch messages together appropriately and only place "complete" messages into the queue
+                        print('ERROR:\n' + msg)
                         raise Exception('A response is required but we failed to find any options!')
                     num_options = int(option_num)+1
-                    self.text.grid(column=1, row=0, rowspan=num_options, sticky=(N,S))
+                    self.text.grid(column=1, row=0, rowspan=num_options+1, sticky=(N,S))
+                    self.confirmation_button.grid(column=0, row=num_options)
 
             except queue.Empty:
                 # just on general principles, although we don't expect this
@@ -103,6 +108,17 @@ class GuiPart(object):
 
     def is_connected(self):
         return self.connected
+
+    def send_message_to_server(self,msg):
+        self.s0.sendall(msg.encode("utf-8"))
+
+    #NOTE: The GUI can send information to the server directly, so we don't need to send the choice back to the worker thread!
+    def hide_options(self):
+        for option in self.choice_list:
+            option.grid_forget()
+        self.choice_list = []
+        self.confirmation_button.grid_forget()
+        self.send_message_to_server(self.client_choice.get())
 
 class ThreadedClient(object):
     """
@@ -149,8 +165,6 @@ class ThreadedClient(object):
     def send_message_to_server(self,msg):
         self.s0.sendall(msg.encode("utf-8"))
 
-    #FIXME: Sadly it's not clear if this approach will help us either. It's worth trying select on the old approach to see if it helps. We could also try using an additional worker thread for responses to the server with another queue that is popped here
-    #       Hmm, not so fast! Closing the GUI becomes unresponsive but clicking other buttons seems just fine. Let's keep pushing on this to see if it works. Making the thread a daemon resolved the unresponsiveness after trying to close the GUI!
     def workerThread1(self):
         """
         This is where we handle the asynchronous I/O. For example, it may be
@@ -158,25 +172,19 @@ class ThreadedClient(object):
         to yield control pretty regularly, be it by select or otherwise.
         """
         while self.running:
-            # To simulate asynchronous I/O, create a random number at random
-            # intervals. Replace the following two lines with the real thing.
-            #time.sleep(rand.random( ) * 1.5)
-            #msg = rand.random()
             #It's unclear how much select actually helps here, but it seems to work and has to be more efficient than just blocking
-            #TODO: Need to figure out how to send input from the GUI back here. I suppose the gui class can have methods that we can call here, like a get response method? Hmm.
-            #Ideally we would probably use another queue but there should only be one real response at a time. Of course the user can send all sorts of input to the GUI but only one response actually needs to be forwarded to the server at any given moment
             if self.gui.is_connected():
                 ready_to_read = select.select([self.s0],[],[],1.0) #The last arg here is a timeout in seconds. The longer this time is the more we clog stuff on the GUI
                 if len(ready_to_read) != 0: #If we have a message ready, go ahead and read it
                     msg = self.read_message_from_server()
                     self.queue.put(msg)
-                    needs_response = False
-                    if msg.find('[needs_response]') != -1:
-                        needs_response = True
+                    #needs_response = False
+                    #if msg.find('[needs_response]') != -1:
+                    #    needs_response = True
 
-                    if needs_response:
-                        response = input("How would you like to respond?\n")
-                        self.send_message_to_server(response)
+                    #if needs_response:
+                    #    response = input("How would you like to respond?\n")
+                    #    self.send_message_to_server(response)
 
     def endApplication(self):
         self.running = False
