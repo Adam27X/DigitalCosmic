@@ -9,6 +9,7 @@ import queue
 import sys
 import socket
 import select
+import re
 
 class GuiPart(object):
     def __init__(self, master, queue, endCommand, socket):
@@ -19,10 +20,12 @@ class GuiPart(object):
         self.master = master
         self.master.withdraw()
         self.text = Text(self.master, state='disabled', width=80, height=24)
-        self.text.grid(column=0,row=0)
-        ttk.Button(self.master, text='Done', command=endCommand).grid(column=0,row=1)
-        ttk.Button(self.master, text='Push Me', command=lambda: print('Pushed')).grid(column=0,row=2)
+        self.text.grid(column=1,row=0)
+        #ttk.Button(self.master, text='Done', command=endCommand).grid(column=0,row=1)
+        #ttk.Button(self.master, text='Push Me', command=lambda: print('Pushed')).grid(column=0,row=1)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
+        self.choice_list = []
+        self.client_choice = StringVar()
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -33,11 +36,15 @@ class GuiPart(object):
         self.conn.columnconfigure(0, weight=1)
         self.conn.rowconfigure(0, weight=1)
 
+        #For ease of debug, enter in the default server information
         self.server_ip = StringVar()
+        self.server_port = StringVar()
+        self.server_ip.set('192.168.0.29')
+        self.server_port.set('3074')
+
         server_ip_entry = ttk.Entry(mainframe, textvariable=self.server_ip)
         server_ip_entry.grid(column=1, row=0)
 
-        self.server_port = StringVar()
         server_port_entry = ttk.Entry(mainframe, textvariable=self.server_port)
         server_port_entry.grid(column=1, row=1)
 
@@ -52,11 +59,11 @@ class GuiPart(object):
     def set_up_main_window(self,*args):
         self.s0.connect((self.server_ip.get(),int(self.server_port.get())))
         self.connected = True
+        # Set up the GUI
+        # Add more GUI stuff here depending on your specific needs
         self.conn.destroy()
         self.master.state('normal')
         self.master.title("Textual Cosmic")
-        # Set up the GUI
-        # Add more GUI stuff here depending on your specific needs
 
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
@@ -67,9 +74,28 @@ class GuiPart(object):
                 # simple example, let's print it (in real life, you would
                 # suitably update the GUI's display in a richer fashion).
                 print(msg)
+                #Update the server log
                 self.text['state'] = 'normal'
                 self.text.insert('end',str(msg)+'\n')
                 self.text['state'] = 'disabled'
+                #Process options if there are any
+                if msg.find('[needs_response]') != -1:
+                    option_num = None
+                    for line in msg.splitlines():
+                        option_match = re.match('([0-9]): (.*)',line) #TODO: Does this regex not work for simple 0: Y, 1: N style prompts?
+                        if line.find('[needs_response]') != -1: #This line is delivered after the options
+                            break
+                        if option_match:
+                            option_num = option_match.group(1)
+                            prompt = option_match.group(2)
+                            print('Found option ' + option_num + ' with desc ' + prompt)
+                            self.choice_list.append(ttk.Radiobutton(self.master, text=prompt, variable=self.client_choice, value=option_num))
+                            self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
+                    if option_num == None:
+                        raise Exception('A response is required but we failed to find any options!')
+                    num_options = int(option_num)+1
+                    self.text.grid(column=1, row=0, rowspan=num_options, sticky=(N,S))
+
             except queue.Empty:
                 # just on general principles, although we don't expect this
                 # branch to be taken in this case, ignore this exception!

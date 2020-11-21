@@ -2481,7 +2481,7 @@ void GameState::dump_current_stack() const
 	{
 		GameEvent g = copy_stack.top();
 		unsigned depth = copy_stack.size()-1;
-		announce << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "\n";
+		announce << "{" << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "}\n";
 		copy_stack.pop();
 	}
 	server.broadcast_message(announce.str());
