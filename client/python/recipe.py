@@ -11,12 +11,46 @@ import sys
 class GuiPart(object):
     def __init__(self, master, queue, endCommand):
         self.queue = queue
-        # Set up the GUI
-        Button(master, text='Done', command=endCommand).grid(column=0,row=1)
-        # Add more GUI stuff here depending on your specific needs
-        self.text = Text(master, state='disabled', width=80, height=24)
+
+        #Initial setup for the game window, hidden until we use it in set_up_main_window
+        self.master = master
+        self.master.withdraw()
+        self.text = Text(self.master, state='disabled', width=80, height=24)
         self.text.grid(column=0,row=0)
-        
+        ttk.Button(self.master, text='Done', command=endCommand).grid(column=0,row=1)
+        self.master.protocol("WM_DELETE_WINDOW", endCommand)
+
+        #First, bring up the connection window
+        self.conn = Toplevel(self.master)
+        self.conn.title("Textual Cosmic -- Connect to Server")
+
+        mainframe = ttk.Frame(self.conn, padding="3 3 12 12")
+        mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
+        self.conn.columnconfigure(0, weight=1)
+        self.conn.rowconfigure(0, weight=1)
+
+        server_ip = StringVar()
+        server_ip_entry = ttk.Entry(mainframe, textvariable=server_ip)
+        server_ip_entry.grid(column=1, row=0)
+
+        server_port = StringVar()
+        server_port_entry = ttk.Entry(mainframe, textvariable=server_port)
+        server_port_entry.grid(column=1, row=1)
+
+        ttk.Button(mainframe, text="Connect", command=self.set_up_main_window).grid(column=0, row=2)
+
+        ttk.Label(mainframe, text='Server IP address:').grid(column=0, row=0)
+        ttk.Label(mainframe, text='Server Port:').grid(column=0, row=1)
+
+        self.conn.bind("<Return>", self.set_up_main_window)
+
+    def set_up_main_window(self,*args):
+        self.conn.destroy()
+        self.master.state('normal')
+        self.master.title("Textual Cosmic")
+        # Set up the GUI
+        # Add more GUI stuff here depending on your specific needs
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -83,7 +117,6 @@ class ThreadedClient(object):
             msg = rand.random( )
             self.queue.put(msg)
 
-    #TODO: This should also be called when the user clicks the 'X' in the game window
     def endApplication(self):
         self.running = False
 
@@ -91,3 +124,4 @@ rand = random.Random()
 root = Tk()
 client = ThreadedClient(root)
 root.mainloop()
+
