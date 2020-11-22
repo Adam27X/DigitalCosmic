@@ -89,12 +89,9 @@ class GuiPart(object):
                         if option_match:
                             option_num = option_match.group(1)
                             prompt = option_match.group(2)
-                            print('Found option ' + option_num + ' with desc ' + prompt)
                             self.choice_list.append(ttk.Radiobutton(self.master, text=prompt, variable=self.client_choice, value=option_num))
                             self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
                     if option_num == None:
-                        #FIXME: Sometimes individual server messages will be caught by select.select() in the worker thread such that they're incomplete. In this case the options can be put into the queue without the needs_response tag, causing this exception.
-                        #Instead, server messages should have some sentinel ending that is known by the client. This way, as the worker thread reads in data it can stitch messages together appropriately and only place "complete" messages into the queue
                         print('ERROR:\n' + msg)
                         raise Exception('A response is required but we failed to find any options!')
                     num_options = int(option_num)+1
@@ -171,20 +168,22 @@ class ThreadedClient(object):
         a 'select()'. One important thing to remember is that the thread has
         to yield control pretty regularly, be it by select or otherwise.
         """
+        full_msg = ''
+        sentinel = "END_MESSAGE\n"
         while self.running:
             #It's unclear how much select actually helps here, but it seems to work and has to be more efficient than just blocking
+            #NOTE: This process is a bit paranoid because I was debugging a problem that wound up being a server-side issue where "[needs_response]" was sent in a separate message from the options
+            #      With that problem resolved we might be able to just do something like self.queue.put(self.read_message_from_server()) instead of using full_msg and looking for a sentinel here
             if self.gui.is_connected():
                 ready_to_read = select.select([self.s0],[],[],1.0) #The last arg here is a timeout in seconds. The longer this time is the more we clog stuff on the GUI
                 if len(ready_to_read) != 0: #If we have a message ready, go ahead and read it
                     msg = self.read_message_from_server()
-                    self.queue.put(msg)
-                    #needs_response = False
-                    #if msg.find('[needs_response]') != -1:
-                    #    needs_response = True
-
-                    #if needs_response:
-                    #    response = input("How would you like to respond?\n")
-                    #    self.send_message_to_server(response)
+                    full_msg += msg
+                    while full_msg.find(sentinel) != -1: #Found the sentinel, put the full message onto the queue. Note that we can extract multiple messages here, so loop until we've handled each sentinel if we find more than one
+                        msg_for_queue = full_msg[:full_msg.find(sentinel)]
+                        remainder = full_msg[full_msg.find(sentinel)+len(sentinel):]
+                        self.queue.put(msg_for_queue)
+                        full_msg = remainder
 
     def endApplication(self):
         self.running = False

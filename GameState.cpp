@@ -2408,9 +2408,9 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		}
 		std::cout << "Waiting on response from the " << to_string(player) << " player..." << std::flush;
 
-		server.send_message_to_client(player,outgoing.str());
 		std::string message("[needs_response] Please choose one of the above options.\n");
-		server.send_message_to_client(player,message);
+		outgoing << message;
+		server.send_message_to_client(player,outgoing.str());
 		response = server.receive_message_from_client(player);
 
 		if(response.size() && is_only_digits(response))

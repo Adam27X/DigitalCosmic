@@ -85,8 +85,10 @@ void CosmicServer::send_message_to_client(const PlayerColors color, const std::s
 	{
 		return;
 	}
-	unsigned msg_size = message.size()+1;
-	int res = write(m_client_socket_map[color], message.c_str(), msg_size);
+	std::string msg_with_sentinel(message);
+	msg_with_sentinel.append("END_MESSAGE\n"); //Add the sentinel
+	unsigned msg_size = msg_with_sentinel.size()+1;
+	int res = write(m_client_socket_map[color], msg_with_sentinel.c_str(), msg_size);
 	check_error(res,"writing message to client");
 }
 
@@ -97,10 +99,12 @@ void CosmicServer::broadcast_message(const std::string &message) const
 	{
 		return;
 	}
-	unsigned msg_size = message.size()+1;
+	std::string msg_with_sentinel(message);
+	msg_with_sentinel.append("END_MESSAGE\n"); //Add the sentinel
+	unsigned msg_size = msg_with_sentinel.size()+1;
 	for(auto i=m_client_socket_map.begin(),e=m_client_socket_map.end();i!=e;++i)
 	{
-		int res = write(i->second, message.c_str(), msg_size);
+		int res = write(i->second, msg_with_sentinel.c_str(), msg_size);
 		check_error(res,"writing message to client");
 	}
 }
