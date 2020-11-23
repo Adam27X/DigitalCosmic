@@ -222,6 +222,8 @@ void GameState::draw_cosmic_card(PlayerInfo &player)
 	player.hand.push_back(*iter);
 	cosmic_deck.erase(iter);
 
+	send_player_hand(player.color);
+
 	GameEvent g(player.color,GameEventType::DrawCard);
 	resolve_game_event(g);
 }
@@ -234,6 +236,14 @@ void GameState::send_player_hands() const
 		const std::string player_hand = get_player_const(player).get_hand();
 		server.send_message_to_client(player,player_hand);
 	}
+}
+
+//TODO: Make sure this function is called whenever a player's hand changes
+//FIXME: We should facilitate the above process by having this function called automatically from within PlayerInfo whenver the hand is modified
+void GameState::send_player_hand(const PlayerColors player) const
+{
+	const std::string player_hand = get_player_const(player).get_hand();
+	server.send_message_to_client(player,player_hand);
 }
 
 void GameState::dump_player_hands() const
@@ -316,7 +326,8 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 		return discard_and_draw_new_hand(player);
 	}
 
-	//Once we've succeeded, add the GameEvent for potential responses
+	//Once we've succeeded, add the GameEvent for potential responses and update the client GUI
+	send_player_hand(player.color);
 	GameEvent g(player.color,GameEventType::DrawCard);
 	resolve_game_event(g);
 }
@@ -451,6 +462,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				send_player_hand(victim.color);
 				break;
 			}
 		}
@@ -481,6 +493,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				send_player_hand(victim.color);
 				break;
 			}
 		}
@@ -492,6 +505,7 @@ void GameState::plague_player()
 		{
 			cosmic_discard.push_back(*i);
 			victim.hand.erase(i);
+			send_player_hand(victim.color);
 			break;
 		}
 	}
@@ -502,6 +516,7 @@ void GameState::plague_player()
 		{
 			cosmic_discard.push_back(*i);
 			victim.hand.erase(i);
+			send_player_hand(victim.color);
 			break;
 		}
 	}
@@ -531,6 +546,7 @@ void GameState::plague_player()
 			{
 				cosmic_discard.push_back(*i);
 				victim.hand.erase(i);
+				send_player_hand(victim.color);
 				break;
 			}
 		}
@@ -651,6 +667,9 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 						}
 					}
 					assert(current_player.hand.size()+1 == old_hand_size && "Error removing played card from the player's hand!");
+
+					//Update the player's hand in the client GUI
+					send_player_hand(current_player.color);
 
 					get_callbacks_for_cosmic_card(play,g);
 				}
@@ -1437,6 +1456,7 @@ void GameState::resolve_negotiation()
 					defense.hand.erase(defense.hand.begin()+chosen_option);
 				}
 			}
+			send_player_hand(assignments.defense);
 		}
 		std::vector<CosmicCardType> cards_to_defense;
 		//Choose which cards will be taken from the offense
@@ -1469,6 +1489,7 @@ void GameState::resolve_negotiation()
 					offense.hand.erase(offense.hand.begin()+chosen_option);
 				}
 			}
+			send_player_hand(assignments.offense);
 		}
 		//Distribute the chosen cards to their new players
 		for(auto i=cards_to_offense.begin(),e=cards_to_offense.end();i!=e;++i)
@@ -1479,6 +1500,8 @@ void GameState::resolve_negotiation()
 		{
 			defense.hand.push_back(*i);
 		}
+		send_player_hand(assignments.offense);
+		send_player_hand(assignments.defense);
 
 		//The deal was actually successful, so we use a separate GameEventType for Tick-Tock triggers
 		GameEvent g(assignments.offense,GameEventType::SuccessfulDeal); //Color is arbitrary here
@@ -1559,6 +1582,8 @@ void GameState::resolve_compensation()
 			unsigned card_choice = rand() % player_giving_compensation.hand.size();
 			player_receiving_compensation.hand.push_back(player_giving_compensation.hand[card_choice]);
 			player_giving_compensation.hand.erase(player_giving_compensation.hand.begin()+card_choice);
+			send_player_hand(player_giving_compensation.color);
+			send_player_hand(player_receiving_compensation.color);
 		}
 	}
 }
@@ -2048,6 +2073,7 @@ void GameState::execute_turn()
 				assignments.offensive_encounter_card = *i;
 				cosmic_discard.push_back(*i);
 				offense.hand.erase(i);
+				send_player_hand(assignments.offense);
 				break;
 			}
 			option++;
@@ -2074,6 +2100,7 @@ void GameState::execute_turn()
 				assignments.defensive_encounter_card = *i;
 				cosmic_discard.push_back(*i);
 				defense.hand.erase(i);
+				send_player_hand(assignments.defense);
 				break;
 			}
 			option++;
@@ -2423,6 +2450,7 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 		}
 
 		//Check for valid player commands
+		//FIXME: These are now deprecated
 		if(response.compare("info hand") == 0)
 		{
 			const std::string player_hand = get_player_const(player).get_hand();

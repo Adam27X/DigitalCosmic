@@ -87,6 +87,7 @@ public:
 	void dump_player_hands() const;
 	void dump_player_hand(const PlayerInfo &p) const;
 	void send_player_hands() const;
+	void send_player_hand(const PlayerColors player) const;
 	void choose_first_player();
 	PlayerInfo& get_player(const PlayerColors &c);
 	const PlayerInfo& get_player_const(const PlayerColors &c) const;

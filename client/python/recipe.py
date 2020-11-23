@@ -22,8 +22,12 @@ class GuiPart(object):
         self.text = Text(self.master, state='disabled', width=80, height=24)
         self.text.grid(column=1,row=0)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
+        #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
         self.choice_list = []
         self.client_choice = StringVar()
+        self.hand_cards = []
+        self.hand_cards_wrapper = StringVar(value=self.hand_cards)
+        self.hand_disp = Listbox(self.master, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
 
         self.confirmation_button = ttk.Button(self.master, text='Confirm choice', command=self.hide_options)
 
@@ -70,15 +74,13 @@ class GuiPart(object):
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
-                # Check contents of message and do whatever is needed. As a
-                # simple example, let's print it (in real life, you would
-                # suitably update the GUI's display in a richer fashion).
                 print('From queue:\n')
                 print(msg)
                 #Update the server log
                 self.text['state'] = 'normal'
                 self.text.insert('end',str(msg)+'\n')
                 self.text['state'] = 'disabled'
+                self.text.see('end') #Focus on the end of the text dump after updating?
                 #Process options if there are any
                 if msg.find('[needs_response]') != -1:
                     option_num = None
@@ -97,6 +99,25 @@ class GuiPart(object):
                     num_options = int(option_num)+1
                     self.text.grid(column=1, row=0, rowspan=num_options+1, sticky=(N,S))
                     self.confirmation_button.grid(column=0, row=num_options)
+                    #Since this process changes the number of rows, we need to redraw the hand_display
+                    #FIXME: This is pretty ugly...it would be better to frame the radiobuttons and the confirmation button and then use a constant number for the row of the hand widget
+                    (current_grid_cols,current_grid_rows) = self.master.grid_size()
+                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows)
+                #TODO: Add more server tags for things like player hands, scores, etc. and parse this info to update the GUI
+                if msg.find('[player_hand]') != -1: #Update the player's hand
+                    hand_found = False
+                    for line in msg.splitlines():
+                        if line == '[player_hand]':
+                            hand_found = True
+                            self.hand_cards = []
+                            continue
+                        if hand_found and len(line) > 0:
+                            self.hand_cards.append(line)
+                    assert hand_found, "Error processing player hand!"
+                    #Anytime we change the list, we need to update the StringVar wrapper
+                    self.hand_cards_wrapper.set(self.hand_cards)
+                    (current_grid_cols,current_grid_rows) = self.master.grid_size()
+                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows) #Put this information on the bottom of the GUI
 
             except queue.Empty:
                 # just on general principles, although we don't expect this

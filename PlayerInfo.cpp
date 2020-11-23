@@ -36,6 +36,7 @@ std::string PlayerInfo::get_hand() const
 {
 	std::stringstream ret;
 	ret << "Hand for the " << to_string(color) << " player:\n";
+	ret << "[player_hand]\n";
 	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 	{
 		ret << to_string(*i) << "\n";
@@ -108,6 +109,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		vret.push_back(ret);
 	}
 
+	//FIXME: The callback if action taken is almost if not always the same here...let's define that here so that we don't repeat ourselves all over the place
 	if(g.event_type == GameEventType::AlienPower)
 	{
 		//We can respond if we have a CosmicZap
@@ -118,7 +120,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
 				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -132,7 +134,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -146,7 +148,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -160,7 +162,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -174,7 +176,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -188,7 +190,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -202,7 +204,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -218,21 +220,21 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement3)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement5)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 					vret.push_back(ret);
 				}
 			}
@@ -247,7 +249,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -261,7 +263,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -275,7 +277,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Quash);
 				ret.callback_if_resolved = [this] () { this->game->get_deal_params().successful = false; };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
 				vret.push_back(ret);
 			}
 		}
