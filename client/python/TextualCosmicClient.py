@@ -23,6 +23,8 @@ class GuiPart(object):
         self.text.grid(column=1,row=0)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
+        self.choice_frame = ttk.Frame(self.master, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
+        self.choice_frame.grid(column=0,row=0)
         self.choice_list = []
         self.client_choice = StringVar()
         self.hand_cards = []
@@ -30,7 +32,7 @@ class GuiPart(object):
         self.hand_disp_label = Label(self.master, text='Player hand:')
         self.hand_disp = Listbox(self.master, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
 
-        self.confirmation_button = ttk.Button(self.master, text='Confirm choice', command=self.hide_options)
+        self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -92,19 +94,14 @@ class GuiPart(object):
                         if option_match:
                             option_num = option_match.group(1)
                             prompt = option_match.group(2)
-                            self.choice_list.append(ttk.Radiobutton(self.master, text=prompt, variable=self.client_choice, value=option_num))
+                            self.choice_list.append(ttk.Radiobutton(self.choice_frame, text=prompt, variable=self.client_choice, value=option_num))
                             self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
                     if option_num == None:
                         print('ERROR:\n' + msg)
                         raise Exception('A response is required but we failed to find any options!')
                     num_options = int(option_num)+1
-                    self.text.grid(column=1, row=0, rowspan=num_options+1, sticky=(N,S))
+                    #self.text.grid(column=1, row=0, rowspan=num_options+1, sticky=(N,S))
                     self.confirmation_button.grid(column=0, row=num_options)
-                    #Since this process changes the number of rows, we need to redraw the hand_display
-                    #FIXME: This is pretty ugly...it would be better to frame the radiobuttons and the confirmation button and then use a constant number for the row of the hand widget
-                    (current_grid_cols,current_grid_rows) = self.master.grid_size()
-                    self.hand_disp_label.grid(column=0, columnspan=2, row=current_grid_rows)
-                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows+1)
                 #TODO: Add more server tags for things like player hands, scores, etc. and parse this info to update the GUI
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     hand_found = False
@@ -118,9 +115,8 @@ class GuiPart(object):
                     assert hand_found, "Error processing player hand!"
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
-                    (current_grid_cols,current_grid_rows) = self.master.grid_size()
-                    self.hand_disp_label.grid(column=0, columnspan=2, row=current_grid_rows)
-                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows+1) #Put this information on the bottom of the GUI
+                    self.hand_disp_label.grid(column=0, columnspan=2, row=1)
+                    self.hand_disp.grid(column=0, columnspan=2, row=2)
 
             except queue.Empty:
                 # just on general principles, although we don't expect this
