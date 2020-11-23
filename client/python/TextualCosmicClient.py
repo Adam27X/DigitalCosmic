@@ -27,6 +27,7 @@ class GuiPart(object):
         self.client_choice = StringVar()
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
+        self.hand_disp_label = Label(self.master, text='Player hand:')
         self.hand_disp = Listbox(self.master, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
 
         self.confirmation_button = ttk.Button(self.master, text='Confirm choice', command=self.hide_options)
@@ -102,7 +103,8 @@ class GuiPart(object):
                     #Since this process changes the number of rows, we need to redraw the hand_display
                     #FIXME: This is pretty ugly...it would be better to frame the radiobuttons and the confirmation button and then use a constant number for the row of the hand widget
                     (current_grid_cols,current_grid_rows) = self.master.grid_size()
-                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows)
+                    self.hand_disp_label.grid(column=0, columnspan=2, row=current_grid_rows)
+                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows+1)
                 #TODO: Add more server tags for things like player hands, scores, etc. and parse this info to update the GUI
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     hand_found = False
@@ -117,7 +119,8 @@ class GuiPart(object):
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
                     (current_grid_cols,current_grid_rows) = self.master.grid_size()
-                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows) #Put this information on the bottom of the GUI
+                    self.hand_disp_label.grid(column=0, columnspan=2, row=current_grid_rows)
+                    self.hand_disp.grid(column=0, columnspan=2, row=current_grid_rows+1) #Put this information on the bottom of the GUI
 
             except queue.Empty:
                 # just on general principles, although we don't expect this
