@@ -27,6 +27,8 @@ class GuiPart(object):
         self.choice_frame.grid(column=0,row=0)
         self.choice_list = []
         self.client_choice = StringVar()
+        self.choice_label_var = StringVar()
+        self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.master, text='Player hand:')
@@ -87,6 +89,8 @@ class GuiPart(object):
                 #Process options if there are any
                 if msg.find('[needs_response]') != -1:
                     option_num = None
+                    self.choice_label_var.set("Please choose one of the following options:")
+                    self.choice_label.grid(column=0, row=0)
                     for line in msg.splitlines():
                         option_match = re.match('([0-9]): (.*)',line)
                         if line.find('[needs_response]') != -1: #This line is delivered after the options
@@ -95,13 +99,13 @@ class GuiPart(object):
                             option_num = option_match.group(1)
                             prompt = option_match.group(2)
                             self.choice_list.append(ttk.Radiobutton(self.choice_frame, text=prompt, variable=self.client_choice, value=option_num))
-                            self.choice_list[int(option_num)].grid(column=0,row=int(option_num))
+                            option_row = int(option_num)+1
+                            self.choice_list[int(option_num)].grid(column=0,row=option_row)
                     if option_num == None:
                         print('ERROR:\n' + msg)
                         raise Exception('A response is required but we failed to find any options!')
-                    num_options = int(option_num)+1
-                    #self.text.grid(column=1, row=0, rowspan=num_options+1, sticky=(N,S))
-                    self.confirmation_button.grid(column=0, row=num_options)
+                    confirmation_row = int(option_num)+2
+                    self.confirmation_button.grid(column=0, row=confirmation_row)
                 #TODO: Add more server tags for things like player hands, scores, etc. and parse this info to update the GUI
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     hand_found = False
@@ -135,6 +139,7 @@ class GuiPart(object):
             option.grid_forget()
         self.choice_list = []
         self.confirmation_button.grid_forget()
+        self.choice_label_var.set("Waiting on other players...")
         self.send_message_to_server(self.client_choice.get())
 
 class ThreadedClient(object):
