@@ -18,7 +18,6 @@ public:
 	unsigned score;
 	std::vector<PlanetInfo> planets; //Each planet has some number of ships of each valid player color
 	std::unique_ptr<AlienBase> alien;
-	std::vector<CosmicCardType> hand;
 	EncounterRole current_role;
 	bool alien_zapped;
 
@@ -33,7 +32,38 @@ public:
 	const std::string get_alien_desc() const;
 	bool alien_revealed() const;
 
+	void update_client_hand() const;
+	void hand_push_back(const CosmicCardType c);
+	std::vector<CosmicCardType>::iterator hand_begin() { return hand.begin(); }
+	std::vector<CosmicCardType>::iterator hand_end() { return hand.end(); }
+	void hand_clear();
+	unsigned hand_size() const { return hand.size(); }
+	bool hand_empty() const { return hand.empty(); }
+	CosmicCardType hand_get(unsigned index) { return hand[index]; }
+	std::vector<CosmicCardType> get_hand_data() const { return hand; }
+	void set_hand_data(std::vector<CosmicCardType> data) { hand = data; }
+
+	template<typename Iterator>
+	Iterator hand_erase(Iterator pos)
+	{
+		auto ret = hand.erase(pos);
+	        update_client_hand();
+		return ret;
+	}
+
+	template<typename Iterator>
+	Iterator hand_erase(Iterator first, Iterator last)
+	{
+		auto ret = hand.erase(first,last);
+	        update_client_hand();
+		return ret;
+	}
+
 	//Does this need a forward decl?
 	GameState *game; //Intended for callbacks and should be used sparingly
+
+private:
+	std::vector<CosmicCardType> hand;
+
 };
 

@@ -191,7 +191,7 @@ void GameState::deal_starting_hands()
 	while(total_cards_dealt > current_cards_dealt)
 	{
 		unsigned player_to_be_dealt_this_card = current_cards_dealt % players.size();
-		players[player_to_be_dealt_this_card].hand.push_back(*iter); //Place the card in the player's hand
+		players[player_to_be_dealt_this_card].hand_push_back(*iter); //Place the card in the player's hand
 		iter = cosmic_deck.erase(iter); //Remove the card from the deck
 
 		current_cards_dealt++;
@@ -219,10 +219,8 @@ void GameState::draw_cosmic_card(PlayerInfo &player)
 	}
 
 	auto iter = cosmic_deck.begin();
-	player.hand.push_back(*iter);
+	player.hand_push_back(*iter);
 	cosmic_deck.erase(iter);
-
-	send_player_hand(player.color);
 
 	GameEvent g(player.color,GameEventType::DrawCard);
 	resolve_game_event(g);
@@ -238,8 +236,6 @@ void GameState::send_player_hands() const
 	}
 }
 
-//TODO: Make sure this function is called whenever a player's hand changes
-//FIXME: We should facilitate the above process by having this function called automatically from within PlayerInfo whenver the hand is modified
 void GameState::send_player_hand(const PlayerColors player) const
 {
 	const std::string player_hand = get_player_const(player).get_hand();
@@ -297,26 +293,26 @@ const PlayerInfo& GameState::get_player_const(const PlayerColors &c) const
 void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 {
 	//Copy cards from the player's hand to discard
-	for(auto i=player.hand.begin(),e=player.hand.end();i!=e;++i)
+	for(auto i=player.hand_begin(),e=player.hand_end();i!=e;++i)
 	{
 		cosmic_discard.push_back(*i);
 	}
-	player.hand.clear();
+	player.hand_clear();
 
 	if(cosmic_deck.size() < 8)
 	{
 		//Move remaining cards in the deck to the player, then move discard to the deck, then shuffle and finish dealing the player's new hand
 		for(auto i=cosmic_deck.begin(),e=cosmic_deck.end();i!=e;++i)
 		{
-			player.hand.push_back(*i);
+			player.hand_push_back(*i);
 		}
 		cosmic_deck.clear();
 		shuffle_discard_into_cosmic_deck();
 	}
 
-	while(player.hand.size() < 8)
+	while(player.hand_size() < 8)
 	{
-		player.hand.push_back(*cosmic_deck.begin());
+		player.hand_push_back(*cosmic_deck.begin());
 		cosmic_deck.erase(cosmic_deck.begin());
 	}
 
@@ -326,8 +322,7 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 		return discard_and_draw_new_hand(player);
 	}
 
-	//Once we've succeeded, add the GameEvent for potential responses and update the client GUI
-	send_player_hand(player.color);
+	//Once we've succeeded, add the GameEvent for potential responses
 	GameEvent g(player.color,GameEventType::DrawCard);
 	resolve_game_event(g);
 }
@@ -438,7 +433,7 @@ void GameState::plague_player()
 	unsigned chosen_option;
 	//Artifacts
 	std::vector<CosmicCardType> valid_artifacts;
-	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 	{
 		if((*i >= CosmicCardType::CardZap) && (*i <= CosmicCardType::Quash))
 		{
@@ -456,20 +451,19 @@ void GameState::plague_player()
 		}
 		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_artifacts[chosen_option];
-		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 		{
 			if(*i == choice)
 			{
 				cosmic_discard.push_back(*i);
-				victim.hand.erase(i);
-				send_player_hand(victim.color);
+				victim.hand_erase(i);
 				break;
 			}
 		}
 	}
 	//Attack
 	std::vector<CosmicCardType> valid_attacks;
-	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 	{
 		if((*i >= CosmicCardType::Attack0) && (*i <= CosmicCardType::Attack40))
 		{
@@ -487,42 +481,39 @@ void GameState::plague_player()
 		}
 		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_attacks[chosen_option];
-		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 		{
 			if(*i == choice)
 			{
 				cosmic_discard.push_back(*i);
-				victim.hand.erase(i);
-				send_player_hand(victim.color);
+				victim.hand_erase(i);
 				break;
 			}
 		}
 	}
 	//Negotiate
-	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 	{
 		if(*i == CosmicCardType::Negotiate)
 		{
 			cosmic_discard.push_back(*i);
-			victim.hand.erase(i);
-			send_player_hand(victim.color);
+			victim.hand_erase(i);
 			break;
 		}
 	}
 	//Morph
-	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 	{
 		if(*i == CosmicCardType::Morph)
 		{
 			cosmic_discard.push_back(*i);
-			victim.hand.erase(i);
-			send_player_hand(victim.color);
+			victim.hand_erase(i);
 			break;
 		}
 	}
 	//Reinforcement
 	std::vector<CosmicCardType> valid_reinforcements;
-	for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 	{
 		if((*i >= CosmicCardType::Reinforcement2) && (*i <= CosmicCardType::Reinforcement5))
 		{
@@ -540,13 +531,12 @@ void GameState::plague_player()
 		}
 		chosen_option = prompt_player(victim.color,prompt.str(),options);
 		CosmicCardType choice = valid_reinforcements[chosen_option];
-		for(auto i=victim.hand.begin(),e=victim.hand.end();i!=e;++i)
+		for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 		{
 			if(*i == choice)
 			{
 				cosmic_discard.push_back(*i);
-				victim.hand.erase(i);
-				send_player_hand(victim.color);
+				victim.hand_erase(i);
 				break;
 			}
 		}
@@ -608,7 +598,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
 		std::vector<GameEvent> valid_plays;
-		for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
 			if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
 			{
@@ -657,19 +647,16 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 					//Remove this card from the player's hand and add it to discard
 					add_to_discard_pile(play);
-					unsigned old_hand_size = current_player.hand.size(); //Sanity checking
-					for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+					unsigned old_hand_size = current_player.hand_size(); //Sanity checking
+					for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 					{
 						if(*i == play)
 						{
-							current_player.hand.erase(i);
+							current_player.hand_erase(i);
 							break;
 						}
 					}
-					assert(current_player.hand.size()+1 == old_hand_size && "Error removing played card from the player's hand!");
-
-					//Update the player's hand in the client GUI
-					send_player_hand(current_player.color);
+					assert(current_player.hand_size()+1 == old_hand_size && "Error removing played card from the player's hand!");
 
 					get_callbacks_for_cosmic_card(play,g);
 				}
@@ -685,7 +672,7 @@ void GameState::check_for_game_events(PlayerInfo &offense)
 
 				//Recalculate the set of valid plays since either the current play or a response to it could have changed it
 				valid_plays.clear();
-				for(auto i=current_player.hand.begin(),e=current_player.hand.end(); i!=e; ++i)
+				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
 					if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
 					{
@@ -973,9 +960,9 @@ void GameState::draw_from_destiny_deck()
 			{
 				unsigned current_player_index = (i+player_index) % players.size();
 				PlayerColors current_player_color = players[current_player_index].color;
-				if((current_player_color != off) && (players[current_player_index].hand.size() > most_cards_in_hand))
+				if((current_player_color != off) && (players[current_player_index].hand_size() > most_cards_in_hand))
 				{
-					most_cards_in_hand = players[current_player_index].hand.size();
+					most_cards_in_hand = players[current_player_index].hand_size();
 					defense_index = current_player_index;
 				}
 			}
@@ -1335,7 +1322,7 @@ void GameState::setup_negotiation()
 			prompt << "How many cards will the " << to_string(assignments.offense) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
 			options.clear();
 			options.push_back("0");
-			for(unsigned i=0; i<get_player(assignments.defense).hand.size(); i++)
+			for(unsigned i=0; i<get_player(assignments.defense).hand_size(); i++)
 			{
 				options.push_back(std::to_string(i+1));
 			}
@@ -1360,7 +1347,7 @@ void GameState::setup_negotiation()
 			prompt << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.offense) << " player (offense)?\n";
 			options.clear();
 			options.push_back("0");
-			for(unsigned i=0; i<get_player(assignments.offense).hand.size(); i++)
+			for(unsigned i=0; i<get_player(assignments.offense).hand_size(); i++)
 			{
 				options.push_back(std::to_string(i+1));
 			}
@@ -1430,14 +1417,14 @@ void GameState::resolve_negotiation()
 		PlayerInfo &defense = get_player(assignments.defense);
 		if(deal_params.num_cards_to_offense > 0)
 		{
-			assert(deal_params.num_cards_to_offense <= defense.hand.size());
+			assert(deal_params.num_cards_to_offense <= defense.hand_size());
 			if(deal_params.cards_to_offense_chosen_randomly)
 			{
 				for(unsigned i=0; i<deal_params.num_cards_to_offense; i++)
 				{
-					unsigned chosen_card_index = rand() % defense.hand.size();
-					cards_to_offense.push_back(defense.hand[chosen_card_index]);
-					defense.hand.erase(defense.hand.begin()+chosen_card_index);
+					unsigned chosen_card_index = rand() % defense.hand_size();
+					cards_to_offense.push_back(defense.hand_get(chosen_card_index));
+					defense.hand_erase(defense.hand_begin()+chosen_card_index);
 				}
 			}
 			else
@@ -1447,30 +1434,29 @@ void GameState::resolve_negotiation()
 				for(unsigned i=0; i<deal_params.num_cards_to_offense; i++)
 				{
 					std::vector<std::string> options;
-					for(unsigned i=0; i<defense.hand.size(); i++)
+					for(unsigned i=0; i<defense.hand_size(); i++)
 					{
-						options.push_back(to_string(defense.hand[i]));
+						options.push_back(to_string(defense.hand_get(i)));
 					}
 					unsigned chosen_option = prompt_player(assignments.defense,prompt.str(),options);
-					cards_to_offense.push_back(defense.hand[chosen_option]);
-					defense.hand.erase(defense.hand.begin()+chosen_option);
+					cards_to_offense.push_back(defense.hand_get(chosen_option));
+					defense.hand_erase(defense.hand_begin()+chosen_option);
 				}
 			}
-			send_player_hand(assignments.defense);
 		}
 		std::vector<CosmicCardType> cards_to_defense;
 		//Choose which cards will be taken from the offense
 		PlayerInfo &offense = get_player(assignments.offense);
 		if(deal_params.num_cards_to_defense > 0)
 		{
-			assert(deal_params.num_cards_to_defense <= offense.hand.size());
+			assert(deal_params.num_cards_to_defense <= offense.hand_size());
 			if(deal_params.cards_to_defense_chosen_randomly)
 			{
 				for(unsigned i=0; i<deal_params.num_cards_to_defense; i++)
 				{
-					unsigned chosen_card_index = rand() % offense.hand.size();
-					cards_to_defense.push_back(offense.hand[chosen_card_index]);
-					offense.hand.erase(offense.hand.begin()+chosen_card_index);
+					unsigned chosen_card_index = rand() % offense.hand_size();
+					cards_to_defense.push_back(offense.hand_get(chosen_card_index));
+					offense.hand_erase(offense.hand_begin()+chosen_card_index);
 				}
 			}
 			else
@@ -1480,28 +1466,25 @@ void GameState::resolve_negotiation()
 				for(unsigned i=0; i<deal_params.num_cards_to_defense; i++)
 				{
 					std::vector<std::string> options;
-					for(unsigned i=0; i<offense.hand.size(); i++)
+					for(unsigned i=0; i<offense.hand_size(); i++)
 					{
-						options.push_back(to_string(offense.hand[i]));
+						options.push_back(to_string(offense.hand_get(i)));
 					}
 					unsigned chosen_option = prompt_player(assignments.offense,prompt.str(),options);
-					cards_to_defense.push_back(offense.hand[chosen_option]);
-					offense.hand.erase(offense.hand.begin()+chosen_option);
+					cards_to_defense.push_back(offense.hand_get(chosen_option));
+					offense.hand_erase(offense.hand_begin()+chosen_option);
 				}
 			}
-			send_player_hand(assignments.offense);
 		}
 		//Distribute the chosen cards to their new players
 		for(auto i=cards_to_offense.begin(),e=cards_to_offense.end();i!=e;++i)
 		{
-			offense.hand.push_back(*i);
+			offense.hand_push_back(*i);
 		}
 		for(auto i=cards_to_defense.begin(),e=cards_to_defense.end();i!=e;++i)
 		{
-			defense.hand.push_back(*i);
+			defense.hand_push_back(*i);
 		}
-		send_player_hand(assignments.offense);
-		send_player_hand(assignments.defense);
 
 		//The deal was actually successful, so we use a separate GameEventType for Tick-Tock triggers
 		GameEvent g(assignments.offense,GameEventType::SuccessfulDeal); //Color is arbitrary here
@@ -1576,14 +1559,12 @@ void GameState::resolve_compensation()
 		server.broadcast_message(announce.str());
 		for(unsigned i=0; i<number_of_ships_lost; i++)
 		{
-			if(player_giving_compensation.hand.empty())
+			if(player_giving_compensation.hand_empty())
 				break;
 
-			unsigned card_choice = rand() % player_giving_compensation.hand.size();
-			player_receiving_compensation.hand.push_back(player_giving_compensation.hand[card_choice]);
-			player_giving_compensation.hand.erase(player_giving_compensation.hand.begin()+card_choice);
-			send_player_hand(player_giving_compensation.color);
-			send_player_hand(player_receiving_compensation.color);
+			unsigned card_choice = rand() % player_giving_compensation.hand_size();
+			player_receiving_compensation.hand_push_back(player_giving_compensation.hand_get(card_choice));
+			player_giving_compensation.hand_erase(player_giving_compensation.hand_begin()+card_choice);
 		}
 	}
 }
@@ -2054,7 +2035,7 @@ void GameState::execute_turn()
 
 	std::string prompt("Which encounter card would you like to play?\n");
 	std::vector<std::string> options;
-	for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
+	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
 	{
 		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 		{
@@ -2064,7 +2045,7 @@ void GameState::execute_turn()
 	unsigned response = prompt_player(assignments.offense,prompt,options);
 
 	unsigned option = 0;
-	for(auto i=offense.hand.begin(),e=offense.hand.end();i!=e;++i)
+	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
 	{
 		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 		{
@@ -2072,8 +2053,7 @@ void GameState::execute_turn()
 			{
 				assignments.offensive_encounter_card = *i;
 				cosmic_discard.push_back(*i);
-				offense.hand.erase(i);
-				send_player_hand(assignments.offense);
+				offense.hand_erase(i);
 				break;
 			}
 			option++;
@@ -2081,7 +2061,7 @@ void GameState::execute_turn()
 	}
 
 	options.clear();
-	for(auto i=defense.hand.begin(),e=defense.hand.end();i!=e;++i)
+	for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
 	{
 		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 		{
@@ -2091,7 +2071,7 @@ void GameState::execute_turn()
 	response = prompt_player(assignments.defense,prompt,options);
 
 	option = 0;
-	for(auto i=defense.hand.begin(),e=defense.hand.end();i!=e;++i)
+	for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
 	{
 		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 		{
@@ -2099,8 +2079,7 @@ void GameState::execute_turn()
 			{
 				assignments.defensive_encounter_card = *i;
 				cosmic_discard.push_back(*i);
-				defense.hand.erase(i);
-				send_player_hand(assignments.defense);
+				defense.hand_erase(i);
 				break;
 			}
 			option++;
@@ -2183,9 +2162,9 @@ void GameState::swap_main_player_hands()
 	PlayerInfo &offense = get_player(assignments.offense);
 	PlayerInfo &defense = get_player(assignments.defense);
 
-	std::vector<CosmicCardType> tmp = offense.hand;
-	offense.hand = defense.hand;
-	defense.hand = tmp;
+	std::vector<CosmicCardType> tmp = offense.get_hand_data();
+	offense.set_hand_data(defense.get_hand_data());
+	defense.set_hand_data(tmp);
 }
 
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color) const
