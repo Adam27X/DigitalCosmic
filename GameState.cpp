@@ -1922,10 +1922,19 @@ void GameState::start_game()
 	}
 }
 
+void GameState::update_turn_phase(const TurnPhase phase)
+{
+	state = phase;
+	//Update client GUIs
+	std::string msg("[turn_phase] ");
+	msg.append(to_string(phase));
+	server.broadcast_message(msg);
+}
+
 void GameState::execute_turn()
 {
 	//Start Turn Phase
-	state = TurnPhase::StartTurn;
+	update_turn_phase(TurnPhase::StartTurn);
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		players[i].current_role = EncounterRole::None;
@@ -1950,7 +1959,7 @@ void GameState::execute_turn()
 	check_for_game_events(offense);
 
 	//Regroup Phase
-	state = TurnPhase::Regroup;
+	update_turn_phase(TurnPhase::Regroup);
 
 	//If the offense has any ships in the warp, they retrieve one of them
 	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
@@ -1968,14 +1977,14 @@ void GameState::execute_turn()
 	check_for_game_events(offense);
 
 	//Destiny Phase
-	state = TurnPhase::Destiny;
+	update_turn_phase(TurnPhase::Destiny);
 
 	draw_from_destiny_deck();
 
 	check_for_game_events(offense);
 
 	//Launch Phase
-	state = TurnPhase::Launch;
+	update_turn_phase(TurnPhase::Launch);
 
 	choose_opponent_planet();
 
@@ -1984,7 +1993,7 @@ void GameState::execute_turn()
 	check_for_game_events(offense);
 
 	//Alliance Phase
-	state = TurnPhase::Alliance;
+	update_turn_phase(TurnPhase::Alliance);
 
 	//Offense invites, then the defense invites, then players accept/reject and commit ships in turn order
 	std::set<PlayerColors> potential_allies;
@@ -2004,7 +2013,7 @@ void GameState::execute_turn()
 	check_for_game_events(offense);
 
 	//Planning Phase
-	state = TurnPhase::Planning_before_selection;
+	update_turn_phase(TurnPhase::Planning_before_selection);
 
 	//If the offense happens to have no encounter cards in hand, the turn ends immediately
 	if(!offense.has_encounter_cards_in_hand())
@@ -2090,11 +2099,11 @@ void GameState::execute_turn()
 	assert(assignments.defensive_encounter_card != CosmicCardType::None && "Failed to obtain defensive encounter card!");
 
 	//After cards are selected effects can now resolve
-	state = TurnPhase::Planning_after_selection;
+	update_turn_phase(TurnPhase::Planning_after_selection);
 	check_for_game_events(offense);
 
 	//Reveal Phase
-	state = TurnPhase::Reveal;
+	update_turn_phase(TurnPhase::Reveal);
 
 	announce.str("");
 	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
@@ -2118,7 +2127,7 @@ void GameState::execute_turn()
 
 	check_for_game_events(offense);
 
-	state = TurnPhase::Resolution;
+	update_turn_phase(TurnPhase::Resolution);
 
 	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
 	check_for_game_events(offense);

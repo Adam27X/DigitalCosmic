@@ -20,7 +20,7 @@ class GuiPart(object):
         self.master = master
         self.master.withdraw()
         self.server_log_frame = ttk.Frame(self.master, padding="5 5 5 5")
-        self.server_log_frame.grid(column=1,row=0)
+        self.server_log_frame.grid(column=1,row=1)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=80, height=24)
@@ -28,7 +28,7 @@ class GuiPart(object):
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
         self.choice_frame = ttk.Frame(self.master, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
-        self.choice_frame.grid(column=0,row=0)
+        self.choice_frame.grid(column=0,row=1)
         self.choice_list = []
         self.client_choice = StringVar()
         self.choice_label_var = StringVar()
@@ -38,6 +38,26 @@ class GuiPart(object):
         self.hand_disp_label = Label(self.master, text='Player hand:')
         self.hand_disp = Listbox(self.master, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
 
+        #Display the current turn phase
+        self.turn_phase_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.turn_phase_frame.grid(column=0, columnspan=2, row=0)
+        self.turn_phase_labels = []
+        #NOTE: Use bg="Orange" to select a turn phase
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Start Turn"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Regroup"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Destiny"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Launch"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Alliance"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Planning"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Reveal"))
+        self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Resolution"))
+        #TODO: Add vertical separators between each phase for clarity?
+        for i in range(len(self.turn_phase_labels)):
+            self.turn_phase_labels[i].grid(column=i,row=0)
+        ttk.Separator(self.turn_phase_frame, orient='horizontal').grid(column=0, columnspan=8, row=1, sticky='ew')
+        self.default_label_bg = self.turn_phase_labels[0].cget('bg')
+
+        #FIXME: This button should only be pressed when one of the options is selected (otherwise it should be displayed, but unclickable)
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #First, bring up the connection window
@@ -123,8 +143,32 @@ class GuiPart(object):
                     assert hand_found, "Error processing player hand!"
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
-                    self.hand_disp_label.grid(column=0, columnspan=2, row=1)
-                    self.hand_disp.grid(column=0, columnspan=2, row=2)
+                    self.hand_disp_label.grid(column=0, columnspan=2, row=2)
+                    self.hand_disp.grid(column=0, columnspan=2, row=3)
+                if msg.find('[turn_phase]') != -1:
+                    phase_index = None
+                    if msg.find('Start') != -1:
+                        phase_index = 0
+                    elif msg.find('Regroup') != -1:
+                        phase_index = 1
+                    elif msg.find('Destiny') != -1:
+                        phase_index = 2
+                    elif msg.find('Launch') != -1:
+                        phase_index = 3
+                    elif msg.find('Alliance') != -1:
+                        phase_index = 4
+                    elif msg.find('Planning') != -1: #This covers Planning before and after cards are selected
+                        phase_index = 5
+                    elif msg.find('Reveal') != -1:
+                        phase_index = 6
+                    elif msg.find('Resolution') != -1:
+                        phase_index = 7
+                    assert phase_index is not None, "Error parsing the turn phase!"
+                    for i in range(len(self.turn_phase_labels)):
+                        if i == phase_index:
+                            self.turn_phase_labels[i].config(bg="Orange")
+                        else:
+                            self.turn_phase_labels[i].config(bg=self.default_label_bg)
 
             except queue.Empty:
                 # just on general principles, although we don't expect this

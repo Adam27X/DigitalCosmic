@@ -152,6 +152,7 @@ private:
 	void update_player_scores();
 	void execute_turn();
 	std::vector<PlayerColors> get_player_order();
+	void update_turn_phase(const TurnPhase phase);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
