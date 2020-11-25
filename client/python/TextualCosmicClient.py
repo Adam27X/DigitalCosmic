@@ -19,8 +19,12 @@ class GuiPart(object):
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
         self.master.withdraw()
-        self.text = Text(self.master, state='disabled', width=80, height=24)
-        self.text.grid(column=1,row=0)
+        self.server_log_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.server_log_frame.grid(column=1,row=0)
+        self.server_log_label = Label(self.server_log_frame, text="Server log:")
+        self.server_log_label.grid(column=0, row=0)
+        self.text = Text(self.server_log_frame, state='disabled', width=80, height=24)
+        self.text.grid(column=0,row=1)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
         self.choice_frame = ttk.Frame(self.master, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
