@@ -19,13 +19,17 @@ class GuiPart(object):
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
         self.master.withdraw()
+
+        #Server log
         self.server_log_frame = ttk.Frame(self.master, padding="5 5 5 5")
-        self.server_log_frame.grid(column=1,row=1)
+        self.server_log_frame.grid(column=2, row=1)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
-        self.text = Text(self.server_log_frame, state='disabled', width=80, height=24)
+        self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
         self.text.grid(column=0,row=1)
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
+
+        #Player choices
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
         self.choice_frame = ttk.Frame(self.master, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
         self.choice_frame.grid(column=0,row=1)
@@ -33,6 +37,10 @@ class GuiPart(object):
         self.client_choice = StringVar()
         self.choice_label_var = StringVar()
         self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
+        #FIXME: This button should only be pressed when one of the options is selected (otherwise it should be displayed, but unclickable)
+        self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
+
+        #Player hand
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.master, text='Player hand:')
@@ -40,9 +48,8 @@ class GuiPart(object):
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master, padding="5 5 5 5")
-        self.turn_phase_frame.grid(column=0, columnspan=2, row=0)
+        self.turn_phase_frame.grid(column=0, columnspan=3, row=0)
         self.turn_phase_labels = []
-        #NOTE: Use bg="Orange" to select a turn phase
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Start Turn"))
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Regroup"))
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Destiny"))
@@ -57,8 +64,14 @@ class GuiPart(object):
         ttk.Separator(self.turn_phase_frame, orient='horizontal').grid(column=0, columnspan=8, row=1, sticky='ew')
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
-        #FIXME: This button should only be pressed when one of the options is selected (otherwise it should be displayed, but unclickable)
-        self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
+        #Game board
+        self.game_board_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.game_board_frame.grid(column=1, row=1)
+        self.warp_width = 400
+        self.warp_height = 80
+        self.warp_canvas = Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="orange")
+        self.warp_ships = [] #NOTE: It's unclear if this list is even necessary
+        self.warp_canvas.grid() #Only object, for now
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -130,7 +143,6 @@ class GuiPart(object):
                         raise Exception('A response is required but we failed to find any options!')
                     confirmation_row = int(option_num)+2
                     self.confirmation_button.grid(column=0, row=confirmation_row)
-                #TODO: Add more server tags for things like player hands, scores, etc. and parse this info to update the GUI
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     hand_found = False
                     for line in msg.splitlines():
@@ -143,9 +155,9 @@ class GuiPart(object):
                     assert hand_found, "Error processing player hand!"
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
-                    self.hand_disp_label.grid(column=0, columnspan=2, row=2)
-                    self.hand_disp.grid(column=0, columnspan=2, row=3)
-                if msg.find('[turn_phase]') != -1:
+                    self.hand_disp_label.grid(column=0, columnspan=3, row=2)
+                    self.hand_disp.grid(column=0, columnspan=3, row=3)
+                if msg.find('[turn_phase]') != -1: #Update the current turn phase
                     phase_index = None
                     if msg.find('Start') != -1:
                         phase_index = 0
@@ -169,6 +181,30 @@ class GuiPart(object):
                             self.turn_phase_labels[i].config(bg="Orange")
                         else:
                             self.turn_phase_labels[i].config(bg=self.default_label_bg)
+                if msg.find('[warp_update]') != -1: #Redraw the warp
+                    ships = msg[msg.find('{')+1:msg.find('}')].split(',')
+                    #FIXME: Looks like there's a mobius tubes bug here; not sure if the bug is in the GUI's display of the information or the actual information (though the issue appears to be server side)
+                    #Clear out the previous canvas objects
+                    self.warp_canvas.delete("all")
+                    self.warp_ships = []
+                    if ships != -1: #If the warp isn't empty, update it
+                        ship_dict = {}
+                        for ship in ships:
+                            if ship not in ship_dict:
+                                ship_dict[ship] = 1
+                            else:
+                                ship_dict[ship] += 1
+                        colorcount = 0
+                        for color,num in ship_dict.items():
+                            left = colorcount*(self.warp_width/5)
+                            right = (colorcount+1)*(self.warp_width/5)
+                            center_hor = (left+right)/2
+                            top = 0
+                            bottom = self.warp_height
+                            center_ver = (top+bottom)/2
+                            self.warp_ships.append(self.warp_canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
+                            self.warp_ships.append(self.warp_canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
+                            colorcount += 1
 
             except queue.Empty:
                 # just on general principles, although we don't expect this

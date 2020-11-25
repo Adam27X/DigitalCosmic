@@ -153,6 +153,16 @@ private:
 	void execute_turn();
 	std::vector<PlayerColors> get_player_order();
 	void update_turn_phase(const TurnPhase phase);
+	void update_warp() const;
+	void warp_push_back(std::pair<PlayerColors,unsigned> ship);
+
+	template<typename Iterator>
+	Iterator warp_erase(Iterator pos)
+	{
+		auto ret = warp.erase(pos);
+		update_warp();
+		return ret;
+	}
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

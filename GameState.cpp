@@ -147,6 +147,19 @@ void GameState::dump_warp() const
 	server.broadcast_message(announce);
 }
 
+void GameState::update_warp() const
+{
+	std::string msg("[warp_update]");
+	msg.append(get_warp());
+	server.broadcast_message(msg);
+}
+
+void GameState::warp_push_back(std::pair<PlayerColors,unsigned> ship)
+{
+	warp.push_back(ship);
+	update_warp();
+}
+
 void GameState::dump_destiny_deck() const
 {
 	destiny_deck.dump();
@@ -396,7 +409,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
-					warp.push_back(std::make_pair(*i,encounter_num));
+					warp_push_back(std::make_pair(*i,encounter_num));
 					hyperspace_gate.erase(i);
 					break;
 				}
@@ -412,7 +425,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
-					warp.push_back(std::make_pair(*i,encounter_num));
+					warp_push_back(std::make_pair(*i,encounter_num));
 					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
 					break;
 				}
@@ -1636,7 +1649,7 @@ void GameState::offense_win_resolution()
 	{
 		if(*i == assignments.defense)
 		{
-			warp.push_back(std::make_pair(*i,encounter_num));
+			warp_push_back(std::make_pair(*i,encounter_num));
 			i = encounter_planet.erase(i);
 		}
 		else
@@ -1646,7 +1659,7 @@ void GameState::offense_win_resolution()
 	}
 	for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 	{
-		warp.push_back(std::make_pair(*i,encounter_num));
+		warp_push_back(std::make_pair(*i,encounter_num));
 		i=defensive_ally_ships.erase(i);
 	}
 
@@ -1665,7 +1678,7 @@ void GameState::defense_win_resolution()
 	//Offense and offensive ally ships go to the warp
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
-		warp.push_back(std::make_pair(*i,encounter_num));
+		warp_push_back(std::make_pair(*i,encounter_num));
 		i=hyperspace_gate.erase(i);
 	}
 	//Defensive allies return each of their ships to one of their colonies
@@ -1730,7 +1743,7 @@ void GameState::resolve_attack()
 		//Send all ships involved to the warp
 		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 		{
-			warp.push_back(std::make_pair(*i,encounter_num));
+			warp_push_back(std::make_pair(*i,encounter_num));
 			i=hyperspace_gate.erase(i);
 		}
 		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
@@ -1738,7 +1751,7 @@ void GameState::resolve_attack()
 		{
 			if(*i == assignments.defense)
 			{
-				warp.push_back(std::make_pair(*i,encounter_num));
+				warp_push_back(std::make_pair(*i,encounter_num));
 				i = encounter_planet.erase(i);
 			}
 			else
@@ -1748,7 +1761,7 @@ void GameState::resolve_attack()
 		}
 		for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 		{
-			warp.push_back(std::make_pair(*i,encounter_num));
+			warp_push_back(std::make_pair(*i,encounter_num));
 			i=defensive_ally_ships.erase(i);
 		}
 
@@ -2373,7 +2386,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 	{
 		if(i->first == p.color)
 		{
-			warp.erase(i);
+			warp_erase(i);
 			break;
 		}
 	}
@@ -2668,16 +2681,17 @@ void GameState::resolve_game_event(const GameEvent g)
 	stack.pop();
 }
 
+//FIXME: This is deprecated and probably no longer useful
 void GameState::debug_send_ship_to_warp()
 {
 	PlayerColors victim = PlayerColors::Yellow;
-	warp.push_back(std::make_pair(victim,encounter_num));
+	warp_push_back(std::make_pair(victim,encounter_num));
 
 	PlayerInfo &yellow = get_player(victim);
 	yellow.planets[0].erase(yellow.planets[0].begin());
 
 	PlayerColors victim2 = PlayerColors::Red;
-	warp.push_back(std::make_pair(victim2,encounter_num));
+	warp_push_back(std::make_pair(victim2,encounter_num));
 	PlayerInfo &red = get_player(victim2);
 	red.planets[2].erase(red.planets[2].begin());
 }
