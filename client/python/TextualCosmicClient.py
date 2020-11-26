@@ -37,7 +37,6 @@ class GuiPart(object):
         self.client_choice = StringVar()
         self.choice_label_var = StringVar()
         self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
-        #FIXME: This button should only be pressed when one of the options is selected (otherwise it should be displayed, but unclickable)
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #Player hand
@@ -129,7 +128,7 @@ class GuiPart(object):
                     self.choice_label_var.set("Please choose one of the following options:")
                     self.choice_label.grid(column=0, row=0)
                     for line in msg.splitlines():
-                        option_match = re.match('([0-9]): (.*)',line)
+                        option_match = re.match('([0-9]): (.*)',line) #TODO: Should we use [0-9]* here...this currently only works for up to 10 options
                         if line.find('[needs_response]') != -1: #This line is delivered after the options
                             break
                         if option_match:
@@ -219,12 +218,13 @@ class GuiPart(object):
 
     #NOTE: The GUI can send information to the server directly, so we don't need to send the choice back to the worker thread!
     def hide_options(self):
-        for option in self.choice_list:
-            option.grid_forget()
-        self.choice_list = []
-        self.confirmation_button.grid_forget()
-        self.choice_label_var.set("Waiting on other players...")
-        self.send_message_to_server(self.client_choice.get())
+        if len(self.client_choice.get()) != 0: #Make sure an option was actually selected
+            for option in self.choice_list:
+                option.grid_forget()
+            self.choice_list = []
+            self.confirmation_button.grid_forget()
+            self.choice_label_var.set("Waiting on other players...")
+            self.send_message_to_server(self.client_choice.get())
 
 class ThreadedClient(object):
     """
