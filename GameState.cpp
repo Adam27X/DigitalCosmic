@@ -53,7 +53,7 @@ const std::string GameState::get_game_board() const
 	std::stringstream ret;
 	ret << get_planets();
 	ret << get_PlanetInfo(hyperspace_gate,"Hyperspace gate");
-	ret << get_warp();
+	ret << get_warp_str();
 	return ret.str();
 }
 
@@ -106,7 +106,7 @@ const std::string GameState::get_PlanetInfo(const PlanetInfo &source, const std:
 	return announce.str();
 }
 
-const std::string GameState::get_warp() const
+const std::string GameState::get_warp_str() const
 {
 	std::stringstream announce;
 	if(warp.size())
@@ -143,14 +143,14 @@ void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name
 
 void GameState::dump_warp() const
 {
-	const std::string announce = get_warp();
+	const std::string announce = get_warp_str();
 	server.broadcast_message(announce);
 }
 
 void GameState::update_warp() const
 {
 	std::string msg("[warp_update]");
-	msg.append(get_warp());
+	msg.append(get_warp_str());
 	server.broadcast_message(msg);
 }
 
@@ -342,9 +342,9 @@ void GameState::discard_and_draw_new_hand(PlayerInfo &player)
 
 void GameState::free_all_ships_from_warp()
 {
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	while(warp.size()) //Subtle: we can use standard iteration here because the move_ship_from_warp_to_colony function calls warp.erase()
 	{
-		move_ship_from_warp_to_colony(get_player(i->first));
+		move_ship_from_warp_to_colony(get_player(warp.begin()->first));
 	}
 }
 

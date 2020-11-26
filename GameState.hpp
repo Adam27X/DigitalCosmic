@@ -109,7 +109,7 @@ public:
 	const std::string get_destiny_discard() const;
 	const std::string get_planets() const;
 	const std::string get_PlanetInfo(const PlanetInfo &source, const std::string name) const;
-	const std::string get_warp() const;
+	const std::string get_warp_str() const;
 	const std::string get_game_board() const;
 	const CosmicServer& get_server() const { return server; }
 

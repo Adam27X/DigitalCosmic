@@ -182,11 +182,10 @@ class GuiPart(object):
                             self.turn_phase_labels[i].config(bg=self.default_label_bg)
                 if msg.find('[warp_update]') != -1: #Redraw the warp
                     ships = msg[msg.find('{')+1:msg.find('}')].split(',')
-                    #FIXME: Looks like there's a mobius tubes bug here; not sure if the bug is in the GUI's display of the information or the actual information (though the issue appears to be server side)
                     #Clear out the previous canvas objects
                     self.warp_canvas.delete("all")
                     self.warp_ships = []
-                    if ships != -1: #If the warp isn't empty, update it
+                    if msg.find('{') != -1: #If the warp isn't empty, update it
                         ship_dict = {}
                         for ship in ships:
                             if ship not in ship_dict:
