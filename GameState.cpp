@@ -1699,6 +1699,7 @@ void GameState::offense_win_resolution()
 	{
 		encounter_planet.push_back(*i);
 		i=hyperspace_gate.erase(i);
+		update_planets();
 	}
 
 	assignments.successful_encounter = true;

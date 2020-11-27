@@ -222,7 +222,8 @@ class GuiPart(object):
                     else: #Reset the canvas
                         #Reset the canvases
                         for i in range(len(players)):
-                            self.planet_canvases[i].delete("all")
+                            for j in range(num_planets):
+                                self.planet_canvases[(num_planets*i)+j].delete("all")
                         self.planets = []
                     #Fill in the details
                     for i in range(len(players)):
@@ -234,6 +235,11 @@ class GuiPart(object):
                             current_planet_lbrace = players[i].find('{',last_lbrace+1)
                             current_planet_rbrace = players[i].find('}',last_rbrace+1)
                             current_planet = players[i][current_planet_lbrace+1:current_planet_rbrace].split(',')
+                            if len(players[i][current_planet_lbrace+1:current_planet_rbrace]) == 0: #No ships on this planet, go to the next one
+                                last_lbrace = current_planet_lbrace
+                                last_rbrace = current_planet_rbrace
+                                planet_id += 1
+                                continue
                             last_lbrace = current_planet_lbrace
                             last_rbrace = current_planet_rbrace
                             planet_dict = {}
