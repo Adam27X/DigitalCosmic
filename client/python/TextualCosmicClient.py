@@ -132,7 +132,7 @@ class GuiPart(object):
                     self.choice_label_var.set("Please choose one of the following options:")
                     self.choice_label.grid(column=0, row=0)
                     for line in msg.splitlines():
-                        option_match = re.match('([0-9]): (.*)',line) #TODO: Should we use [0-9]* here...this currently only works for up to 10 options
+                        option_match = re.match('([0-9]): (.*)',line) #TODO: Should we use [0-9]* here?  This setup currently only works for up to 10 options
                         if line.find('[needs_response]') != -1: #This line is delivered after the options
                             break
                         if option_match:
@@ -206,6 +206,9 @@ class GuiPart(object):
                             center_ver = (top+bottom)/2
                             self.warp_ships.append(self.warp_canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
                             self.warp_ships.append(self.warp_canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
+                            bbox = self.warp_canvas.bbox(self.warp_ships[-1]) #Get a bounding box for the newly created text object
+                            self.warp_ships.append(self.warp_canvas.create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
+                            self.warp_canvas.tag_raise(self.warp_ships[-2],self.warp_ships[-1]) #Bring the text in front of the background
                             colorcount += 1
                 if msg.find('[planet_update]') != -1: #Redraw player planets
                     players = msg.split('\n')[1:]
@@ -258,6 +261,9 @@ class GuiPart(object):
                                 center_ver = (top+bottom)/2
                                 self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_oval(left,top,right,bottom,fill=color,outline='black'))
                                 self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
+                                bbox = self.planet_canvases[(num_planets*i)+planet_id].bbox(self.planets[-1]) #Get a bounding box for the newly created text object
+                                self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
+                                self.planet_canvases[(num_planets*i)+planet_id].tag_raise(self.planets[-2],self.planets[-1]) #Bring the text in front of the background
                                 colorcount += 1
                             planet_id += 1
 
