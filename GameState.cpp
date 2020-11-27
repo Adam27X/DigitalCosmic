@@ -160,6 +160,32 @@ void GameState::warp_push_back(std::pair<PlayerColors,unsigned> ship)
 	update_warp();
 }
 
+void GameState::update_planets() const
+{
+	std::stringstream msg;
+	msg << "[planet_update]\n";
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		msg << to_string(i->color) << " Planets: {";
+		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
+		{
+			if(ii != i->planets.begin())
+				msg << ",";
+			msg << "{";
+			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
+			{
+				if(iii != ii->begin())
+					msg << ",";
+				msg << to_string(*iii);
+			}
+			msg << "}";
+		}
+		msg << "}\n";
+	}
+	msg << "\n";
+	server.broadcast_message(msg.str());
+}
+
 void GameState::dump_destiny_deck() const
 {
 	destiny_deck.dump();
@@ -427,6 +453,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 				{
 					warp_push_back(std::make_pair(*i,encounter_num));
 					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
+					update_planets(); //FIXME: Ideally changing the planet data would send these messages automatically...we would need an API that accepts a specific planet ID in addition to the vector API since we're dealing with a vector of vectors here
 					break;
 				}
 			}
@@ -1138,6 +1165,7 @@ void GameState::send_in_ships(const PlayerColors player)
 				if(*i == player)
 				{
 					host.planets[planet_id].erase(i);
+					update_planets();
 					break;
 				}
 			}
@@ -1414,6 +1442,7 @@ void GameState::resolve_negotiation()
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.offense,defense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.offense);
+			update_planets();
 		}
 		if(deal_params.defense_receives_colony)
 		{
@@ -1424,6 +1453,7 @@ void GameState::resolve_negotiation()
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.defense);
+			update_planets();
 		}
 		std::vector<CosmicCardType> cards_to_offense;
 		//Choose which cards will be taken from the defense
@@ -1651,6 +1681,7 @@ void GameState::offense_win_resolution()
 		{
 			warp_push_back(std::make_pair(*i,encounter_num));
 			i = encounter_planet.erase(i);
+			update_planets();
 		}
 		else
 		{
@@ -1753,6 +1784,7 @@ void GameState::resolve_attack()
 			{
 				warp_push_back(std::make_pair(*i,encounter_num));
 				i = encounter_planet.erase(i);
+				update_planets();
 			}
 			else
 			{
@@ -2299,6 +2331,7 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 			if(colony_found)
 			{
 				chosen_planet.push_back(p.color);
+				update_planets();
 				break;
 			}
 		}
@@ -2374,6 +2407,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 			if(colony_found)
 			{
 				chosen_planet.push_back(p.color);
+				update_planets();
 				break;
 			}
 		}

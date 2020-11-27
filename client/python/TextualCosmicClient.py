@@ -69,8 +69,12 @@ class GuiPart(object):
         self.warp_width = 400
         self.warp_height = 80
         self.warp_canvas = Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="orange")
-        self.warp_ships = [] #NOTE: It's unclear if this list is even necessary
-        self.warp_canvas.grid() #Only object, for now
+        self.warp_ships = []
+        Label(self.game_board_frame, text="The Warp:").grid(column=0,row=0)
+        self.warp_canvas.grid(column=0,row=1)
+        #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
+        self.planet_canvases = []
+        self.planets = []
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -203,6 +207,53 @@ class GuiPart(object):
                             self.warp_ships.append(self.warp_canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
                             self.warp_ships.append(self.warp_canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
                             colorcount += 1
+                if msg.find('[planet_update]') != -1: #Redraw player planets
+                    players = msg.split('\n')[1:]
+                    players = list(filter(None, players)) #Remove empty entries
+                    num_planets = 5
+                    if len(self.planet_canvases) == 0: #Draw the canvases for the first time
+                        #TODO: Add labels to the planets
+                        #TODO: We can probably do a better job of organizing this data, but this is a good start
+                        for i in range(len(players)):
+                            print('Players[i] = ' + players[i])
+                            for j in range(num_planets): #Create a row for each planet
+                                self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
+                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=2+j)
+                    else: #Reset the canvas
+                        #Reset the canvases
+                        for i in range(len(players)):
+                            self.planet_canvases[i].delete("all")
+                        self.planets = []
+                    #Fill in the details
+                    for i in range(len(players)):
+                        player = players[i].split(' ')[0]
+                        last_lbrace = players[i].find('{')
+                        last_rbrace = 0
+                        planet_id = 0
+                        while players[i].find('{',last_lbrace+1) != -1:
+                            current_planet_lbrace = players[i].find('{',last_lbrace+1)
+                            current_planet_rbrace = players[i].find('}',last_rbrace+1)
+                            current_planet = players[i][current_planet_lbrace+1:current_planet_rbrace].split(',')
+                            last_lbrace = current_planet_lbrace
+                            last_rbrace = current_planet_rbrace
+                            planet_dict = {}
+                            for ship in current_planet:
+                                if ship not in planet_dict:
+                                    planet_dict[ship] = 1
+                                else:
+                                    planet_dict[ship] += 1
+                            colorcount = 0
+                            for color,num in planet_dict.items():
+                                left = colorcount*(self.warp_width/5)
+                                right = (colorcount+1)*(self.warp_width/5)
+                                center_hor = (left+right)/2
+                                top = 0
+                                bottom = self.warp_height
+                                center_ver = (top+bottom)/2
+                                self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_oval(left,top,right,bottom,fill=color,outline='black'))
+                                self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
+                                colorcount += 1
+                            planet_id += 1
 
             except queue.Empty:
                 # just on general principles, although we don't expect this

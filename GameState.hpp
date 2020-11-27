@@ -155,6 +155,7 @@ private:
 	void update_turn_phase(const TurnPhase phase);
 	void update_warp() const;
 	void warp_push_back(std::pair<PlayerColors,unsigned> ship);
+	void update_planets() const;
 
 	template<typename Iterator>
 	Iterator warp_erase(Iterator pos)
