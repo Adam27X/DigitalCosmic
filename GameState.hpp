@@ -112,14 +112,13 @@ public:
 	const std::string get_warp_str() const;
 	const std::string get_game_board() const;
 	const CosmicServer& get_server() const { return server; }
+	void update_planets() const;
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
 	std::vector< std::pair<PlayerColors,unsigned> >& get_warp() { return warp; }
 	DealParameters& get_deal_params() { return deal_params; }
 
-	//Methods only meant for testing
-	void debug_send_ship_to_warp();
 private:	
 	void shuffle_destiny_deck();
 	void draw_from_destiny_deck();
@@ -155,7 +154,6 @@ private:
 	void update_turn_phase(const TurnPhase phase);
 	void update_warp() const;
 	void warp_push_back(std::pair<PlayerColors,unsigned> ship);
-	void update_planets() const;
 
 	template<typename Iterator>
 	Iterator warp_erase(Iterator pos)

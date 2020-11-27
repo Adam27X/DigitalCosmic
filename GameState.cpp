@@ -20,6 +20,11 @@ GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplaye
 	announce << "Starting Game with " << num_players << " players\n";
 	server.broadcast_message(announce.str());
 
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		players[i].set_game_state(this);
+	}
+
 	//For now assign colors in a specific order...TODO: let the user choose colors
 	players[0].make_default_player(PlayerColors::Red);
 	players[1].make_default_player(PlayerColors::Blue);
@@ -34,11 +39,6 @@ GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplaye
 	if(num_players > 4)
 	{
 		players[4].make_default_player(PlayerColors::Green);
-	}
-
-	for(unsigned i=0; i<players.size(); i++)
-	{
-		players[i].set_game_state(this);
 	}
 }
 
@@ -65,9 +65,9 @@ const std::string GameState::get_planets() const
 	{
 		announce << to_string(i->color) << " Player score: " << i->score << "\n";
 		announce << "Planets: {";
-		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
+		for(auto ii=i->planets.cbegin(),ee=i->planets.cend();ii!=ee;++ii)
 		{
-			if(ii != i->planets.begin())
+			if(ii != i->planets.cbegin())
 				announce << ",";
 			announce << "{";
 			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
@@ -167,9 +167,9 @@ void GameState::update_planets() const
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
 		msg << to_string(i->color) << " Planets: {";
-		for(auto ii=i->planets.begin(),ee=i->planets.end();ii!=ee;++ii)
+		for(auto ii=i->planets.cbegin(),ee=i->planets.cend();ii!=ee;++ii)
 		{
-			if(ii != i->planets.begin())
+			if(ii != i->planets.cbegin())
 				msg << ",";
 			msg << "{";
 			for(auto iii=ii->begin(),eee=ii->end();iii!=eee;++iii)
@@ -447,13 +447,12 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			server.send_message_to_client(player,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(player,valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			for(auto i=player_with_chosen_colony.planets[chosen_colony.second].begin(),e=player_with_chosen_colony.planets[chosen_colony.second].end();i!=e;++i)
+			for(auto i=player_with_chosen_colony.planets.planet_begin(chosen_colony.second),e=player_with_chosen_colony.planets.planet_begin(chosen_colony.second);i!=e;++i)
 			{
 				if(*i == player)
 				{
 					warp_push_back(std::make_pair(*i,encounter_num));
-					player_with_chosen_colony.planets[chosen_colony.second].erase(i);
-					update_planets(); //FIXME: Ideally changing the planet data would send these messages automatically...we would need an API that accepts a specific planet ID in addition to the vector API since we're dealing with a vector of vectors here
+					player_with_chosen_colony.planets.planet_erase(chosen_colony.second,i);
 					break;
 				}
 			}
@@ -861,7 +860,7 @@ void GameState::draw_from_destiny_deck()
 			std::map< std::pair<PlayerColors,unsigned>, unsigned > valid_home_system_encounters; //Map <opponent,planet number> -> number of opponent ships on that planet
 			for(unsigned i=0; i<offense.planets.size(); i++)
 			{
-				for(auto ii=offense.planets[i].begin(),ee=offense.planets[i].end(); ii!=ee; ++ii)
+				for(auto ii=offense.planets.planet_begin(i),ee=offense.planets.planet_end(i); ii!=ee; ++ii)
 				{
 					if(*ii != off)
 					{
@@ -1160,12 +1159,11 @@ void GameState::send_in_ships(const PlayerColors player)
 			//Remove the ship from the chosen colony
 			PlayerInfo &host = get_player(valid_colonies[choice].first);
 			const unsigned planet_id = valid_colonies[choice].second;
-			for(auto i=host.planets[planet_id].begin(),e=host.planets[planet_id].end();i!=e;++i)
+			for(auto i=host.planets.planet_begin(planet_id),e=host.planets.planet_end(planet_id);i!=e;++i)
 			{
 				if(*i == player)
 				{
-					host.planets[planet_id].erase(i);
-					update_planets();
+					host.planets.planet_erase(planet_id,i);
 					break;
 				}
 			}
@@ -1441,8 +1439,7 @@ void GameState::resolve_negotiation()
 			server.send_message_to_client(assignments.offense,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.offense,defense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.offense);
-			update_planets();
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.offense);
 		}
 		if(deal_params.defense_receives_colony)
 		{
@@ -1452,8 +1449,7 @@ void GameState::resolve_negotiation()
 			server.send_message_to_client(assignments.defense,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets[chosen_colony.second].push_back(assignments.defense);
-			update_planets();
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.defense);
 		}
 		std::vector<CosmicCardType> cards_to_offense;
 		//Choose which cards will be taken from the defense
@@ -1581,7 +1577,7 @@ void GameState::resolve_compensation()
 	}
 	else
 	{
-		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 		for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
 		{
 			if(*i == assignments.player_receiving_compensation)
@@ -1652,7 +1648,7 @@ void GameState::setup_attack()
 		}
 	}
 
-	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
 	{
 		if(*i == assignments.defense)
@@ -1674,14 +1670,13 @@ void GameState::setup_attack()
 void GameState::offense_win_resolution()
 {
 	//Defense and defensive ally ships go to the warp
-	PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+	PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
 	{
 		if(*i == assignments.defense)
 		{
 			warp_push_back(std::make_pair(*i,encounter_num));
-			i = encounter_planet.erase(i);
-			update_planets();
+			i = get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i); //FIXME: This should work but it's pretty ugly...
 		}
 		else
 		{
@@ -1697,9 +1692,8 @@ void GameState::offense_win_resolution()
 	//Offense and offensive ally ships create (or reinforce) a colony on the encounter planet
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
-		encounter_planet.push_back(*i);
+		get_player(assignments.planet_location).planets.planet_push_back(assignments.planet_id,*i); //FIXME: Ugly here too
 		i=hyperspace_gate.erase(i);
-		update_planets();
 	}
 
 	assignments.successful_encounter = true;
@@ -1778,14 +1772,13 @@ void GameState::resolve_attack()
 			warp_push_back(std::make_pair(*i,encounter_num));
 			i=hyperspace_gate.erase(i);
 		}
-		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets[assignments.planet_id];
+		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
 		{
 			if(*i == assignments.defense)
 			{
 				warp_push_back(std::make_pair(*i,encounter_num));
-				i = encounter_planet.erase(i);
-				update_planets();
+				get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i);
 			}
 			else
 			{
@@ -2230,9 +2223,9 @@ std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(co
 	{
 		for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
 		{
-			for(unsigned ships=0; ships<player_begin->planets[planet].size(); ships++)
+			for(unsigned ships=0; ships<player_begin->planets.planet_size(planet); ships++)
 			{
-				if(player_begin->planets[planet][ships] == color) //If this ship matches our color we have a colony there
+				if(player_begin->planets.get_ship(planet,ships) == color) //If this ship matches our color we have a colony there
 				{
 					valid_colonies.push_back(std::make_pair(player_begin->color,planet));
 					break;
@@ -2320,7 +2313,7 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 		{
 			if(player_begin->color != chosen_colony.first)
 				continue;
-			PlanetInfo &chosen_planet = player_begin->planets[chosen_colony.second];
+			PlanetInfo &chosen_planet = player_begin->planets.get_planet(chosen_colony.second);
 			for(auto i=chosen_planet.begin(),e=chosen_planet.end();i!=e; ++i)
 			{
 				if(*i == p.color)
@@ -2331,8 +2324,7 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
 			}
 			if(colony_found)
 			{
-				chosen_planet.push_back(p.color);
-				update_planets();
+				player_begin->planets.planet_push_back(chosen_colony.second,p.color);
 				break;
 			}
 		}
@@ -2396,7 +2388,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 		{
 			if(player_begin->color != chosen_colony.first)
 				continue;
-			PlanetInfo &chosen_planet = player_begin->planets[chosen_colony.second];
+			PlanetInfo &chosen_planet = player_begin->planets.get_planet(chosen_colony.second);
 			for(auto i=chosen_planet.begin(),e=chosen_planet.end();i!=e; ++i)
 			{
 				if(*i == p.color)
@@ -2407,8 +2399,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 			}
 			if(colony_found)
 			{
-				chosen_planet.push_back(p.color);
-				update_planets();
+				player_begin->planets.planet_push_back(chosen_colony.second,p.color);
 				break;
 			}
 		}
@@ -2714,20 +2705,5 @@ void GameState::resolve_game_event(const GameEvent g)
 		}
 	}
 	stack.pop();
-}
-
-//FIXME: This is deprecated and probably no longer useful
-void GameState::debug_send_ship_to_warp()
-{
-	PlayerColors victim = PlayerColors::Yellow;
-	warp_push_back(std::make_pair(victim,encounter_num));
-
-	PlayerInfo &yellow = get_player(victim);
-	yellow.planets[0].erase(yellow.planets[0].begin());
-
-	PlayerColors victim2 = PlayerColors::Red;
-	warp_push_back(std::make_pair(victim2,encounter_num));
-	PlayerInfo &red = get_player(victim2);
-	red.planets[2].erase(red.planets[2].begin());
 }
 

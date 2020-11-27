@@ -20,7 +20,7 @@ void PlayerInfo::make_default_player(const PlayerColors c)
 	{
 		for(unsigned ii=0; ii<default_ships_per_planet; ii++)
 		{
-			planets[i].push_back(color);
+			planets.planet_push_back(i,color);
 		}
 	}
 	alien_zapped = false;
@@ -71,9 +71,9 @@ bool PlayerInfo::alien_enabled() const
 	unsigned num_home_colonies = 0;
 	for(unsigned planet=0; planet<planets.size(); planet++)
 	{
-		for(unsigned ship=0; ship<planets[planet].size(); ship++)
+		for(unsigned ship=0; ship<planets.planet_size(planet); ship++)
 		{
-			if(planets[planet][ship] == color)
+			if(planets.get_ship(planet,ship) == color)
 			{
 				num_home_colonies++;
 				break;
@@ -329,5 +329,12 @@ void PlayerInfo::hand_clear()
 {
 	hand.clear();
 	game->send_player_hand(color);
+}
+
+void PlayerInfo::set_game_state(GameState *g)
+{
+	game = g;
+	std::function<void()> callback = [this] () { this->game->update_planets(); };
+	planets.set_server_callback(callback);
 }
 
