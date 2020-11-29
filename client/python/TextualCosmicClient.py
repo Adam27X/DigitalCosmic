@@ -75,6 +75,7 @@ class GuiPart(object):
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
         self.planets = []
+        self.planet_labels = []
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -215,13 +216,11 @@ class GuiPart(object):
                     players = list(filter(None, players)) #Remove empty entries
                     num_planets = 5
                     if len(self.planet_canvases) == 0: #Draw the canvases for the first time
-                        #TODO: Add labels to the planets
                         #TODO: We can probably do a better job of organizing this data, but this is a good start
                         for i in range(len(players)):
-                            print('Players[i] = ' + players[i])
                             for j in range(num_planets): #Create a row for each planet
                                 self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
-                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=2+j)
+                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=2+(2*j)+1)
                     else: #Reset the canvas
                         #Reset the canvases
                         for i in range(len(players)):
@@ -229,6 +228,13 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*i)+j].delete("all")
                         self.planets = []
                     #Fill in the details
+                    for i in range(len(players)):
+                        for j in range(num_planets):
+                            #TODO: Improve on this approach by sending over basic server data such as the number of players and the colors chosen, etc.
+                            if len(self.planet_labels) < len(players)*num_planets and players[0].split(' ')[0] != players[len(players)-1].split(' ')[0]: #Only fill in the labels the first time we have complete planet information, ugh
+                                player = players[i].split(' ')[0]
+                                labeltext = player + ' Planet ' + str(j) + ':'
+                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=2+2*j))
                     for i in range(len(players)):
                         player = players[i].split(' ')[0]
                         last_lbrace = players[i].find('{')
