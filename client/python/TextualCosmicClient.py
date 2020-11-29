@@ -69,14 +69,22 @@ class GuiPart(object):
         self.game_board_frame.grid(column=1, row=1)
         self.warp_width = 400
         self.warp_height = 80
+
         self.warp_canvas = Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="orange")
         self.warp_ships = []
         Label(self.game_board_frame, text="The Warp:").grid(column=0,row=0)
         self.warp_canvas.grid(column=0,row=1)
+
         self.hyperspace_gate_canvas = Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="orange")
         self.hyperspace_gate_ships = []
         Label(self.game_board_frame, text="Hyperspace gate:").grid(column=1,row=0)
         self.hyperspace_gate_canvas.grid(column=1,row=1)
+
+        self.defensive_ally_canvas = Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="orange") #TODO: Could be neat to make this the same color as the defense?
+        self.defensive_ally_ships = []
+        Label(self.game_board_frame, text="Defensive ally ships:").grid(column=2,row=0)
+        self.defensive_ally_canvas.grid(column=2,row=1)
+
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
         self.planets = []
@@ -120,6 +128,33 @@ class GuiPart(object):
         self.master.state('normal')
         self.master.title("Textual Cosmic")
 
+    def update_source(self, msg, canvas, ship_list):
+        ships = msg[msg.find('{')+1:msg.find('}')].split(',')
+        #Clear out the previous canvas objects
+        canvas.delete("all")
+        ship_list = []
+        if msg.find('{') != -1: #If the warp isn't empty, update it
+            ship_dict = {}
+            for ship in ships:
+                if ship not in ship_dict:
+                    ship_dict[ship] = 1
+                else:
+                    ship_dict[ship] += 1
+            colorcount = 0
+            for color,num in ship_dict.items():
+                left = colorcount*(self.warp_width/5)
+                right = (colorcount+1)*(self.warp_width/5)
+                center_hor = (left+right)/2
+                top = 0
+                bottom = self.warp_height
+                center_ver = (top+bottom)/2
+                ship_list.append(canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
+                ship_list.append(canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
+                bbox = canvas.bbox(ship_list[-1]) #Get a bounding box for the newly created text object
+                ship_list.append(canvas.create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
+                canvas.tag_raise(ship_list[-2],ship_list[-1]) #Bring the text in front of the background
+                colorcount += 1
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -133,11 +168,12 @@ class GuiPart(object):
                 self.text['state'] = 'disabled'
                 self.text.see('end') #Focus on the end of the text dump after updating?
                 #Process options if there are any
-                #TODO: Support the hyperspace gate, defensive ally ships, and labels for other game state elements (current offense/defense/allies, etc.)
+                #TODO: Add labels for other game state elements (current offense/defense/allies, etc.)
                 #TODO: Display the player's color somewhere
                 #TODO: Add a way for the player to learn more about what the cards in his or her hand do
                 #TODO: Add more diagnotics for the Aliens
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
+                #TODO: Improve the server log such that only untagged messages go to the GUI
                 if msg.find('[needs_response]') != -1:
                     option_num = None
                     self.choice_label_var.set("Please choose one of the following options:")
@@ -195,59 +231,12 @@ class GuiPart(object):
                             self.turn_phase_labels[i].config(bg="Orange")
                         else:
                             self.turn_phase_labels[i].config(bg=self.default_label_bg)
-                #FIXME: Write a helper function to perform this logic for a given source out of the warp, hyperspace gate, and defensive ally ships
                 if msg.find('[warp_update]') != -1: #Redraw the warp
-                    ships = msg[msg.find('{')+1:msg.find('}')].split(',')
-                    #Clear out the previous canvas objects
-                    self.warp_canvas.delete("all")
-                    self.warp_ships = []
-                    if msg.find('{') != -1: #If the warp isn't empty, update it
-                        ship_dict = {}
-                        for ship in ships:
-                            if ship not in ship_dict:
-                                ship_dict[ship] = 1
-                            else:
-                                ship_dict[ship] += 1
-                        colorcount = 0
-                        for color,num in ship_dict.items():
-                            left = colorcount*(self.warp_width/5)
-                            right = (colorcount+1)*(self.warp_width/5)
-                            center_hor = (left+right)/2
-                            top = 0
-                            bottom = self.warp_height
-                            center_ver = (top+bottom)/2
-                            self.warp_ships.append(self.warp_canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
-                            self.warp_ships.append(self.warp_canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
-                            bbox = self.warp_canvas.bbox(self.warp_ships[-1]) #Get a bounding box for the newly created text object
-                            self.warp_ships.append(self.warp_canvas.create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
-                            self.warp_canvas.tag_raise(self.warp_ships[-2],self.warp_ships[-1]) #Bring the text in front of the background
-                            colorcount += 1
+                    self.update_source(msg,self.warp_canvas,self.warp_ships)
                 if msg.find('[hyperspace_gate_update]') != -1: #Redraw the hyperspace gate
-                    ships = msg[msg.find('{')+1:msg.find('}')].split(',')
-                    #Clear out the previous canvas objects
-                    self.hyperspace_gate_canvas.delete("all")
-                    self.hyperspace_gate_ships = []
-                    if msg.find('{') != -1: #If the hyperspace_gate isn't empty, update it
-                        ship_dict = {}
-                        for ship in ships:
-                            if ship not in ship_dict:
-                                ship_dict[ship] = 1
-                            else:
-                                ship_dict[ship] += 1
-                        colorcount = 0
-                        for color,num in ship_dict.items():
-                            left = colorcount*(self.warp_width/5)
-                            right = (colorcount+1)*(self.warp_width/5)
-                            center_hor = (left+right)/2
-                            top = 0
-                            bottom = self.warp_height
-                            center_ver = (top+bottom)/2
-                            self.hyperspace_gate_ships.append(self.hyperspace_gate_canvas.create_oval(left,top,right,bottom,fill=color,outline='black'))
-                            self.hyperspace_gate_ships.append(self.hyperspace_gate_canvas.create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
-                            bbox = self.hyperspace_gate_canvas.bbox(self.hyperspace_gate_ships[-1]) #Get a bounding box for the newly created text object
-                            self.hyperspace_gate_ships.append(self.hyperspace_gate_canvas.create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
-                            self.hyperspace_gate_canvas.tag_raise(self.hyperspace_gate_ships[-2],self.hyperspace_gate_ships[-1]) #Bring the text in front of the background
-                            colorcount += 1
+                    self.update_source(msg,self.hyperspace_gate_canvas,self.hyperspace_gate_ships)
+                if msg.find('[defensive_ally_ships_update]') != -1: #Redraw the set of defensive allies
+                    self.update_source(msg,self.defensive_ally_canvas,self.defensive_ally_ships)
                 if msg.find('[planet_update]') != -1: #Redraw player planets
                     players = msg.split('\n')[1:]
                     players = list(filter(None, players)) #Remove empty entries
