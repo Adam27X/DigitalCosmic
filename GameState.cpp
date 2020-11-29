@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); })
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -113,9 +113,9 @@ const std::string GameState::get_warp_str() const
 	{
 		announce << "Warp: {";
 	}
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	for(auto i=warp.cbegin(),e=warp.cend();i!=e;++i)
 	{
-		if(i!=warp.begin())
+		if(i!=warp.cbegin())
 		{
 			announce << ",";
 		}
@@ -152,12 +152,6 @@ void GameState::update_warp() const
 	std::string msg("[warp_update]");
 	msg.append(get_warp_str());
 	server.broadcast_message(msg);
-}
-
-void GameState::warp_push_back(std::pair<PlayerColors,unsigned> ship)
-{
-	warp.push_back(ship);
-	update_warp();
 }
 
 void GameState::update_planets() const
@@ -435,7 +429,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
-					warp_push_back(std::make_pair(*i,encounter_num));
+					warp.push_back(std::make_pair(*i,encounter_num));
 					hyperspace_gate.erase(i);
 					break;
 				}
@@ -451,7 +445,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			{
 				if(*i == player)
 				{
-					warp_push_back(std::make_pair(*i,encounter_num));
+					warp.push_back(std::make_pair(*i,encounter_num));
 					player_with_chosen_colony.planets.planet_erase(chosen_colony.second,i);
 					break;
 				}
@@ -1675,7 +1669,7 @@ void GameState::offense_win_resolution()
 	{
 		if(*i == assignments.defense)
 		{
-			warp_push_back(std::make_pair(*i,encounter_num));
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i = get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i); //FIXME: This should work but it's pretty ugly...
 		}
 		else
@@ -1685,7 +1679,7 @@ void GameState::offense_win_resolution()
 	}
 	for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 	{
-		warp_push_back(std::make_pair(*i,encounter_num));
+		warp.push_back(std::make_pair(*i,encounter_num));
 		i=defensive_ally_ships.erase(i);
 	}
 
@@ -1704,7 +1698,7 @@ void GameState::defense_win_resolution()
 	//Offense and offensive ally ships go to the warp
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
-		warp_push_back(std::make_pair(*i,encounter_num));
+		warp.push_back(std::make_pair(*i,encounter_num));
 		i=hyperspace_gate.erase(i);
 	}
 	//Defensive allies return each of their ships to one of their colonies
@@ -1769,7 +1763,7 @@ void GameState::resolve_attack()
 		//Send all ships involved to the warp
 		for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 		{
-			warp_push_back(std::make_pair(*i,encounter_num));
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i=hyperspace_gate.erase(i);
 		}
 		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
@@ -1777,7 +1771,7 @@ void GameState::resolve_attack()
 		{
 			if(*i == assignments.defense)
 			{
-				warp_push_back(std::make_pair(*i,encounter_num));
+				warp.push_back(std::make_pair(*i,encounter_num));
 				get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i);
 			}
 			else
@@ -1787,7 +1781,7 @@ void GameState::resolve_attack()
 		}
 		for(auto i=defensive_ally_ships.begin();i!=defensive_ally_ships.end();)
 		{
-			warp_push_back(std::make_pair(*i,encounter_num));
+			warp.push_back(std::make_pair(*i,encounter_num));
 			i=defensive_ally_ships.erase(i);
 		}
 
@@ -2255,7 +2249,7 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 
 bool GameState::player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const
 {
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	for(auto i=warp.cbegin(),e=warp.cend();i!=e;++i)
 	{
 		if((i->first == player) && (i->second < encounter_num))
 		{
@@ -2412,7 +2406,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 	{
 		if(i->first == p.color)
 		{
-			warp_erase(i);
+			warp.erase(i);
 			break;
 		}
 	}

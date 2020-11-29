@@ -128,6 +128,11 @@ class GuiPart(object):
                 self.text['state'] = 'disabled'
                 self.text.see('end') #Focus on the end of the text dump after updating?
                 #Process options if there are any
+                #TODO: Support the hyperspace gate, defensive ally ships, and labels for other game state elements (current offense/defense/allies, etc.)
+                #TODO: Display the player's color somewhere
+                #TODO: Add a way for the player to learn more about what the cards in his or her hand do
+                #TODO: Add more diagnotics for the Aliens
+                #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 if msg.find('[needs_response]') != -1:
                     option_num = None
                     self.choice_label_var.set("Please choose one of the following options:")

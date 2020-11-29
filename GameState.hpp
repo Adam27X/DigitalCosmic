@@ -14,6 +14,7 @@
 #include "PlayerInfo.hpp"
 #include "GameEvent.hpp"
 #include "CosmicServer.hpp"
+#include "PlanetInfo.hpp"
 
 bool is_only_digits(const std::string &s);
 
@@ -116,7 +117,6 @@ public:
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
-	std::vector< std::pair<PlayerColors,unsigned> >& get_warp() { return warp; }
 	DealParameters& get_deal_params() { return deal_params; }
 
 private:	
@@ -153,15 +153,6 @@ private:
 	std::vector<PlayerColors> get_player_order();
 	void update_turn_phase(const TurnPhase phase);
 	void update_warp() const;
-	void warp_push_back(std::pair<PlayerColors,unsigned> ship);
-
-	template<typename Iterator>
-	Iterator warp_erase(Iterator pos)
-	{
-		auto ret = warp.erase(pos);
-		update_warp();
-		return ret;
-	}
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -173,7 +164,6 @@ private:
 	bool invalidate_next_callback;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	unsigned player_to_be_plagued;
-	std::vector< std::pair<PlayerColors,unsigned> >  warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
 	PlanetInfo hyperspace_gate;
 	PlanetInfo defensive_ally_ships;
 	PlayerAssignments assignments;
@@ -182,5 +172,6 @@ private:
 	bool is_second_encounter_for_offense;
 	unsigned encounter_num;
 	CosmicServer &server;
+	PlanetInfoFull< std::pair<PlayerColors,unsigned> > warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
 };
 
