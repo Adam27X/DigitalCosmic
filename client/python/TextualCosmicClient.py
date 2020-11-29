@@ -40,11 +40,14 @@ class GuiPart(object):
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #Player hand
-        #FIXME: This needs a scrollbar
+        self.hand_frame = ttk.Frame(self.master, padding="5 5 5 5") #Group the label, hand, and scrollbar together
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
-        self.hand_disp_label = Label(self.master, text='Player hand:')
-        self.hand_disp = Listbox(self.master, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
+        self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
+        self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
+        self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
+        self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
+        self.hand_frame.grid(column=0,columnspan=3,row=2)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master, padding="5 5 5 5")
@@ -205,8 +208,9 @@ class GuiPart(object):
                     assert hand_found, "Error processing player hand!"
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
-                    self.hand_disp_label.grid(column=0, columnspan=3, row=2)
-                    self.hand_disp.grid(column=0, columnspan=3, row=3)
+                    self.hand_disp_label.grid(column=0, row=0)
+                    self.hand_disp.grid(column=0,row=1)
+                    self.hand_disp_scroll.grid(column=1,row=1, sticky=(N,S))
                 if msg.find('[turn_phase]') != -1: #Update the current turn phase
                     phase_index = None
                     if msg.find('Start') != -1:
