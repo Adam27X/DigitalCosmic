@@ -7,8 +7,7 @@
 #include "PlayerColors.hpp"
 #include "AlienBase.hpp"
 
-//TODO: Write up a new class PlanetInfo that is a wrapper around std::vector that sends server messages when appropriate. Can test it with the current warp setup and then extend it to the hyperspace gate and defensive ally ships
-//	This may even work with the player hands if it is designed generically
+//TODO: Use PlanetInfoFull<Playercolors> here too?
 typedef std::vector<PlayerColors> PlanetInfo;
 
 class GameState;

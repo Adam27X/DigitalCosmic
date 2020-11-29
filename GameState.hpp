@@ -79,7 +79,6 @@ public:
 	GameState(unsigned nplayers, CosmicServer &serv);
 	void dump() const;
 	void dump_planets() const;
-	void dump_PlanetInfo(const PlanetInfo &source, const std::string name) const;
 	void dump_warp() const;
 	void dump_destiny_deck() const;
 	void dump_cosmic_deck() const;
@@ -97,7 +96,7 @@ public:
 	unsigned prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
-	void move_ship_to_colony(PlayerInfo &p, PlanetInfo &source);
+	void move_ship_to_colony(PlayerInfo &p, PlanetInfoFull<PlayerColors> &source);
 	void move_ship_from_warp_to_colony(PlayerInfo &p);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
@@ -109,7 +108,7 @@ public:
 	const std::string get_cosmic_discard() const;
 	const std::string get_destiny_discard() const;
 	const std::string get_planets() const;
-	const std::string get_PlanetInfo(const PlanetInfo &source, const std::string name) const;
+	const std::string get_PlanetInfo(const PlanetInfoFull<PlayerColors> &source, const std::string name) const;
 	const std::string get_warp_str() const;
 	const std::string get_game_board() const;
 	const CosmicServer& get_server() const { return server; }
@@ -153,6 +152,8 @@ private:
 	std::vector<PlayerColors> get_player_order();
 	void update_turn_phase(const TurnPhase phase);
 	void update_warp() const;
+	void update_hyperspace_gate() const;
+	void update_defensive_ally_ships() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -164,8 +165,6 @@ private:
 	bool invalidate_next_callback;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	unsigned player_to_be_plagued;
-	PlanetInfo hyperspace_gate;
-	PlanetInfo defensive_ally_ships;
 	PlayerAssignments assignments;
 	std::set<PlayerColors> allies_to_be_stopped; //Allies to be prevented by the player casting force field (if it resolves)
 	DealParameters deal_params;
@@ -173,5 +172,7 @@ private:
 	unsigned encounter_num;
 	CosmicServer &server;
 	PlanetInfoFull< std::pair<PlayerColors,unsigned> > warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
+	PlanetInfoFull<PlayerColors> hyperspace_gate;
+	PlanetInfoFull<PlayerColors> defensive_ally_ships;
 };
 

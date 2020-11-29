@@ -40,6 +40,7 @@ class GuiPart(object):
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #Player hand
+        #FIXME: This needs a scrollbar
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.master, text='Player hand:')

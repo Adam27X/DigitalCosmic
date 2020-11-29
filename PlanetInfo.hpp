@@ -28,6 +28,7 @@ public:
 	}
 
 	unsigned size() const { return data.size(); }
+	bool empty() const { return data.empty(); }
 
 	typename std::vector<T>::const_iterator cbegin() const { return data.cbegin(); }
 	typename std::vector<T>::const_iterator cend() const { return data.cend(); }

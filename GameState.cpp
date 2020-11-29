@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); })
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); })
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -85,16 +85,16 @@ const std::string GameState::get_planets() const
 	return announce.str();
 }
 
-const std::string GameState::get_PlanetInfo(const PlanetInfo &source, const std::string name) const
+const std::string GameState::get_PlanetInfo(const PlanetInfoFull<PlayerColors> &source, const std::string name) const
 {
 	std::stringstream announce;
 	if(source.size())
 	{
 		announce << name << ": {";
 	}
-	for(auto i=source.begin(),e=source.end();i!=e;++i)
+	for(auto i=source.cbegin(),e=source.cend();i!=e;++i)
 	{
-		if(i!=source.begin())
+		if(i!=source.cbegin())
 			announce << ",";
 		announce << to_string(*i);
 	}
@@ -135,12 +135,6 @@ void GameState::dump_planets() const
 	server.broadcast_message(announce);
 }
 
-void GameState::dump_PlanetInfo(const PlanetInfo &source, const std::string name) const
-{
-	const std::string announce = get_PlanetInfo(source,name);
-	server.broadcast_message(announce);
-}
-
 void GameState::dump_warp() const
 {
 	const std::string announce = get_warp_str();
@@ -151,6 +145,20 @@ void GameState::update_warp() const
 {
 	std::string msg("[warp_update]");
 	msg.append(get_warp_str());
+	server.broadcast_message(msg);
+}
+
+void GameState::update_hyperspace_gate() const
+{
+	std::string msg("[hyperspace_gate_update]");
+	msg.append(get_PlanetInfo(hyperspace_gate, "Hyperspace gate"));
+	server.broadcast_message(msg);
+}
+
+void GameState::update_defensive_ally_ships() const
+{
+	std::string msg("[defensive_ally_ships_update]");
+	msg.append(get_PlanetInfo(defensive_ally_ships, "Defensive ally ships"));
 	server.broadcast_message(msg);
 }
 
@@ -2261,7 +2269,7 @@ bool GameState::player_has_ship_in_warp_from_prior_encounter(const PlayerColors 
 }
 
 //Source = hyperspace_gate, defensive_ally_ships, etc. but not the warp (see move_ship_from_warp_to_colony instead)
-void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfo &source)
+void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfoFull<PlayerColors> &source)
 {
 	//Check that at least one ship of the specified color resides in the source; if not, return
 	bool ship_exists_in_source = false;
