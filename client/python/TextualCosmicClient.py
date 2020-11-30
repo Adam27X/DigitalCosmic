@@ -42,6 +42,15 @@ class GuiPart(object):
         self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
+        #Player/Turn info
+        self.player_info_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.player_info_frame.grid(column=0,row=2)
+        self.player_color = StringVar()
+        self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color)
+        self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
+        #TODO: Add Alien info here? Can briefly mention the alien name and power and on click/mouseover give more details elsewhere
+        #TODO: Add offense/defense/offensive allies/defensive allies here?
+
         #Player hand
         self.hand_frame = ttk.Frame(self.master, padding="5 5 5 5") #Group the label, hand, and scrollbar together
         self.hand_cards = []
@@ -50,7 +59,7 @@ class GuiPart(object):
         self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
-        self.hand_frame.grid(column=0,columnspan=3,row=2)
+        self.hand_frame.grid(column=1,columnspan=2,row=2)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master, padding="5 5 5 5")
@@ -172,7 +181,7 @@ class GuiPart(object):
                 self.text['state'] = 'normal'
                 self.text.insert('end',str(msg)+'\n')
                 self.text['state'] = 'disabled'
-                self.text.see('end') #Focus on the end of the text dump after updating?
+                self.text.see('end') #Focus on the end of the text dump after updating
                 #Process options if there are any
                 #TODO: Add labels for other game state elements (current offense/defense/allies, etc.)
                 #TODO: Display the player's color somewhere
@@ -200,6 +209,14 @@ class GuiPart(object):
                     confirmation_row = int(option_num)+2
                     self.confirmation_button.grid(column=0, row=confirmation_row)
                 if msg.find('[player_hand]') != -1: #Update the player's hand
+                    if len(self.player_color.get()) == 0:
+                        player_color_match = re.search('Hand for the (.*) player',msg)
+                        if player_color_match:
+                            self.player_color.set("You are the " + player_color_match.group(1) + " player")
+                            self.player_color_label.grid(column=0,row=0)
+                            self.player_color_canvas.configure(bg=player_color_match.group(1))
+                            self.player_color_canvas.grid(column=1,row=0)
+
                     hand_found = False
                     for line in msg.splitlines():
                         if line == '[player_hand]':

@@ -11,7 +11,14 @@ const std::string AlienBase::get_desc() const
 	desc << "===== " << name << " =====\n";
 	desc << "You have the power of " << power << "\n";
 	desc << "Required player role for this power: " << to_string(role) << "\n";
-	desc << "Is this power mandatory? " << mandatory << "\n";
+	if(mandatory)
+	{
+		desc << "This power is mandatory.\n";
+	}
+	else
+	{
+		desc << "This power is optional.\n";
+	}
 	desc << "Valid phases for this power: {";
 	for(auto i=valid_phases.begin(),e=valid_phases.end();i!=e;++i)
 	{
