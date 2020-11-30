@@ -167,6 +167,8 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			}
 		}
 	}
+	//FIXME: We can respond to a plague with a mobius tubes (for instance, to avoid discarding it)
+	//	 More generally, we can respond with any card that can be played during the same phase as the plague (regroup)
 	else if(g.event_type == GameEventType::Plague)
 	{
 		//We can respond if we have a CardZap

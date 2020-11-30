@@ -177,19 +177,14 @@ class GuiPart(object):
                 msg = self.queue.get(0)
                 print('From queue:\n')
                 print(msg)
-                #Update the server log
-                self.text['state'] = 'normal'
-                self.text.insert('end',str(msg)+'\n')
-                self.text['state'] = 'disabled'
-                self.text.see('end') #Focus on the end of the text dump after updating
                 #Process options if there are any
                 #TODO: Add labels for other game state elements (current offense/defense/allies, etc.)
-                #TODO: Display the player's color somewhere
                 #TODO: Add a way for the player to learn more about what the cards in his or her hand do
                 #TODO: Add more diagnotics for the Aliens
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
-                #TODO: Improve the server log such that only untagged messages go to the GUI
+                tag_found = False
                 if msg.find('[needs_response]') != -1:
+                    tag_found = True
                     option_num = None
                     self.choice_label_var.set("Please choose one of the following options:")
                     self.choice_label.grid(column=0, row=0)
@@ -209,6 +204,7 @@ class GuiPart(object):
                     confirmation_row = int(option_num)+2
                     self.confirmation_button.grid(column=0, row=confirmation_row)
                 if msg.find('[player_hand]') != -1: #Update the player's hand
+                    tag_found = True
                     if len(self.player_color.get()) == 0:
                         player_color_match = re.search('Hand for the (.*) player',msg)
                         if player_color_match:
@@ -232,6 +228,7 @@ class GuiPart(object):
                     self.hand_disp.grid(column=0,row=1)
                     self.hand_disp_scroll.grid(column=1,row=1, sticky=(N,S))
                 if msg.find('[turn_phase]') != -1: #Update the current turn phase
+                    tag_found = True
                     phase_index = None
                     if msg.find('Start') != -1:
                         phase_index = 0
@@ -256,12 +253,16 @@ class GuiPart(object):
                         else:
                             self.turn_phase_labels[i].config(bg=self.default_label_bg)
                 if msg.find('[warp_update]') != -1: #Redraw the warp
+                    tag_found = True
                     self.update_source(msg,self.warp_canvas,self.warp_ships)
                 if msg.find('[hyperspace_gate_update]') != -1: #Redraw the hyperspace gate
+                    tag_found = True
                     self.update_source(msg,self.hyperspace_gate_canvas,self.hyperspace_gate_ships)
                 if msg.find('[defensive_ally_ships_update]') != -1: #Redraw the set of defensive allies
+                    tag_found = True
                     self.update_source(msg,self.defensive_ally_canvas,self.defensive_ally_ships)
                 if msg.find('[planet_update]') != -1: #Redraw player planets
+                    tag_found = True
                     players = msg.split('\n')[1:]
                     players = list(filter(None, players)) #Remove empty entries
                     num_planets = 5
@@ -322,6 +323,12 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*i)+planet_id].tag_raise(self.planets[-2],self.planets[-1]) #Bring the text in front of the background
                                 colorcount += 1
                             planet_id += 1
+                if not tag_found:
+                    #Update the server log
+                    self.text['state'] = 'normal'
+                    self.text.insert('end',str(msg)+'\n')
+                    self.text['state'] = 'disabled'
+                    self.text.see('end') #Focus on the end of the text dump after updating
 
             except queue.Empty:
                 # just on general principles, although we don't expect this
