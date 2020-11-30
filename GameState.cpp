@@ -449,7 +449,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 			server.send_message_to_client(player,msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(player,valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			for(auto i=player_with_chosen_colony.planets.planet_begin(chosen_colony.second),e=player_with_chosen_colony.planets.planet_begin(chosen_colony.second);i!=e;++i)
+			for(auto i=player_with_chosen_colony.planets.planet_begin(chosen_colony.second),e=player_with_chosen_colony.planets.planet_end(chosen_colony.second);i!=e;++i)
 			{
 				if(*i == player)
 				{

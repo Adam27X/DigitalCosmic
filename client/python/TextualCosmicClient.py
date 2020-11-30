@@ -27,6 +27,9 @@ class GuiPart(object):
         self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
         self.text.grid(column=0,row=1)
+        self.server_log_scroll = ttk.Scrollbar(self.server_log_frame, orient=VERTICAL, command=self.text.yview)
+        self.text['yscrollcommand'] = self.server_log_scroll.set
+        self.server_log_scroll.grid(column=1,row=1,sticky=(N,S))
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
 
         #Player choices
