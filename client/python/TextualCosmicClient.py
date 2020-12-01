@@ -50,6 +50,11 @@ class GuiPart(object):
         self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         #TODO: Add Alien info here? Can briefly mention the alien name and power and on click/mouseover give more details elsewhere
         #TODO: Add offense/defense/offensive allies/defensive allies here?
+        self.offense_color = StringVar()
+        self.offense_color_label = Label(self.player_info_frame, textvariable=self.offense_color)
+        self.offense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
+        self.offense_color_label.grid(column=0,row=1)
+        self.offense_color_canvas.grid(column=1,row=1)
 
         #Player hand
         self.hand_frame = ttk.Frame(self.master, padding="5 5 5 5") #Group the label, hand, and scrollbar together
@@ -212,7 +217,6 @@ class GuiPart(object):
                             self.player_color_label.grid(column=0,row=0)
                             self.player_color_canvas.configure(bg=player_color_match.group(1))
                             self.player_color_canvas.grid(column=1,row=0)
-
                     hand_found = False
                     for line in msg.splitlines():
                         if line == '[player_hand]':
@@ -323,6 +327,14 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*i)+planet_id].tag_raise(self.planets[-2],self.planets[-1]) #Bring the text in front of the background
                                 colorcount += 1
                             planet_id += 1
+                if msg.find('[offense_update]') != -1: #Update the offense label
+                    tag_found = True
+                    offense_color_match = re.search('\[offense_update\] (.*)',msg)
+                    if offense_color_match:
+                        self.offense_color.set("The " + offense_color_match.group(1) + " player is on the offense")
+                        self.offense_color_canvas.configure(bg=offense_color_match.group(1))
+                    else:
+                        raise Exception("Failed to match regex")
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

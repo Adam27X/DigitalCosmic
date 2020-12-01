@@ -22,8 +22,11 @@ bool is_only_digits(const std::string &s);
 class PlayerAssignments
 {
 public:
-	PlayerAssignments() { clear(); }
-	PlayerColors offense;
+	PlayerAssignments(std::function<void()> off_callback) : offense_callback(off_callback)
+	{
+		clear();
+	}
+
 	PlayerColors defense;
 	PlayerColors planet_location;
 	unsigned planet_id;
@@ -39,6 +42,13 @@ public:
 	bool human_wins_encounter;
 	bool stop_compensation_and_rewards;
 	bool successful_encounter;
+
+	void set_offense(const PlayerColors c)
+	{
+		offense = c;
+		offense_callback();
+	}
+	const PlayerColors get_offense() const { return offense; }
 
 	void clear()
 	{
@@ -58,6 +68,10 @@ public:
 		stop_compensation_and_rewards = false;
 		successful_encounter = false;
 	}
+
+private:
+	PlayerColors offense;
+	std::function<void()> offense_callback;
 };
 
 class DealParameters
@@ -126,7 +140,7 @@ private:
 	void shuffle_discard_into_cosmic_deck();
 	void free_all_ships_from_warp();
 	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
-	void check_for_game_events(PlayerInfo &offense);
+	void check_for_game_events();
 	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color) const;
 	void cast_plague(const PlayerColors casting_player);
 	void cast_force_field(const PlayerColors casting_player);
@@ -155,6 +169,7 @@ private:
 	void update_warp() const;
 	void update_hyperspace_gate() const;
 	void update_defensive_ally_ships() const;
+	void update_offense() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
@@ -166,7 +181,6 @@ private:
 	bool invalidate_next_callback;
 	const unsigned int max_player_sentinel = 6; //Sentintel value that's never a valid player ID
 	unsigned player_to_be_plagued;
-	PlayerAssignments assignments;
 	std::set<PlayerColors> allies_to_be_stopped; //Allies to be prevented by the player casting force field (if it resolves)
 	DealParameters deal_params;
 	bool is_second_encounter_for_offense;
@@ -175,5 +189,6 @@ private:
 	PlanetInfoFull< std::pair<PlayerColors,unsigned> > warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
 	PlanetInfoFull<PlayerColors> hyperspace_gate;
 	PlanetInfoFull<PlayerColors> defensive_ally_ships;
+	PlayerAssignments assignments;
 };
 
