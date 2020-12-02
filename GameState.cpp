@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); } )
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); })
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -166,6 +166,13 @@ void GameState::update_offense() const
 {
 	std::string msg("[offense_update] ");
 	msg.append(to_string(assignments.get_offense()));
+	server.broadcast_message(msg);
+}
+
+void GameState::update_defense() const
+{
+	std::string msg("[defense_update] ");
+	msg.append(to_string(assignments.get_defense()));
 	server.broadcast_message(msg);
 }
 
@@ -926,19 +933,19 @@ void GameState::draw_from_destiny_deck()
 						}
 						option++;
 					}
-					assignments.defense = home_system_encounter.first;
+					assignments.set_defense(home_system_encounter.first);
 					assignments.planet_location = off;
 					assignments.planet_id = home_system_encounter.second;
-					PlayerInfo &def = get_player(assignments.defense);
+					PlayerInfo &def = get_player(assignments.get_defense());
 					def.current_role = EncounterRole::Defense;
 				}
 			}
 		}
 		else
 		{
-			assignments.defense = drawn;
+			assignments.set_defense(drawn);
 			assignments.planet_location = drawn;
-			PlayerInfo &def = get_player(assignments.defense);
+			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
 		}
 	}
@@ -984,9 +991,9 @@ void GameState::draw_from_destiny_deck()
 				}
 			}
 
-			assignments.defense = players[defense_index].color;
+			assignments.set_defense(players[defense_index].color);
 			assignments.planet_location = players[defense_index].color;
-			PlayerInfo &def = get_player(assignments.defense);
+			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Special_most_cards_in_hand)
@@ -1021,9 +1028,9 @@ void GameState::draw_from_destiny_deck()
 				defense_index = (player_index+1) % players.size();
 			}
 
-			assignments.defense = players[defense_index].color;
+			assignments.set_defense(players[defense_index].color);
 			assignments.planet_location = players[defense_index].color;
-			PlayerInfo &def = get_player(assignments.defense);
+			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Special_most_foreign_colonies)
@@ -1058,9 +1065,9 @@ void GameState::draw_from_destiny_deck()
 				defense_index = (player_index+1) % players.size();
 			}
 
-			assignments.defense = players[defense_index].color;
+			assignments.set_defense(players[defense_index].color);
 			assignments.planet_location = players[defense_index].color;
-			PlayerInfo &def = get_player(assignments.defense);
+			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
 		}
 		else if(dest == DestinyCardType::Wild)
@@ -1083,7 +1090,7 @@ void GameState::draw_from_destiny_deck()
 				{
 					if(chosen_option == valid_option)
 					{
-						assignments.defense = players[i].color;
+						assignments.set_defense(players[i].color);
 						assignments.planet_location = players[i].color;
 						break;
 					}
@@ -1091,10 +1098,10 @@ void GameState::draw_from_destiny_deck()
 				}
 			}
 
-			assert(assignments.defense != PlayerColors::Invalid && "Failed to set defensive player after drawing wild destiny card");
+			assert(assignments.get_defense() != PlayerColors::Invalid && "Failed to set defensive player after drawing wild destiny card");
 			assert(assignments.planet_location != PlayerColors::Invalid && "Failed to set defensive planet location after drawing wild destiny card");
 
-			PlayerInfo &def = get_player(assignments.defense);
+			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
 		}
 		else
@@ -1111,7 +1118,7 @@ void GameState::choose_opponent_planet()
 		return;
 
 	std::stringstream prompt;
-	prompt << "The offense (" << to_string(assignments.get_offense()) << ") has chosen to have an encounter with the " << to_string(assignments.defense) << " player.\n";
+	prompt << "The offense (" << to_string(assignments.get_offense()) << ") has chosen to have an encounter with the " << to_string(assignments.get_defense()) << " player.\n";
 	std::vector<std::string> options;
 	const PlayerInfo &host = get_player(assignments.planet_location);
 	for(unsigned i=0; i<host.planets.size(); i++)
@@ -1124,8 +1131,7 @@ void GameState::choose_opponent_planet()
 	assignments.planet_id = chosen_option;
 
 	std::stringstream announce;
-	announce << "The offense (" << to_string(assignments.get_offense()) << ") will have an encounter with the " << to_string(assignments.defense) << " player on " << to_string(assignments.planet_location) << " Planet " << assignments.planet_id << "\n";
-	//TODO: Show the status of the chosen planet location?
+	announce << "The offense (" << to_string(assignments.get_offense()) << ") will have an encounter with the " << to_string(assignments.get_defense()) << " player on " << to_string(assignments.planet_location) << " Planet " << assignments.planet_id << "\n";
 	server.broadcast_message(announce.str());
 }
 
@@ -1198,7 +1204,7 @@ std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &po
 		std::vector<std::string> options;
 		options.push_back("Y");
 		options.push_back("N");
-		PlayerColors inviter_color = offense ? assignments.get_offense() : assignments.defense;
+		PlayerColors inviter_color = offense ? assignments.get_offense() : assignments.get_defense();
 		unsigned response = prompt_player(inviter_color,prompt.str(),options);
 
 		if(response == 0)
@@ -1330,7 +1336,7 @@ void GameState::setup_negotiation()
 		bool valid_deal = false;
 		do
 		{
-			std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
+			std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.get_defense()); //A list of planet colors and indices
 			std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.get_offense()); //A list of planet colors and indices
 
 			if(defense_valid_colonies.empty())
@@ -1340,7 +1346,7 @@ void GameState::setup_negotiation()
 			else
 			{
 				prompt.str(std::string());
-				prompt << "Will the " << to_string(assignments.get_offense()) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.defense) << " player (defense) has a colony?\n";
+				prompt << "Will the " << to_string(assignments.get_offense()) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.get_defense()) << " player (defense) has a colony?\n";
 				//TODO: Prompt both the offense and defense and refuse to move on until they agree? That seems fairer
 				response = prompt_player(assignments.get_offense(),prompt.str(),options);
 
@@ -1357,7 +1363,7 @@ void GameState::setup_negotiation()
 			else
 			{
 				prompt.str(std::string());
-				prompt << "Will the " << to_string(assignments.defense) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.get_offense()) << " player (offense) has a colony?\n";
+				prompt << "Will the " << to_string(assignments.get_defense()) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.get_offense()) << " player (offense) has a colony?\n";
 				response = prompt_player(assignments.get_offense(),prompt.str(),options);
 
 				if(response == 0)
@@ -1367,10 +1373,10 @@ void GameState::setup_negotiation()
 			}
 
 			prompt.str(std::string());
-			prompt << "How many cards will the " << to_string(assignments.get_offense()) << " (offense) receive from the " << to_string(assignments.defense) << " player (defense)?\n";
+			prompt << "How many cards will the " << to_string(assignments.get_offense()) << " (offense) receive from the " << to_string(assignments.get_defense()) << " player (defense)?\n";
 			options.clear();
 			options.push_back("0");
-			for(unsigned i=0; i<get_player(assignments.defense).hand_size(); i++)
+			for(unsigned i=0; i<get_player(assignments.get_defense()).hand_size(); i++)
 			{
 				options.push_back(std::to_string(i+1));
 			}
@@ -1379,7 +1385,7 @@ void GameState::setup_negotiation()
 			if(deal_params.num_cards_to_offense > 0)
 			{
 				prompt.str(std::string());
-				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.defense) << " player (defense).\n";
+				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.get_defense()) << " player (defense).\n";
 				options.clear();
 				options.push_back("Y");
 				options.push_back("N");
@@ -1392,7 +1398,7 @@ void GameState::setup_negotiation()
 			}
 
 			prompt.str(std::string());
-			prompt << "How many cards will the " << to_string(assignments.defense) << " (defense) receive from the " << to_string(assignments.get_offense()) << " player (offense)?\n";
+			prompt << "How many cards will the " << to_string(assignments.get_defense()) << " (defense) receive from the " << to_string(assignments.get_offense()) << " player (offense)?\n";
 			options.clear();
 			options.push_back("0");
 			for(unsigned i=0; i<get_player(assignments.get_offense()).hand_size(); i++)
@@ -1438,7 +1444,7 @@ void GameState::resolve_negotiation()
 	if(deal_params.successful)
 	{
 		//Now that we have the information we need, carry out the deal
-		std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.defense); //A list of planet colors and indices
+		std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.get_defense()); //A list of planet colors and indices
 		std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.get_offense()); //A list of planet colors and indices
 		if(deal_params.offense_receives_colony)
 		{
@@ -1455,14 +1461,14 @@ void GameState::resolve_negotiation()
 			assert(!offense_valid_colonies.empty());
 			//Choose from any of the valid offense colonies
 			std::string msg("Choose a location to establish a new colony\n");
-			server.send_message_to_client(assignments.defense,msg);
-			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.defense,offense_valid_colonies);
+			server.send_message_to_client(assignments.get_defense(),msg);
+			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.get_defense(),offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.defense);
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
 		}
 		std::vector<CosmicCardType> cards_to_offense;
 		//Choose which cards will be taken from the defense
-		PlayerInfo &defense = get_player(assignments.defense);
+		PlayerInfo &defense = get_player(assignments.get_defense());
 		if(deal_params.num_cards_to_offense > 0)
 		{
 			assert(deal_params.num_cards_to_offense <= defense.hand_size());
@@ -1478,7 +1484,7 @@ void GameState::resolve_negotiation()
 			else
 			{
 				std::stringstream prompt;
-				prompt << "The " << to_string(assignments.defense) << " player has the following cards. Choose one to give to the offense.\n";
+				prompt << "The " << to_string(assignments.get_defense()) << " player has the following cards. Choose one to give to the offense.\n";
 				for(unsigned i=0; i<deal_params.num_cards_to_offense; i++)
 				{
 					std::vector<std::string> options;
@@ -1486,7 +1492,7 @@ void GameState::resolve_negotiation()
 					{
 						options.push_back(to_string(defense.hand_get(i)));
 					}
-					unsigned chosen_option = prompt_player(assignments.defense,prompt.str(),options);
+					unsigned chosen_option = prompt_player(assignments.get_defense(),prompt.str(),options);
 					cards_to_offense.push_back(defense.hand_get(chosen_option));
 					defense.hand_erase(defense.hand_begin()+chosen_option);
 				}
@@ -1545,7 +1551,7 @@ void GameState::resolve_negotiation()
 		//NOTE: This signifies an unsuccessful encounter
 		//This logic should be similar to part of a plague
 		lose_ships_to_warp(assignments.get_offense(),3);
-		lose_ships_to_warp(assignments.defense,3);
+		lose_ships_to_warp(assignments.get_defense(),3);
 	}
 }
 
@@ -1555,11 +1561,11 @@ void GameState::setup_compensation()
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate)
 	{
 		assignments.player_receiving_compensation = assignments.get_offense();
-		assignments.player_giving_compensation = assignments.defense;
+		assignments.player_giving_compensation = assignments.get_defense();
 	}
 	else
 	{
-		assignments.player_receiving_compensation = assignments.defense;
+		assignments.player_receiving_compensation = assignments.get_defense();
 		assignments.player_giving_compensation = assignments.get_offense();
 	}
 
@@ -1660,7 +1666,7 @@ void GameState::setup_attack()
 	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
 	{
-		if(*i == assignments.defense)
+		if(*i == assignments.get_defense())
 		{
 			announce << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
 			assignments.defense_attack_value++;
@@ -1682,7 +1688,7 @@ void GameState::offense_win_resolution()
 	PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
 	{
-		if(*i == assignments.defense)
+		if(*i == assignments.get_defense())
 		{
 			warp.push_back(std::make_pair(*i,encounter_num));
 			i = get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i); //FIXME: This should work but it's pretty ugly...
@@ -1767,7 +1773,7 @@ void GameState::defense_win_resolution()
 		}
 	}
 
-	GameEvent g(assignments.defense,GameEventType::DefensiveEncounterWin);
+	GameEvent g(assignments.get_defense(),GameEventType::DefensiveEncounterWin);
 	resolve_game_event(g);
 }
 
@@ -1784,7 +1790,7 @@ void GameState::resolve_attack()
 		PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 		for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
 		{
-			if(*i == assignments.defense)
+			if(*i == assignments.get_defense())
 			{
 				warp.push_back(std::make_pair(*i,encounter_num));
 				get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i);
@@ -1820,7 +1826,7 @@ void GameState::add_reinforcements(const PlayerColors player, const unsigned val
 	{
 		player_is_offense = true;
 	}
-	else if(player == assignments.defense || assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
+	else if(player == assignments.get_defense() || assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
 	{
 		player_is_offense = false;
 	}
@@ -2047,7 +2053,7 @@ void GameState::execute_turn()
 	std::set<PlayerColors> potential_allies;
 	for(unsigned i=0; i<players.size(); i++)
 	{
-		if((players[i].color != assignments.get_offense()) && (players[i].color != assignments.defense))
+		if((players[i].color != assignments.get_offense()) && (players[i].color != assignments.get_defense()))
 		{
 			potential_allies.insert(players[i].color);
 		}
@@ -2081,7 +2087,7 @@ void GameState::execute_turn()
 	}
 
 	//If the defense has no encounter cards in hand, they get to draw
-	PlayerInfo &defense = get_player(assignments.defense);
+	PlayerInfo &defense = get_player(assignments.get_defense());
 	if(!defense.has_encounter_cards_in_hand())
 	{
 		discard_and_draw_new_hand(defense);
@@ -2125,7 +2131,7 @@ void GameState::execute_turn()
 			options.push_back(to_string(*i));
 		}
 	}
-	response = prompt_player(assignments.defense,prompt,options);
+	response = prompt_player(assignments.get_defense(),prompt,options);
 
 	option = 0;
 	for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
@@ -2217,7 +2223,7 @@ void GameState::swap_encounter_cards()
 void GameState::swap_main_player_hands()
 {
 	PlayerInfo &offense = get_player(assignments.get_offense());
-	PlayerInfo &defense = get_player(assignments.defense);
+	PlayerInfo &defense = get_player(assignments.get_defense());
 
 	std::vector<CosmicCardType> tmp = offense.get_hand_data();
 	offense.set_hand_data(defense.get_hand_data());
@@ -2567,9 +2573,9 @@ std::vector<PlayerColors> GameState::get_player_order()
 
 	std::vector<PlayerColors> player_order;
 	player_order.push_back(assignments.get_offense()); //Offense goes first
-	if(assignments.defense != PlayerColors::Invalid)
+	if(assignments.get_defense() != PlayerColors::Invalid)
 	{
-		player_order.push_back(assignments.defense); //Then defense, if the defense has been assigned
+		player_order.push_back(assignments.get_defense()); //Then defense, if the defense has been assigned
 	}
 	//Then we proceed clockwise (aka in turn order) from the offense
 	while(player_order.size() < players.size())

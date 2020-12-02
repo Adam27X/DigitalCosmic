@@ -22,12 +22,11 @@ bool is_only_digits(const std::string &s);
 class PlayerAssignments
 {
 public:
-	PlayerAssignments(std::function<void()> off_callback) : offense_callback(off_callback)
+	PlayerAssignments(std::function<void()> off_callback, std::function<void()> def_callback) : offense_callback(off_callback), defense_callback(def_callback)
 	{
 		clear();
 	}
 
-	PlayerColors defense;
 	PlayerColors planet_location;
 	unsigned planet_id;
 	std::map<PlayerColors,unsigned> offensive_allies; //Map ally color to the number of ships provided
@@ -50,6 +49,13 @@ public:
 	}
 	const PlayerColors get_offense() const { return offense; }
 
+	void set_defense(const PlayerColors c)
+	{
+		defense = c;
+		defense_callback();
+	}
+	const PlayerColors get_defense() const { return defense; }
+
 	void clear()
 	{
 		offense = PlayerColors::Invalid;
@@ -71,7 +77,9 @@ public:
 
 private:
 	PlayerColors offense;
+	PlayerColors defense;
 	std::function<void()> offense_callback;
+	std::function<void()> defense_callback;
 };
 
 class DealParameters
@@ -170,6 +178,7 @@ private:
 	void update_hyperspace_gate() const;
 	void update_defensive_ally_ships() const;
 	void update_offense() const;
+	void update_defense() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
