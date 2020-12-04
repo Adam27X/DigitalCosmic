@@ -85,7 +85,7 @@ const std::string GameState::get_planets() const
 	return announce.str();
 }
 
-const std::string GameState::get_PlanetInfo(const PlanetInfoFull<PlayerColors> &source, const std::string name) const
+const std::string GameState::get_PlanetInfo(const PlanetInfoVector<PlayerColors> &source, const std::string name) const
 {
 	std::stringstream announce;
 	if(source.size())
@@ -2282,7 +2282,7 @@ bool GameState::player_has_ship_in_warp_from_prior_encounter(const PlayerColors 
 }
 
 //Source = hyperspace_gate, defensive_ally_ships, etc. but not the warp (see move_ship_from_warp_to_colony instead)
-void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfoFull<PlayerColors> &source)
+void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfoVector<PlayerColors> &source)
 {
 	//Check that at least one ship of the specified color resides in the source; if not, return
 	bool ship_exists_in_source = false;

@@ -49,7 +49,7 @@ class GuiPart(object):
         self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color)
         self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         #TODO: Add Alien info here? Can briefly mention the alien name and power and on click/mouseover give more details elsewhere
-        #TODO: Add offense/defense/offensive allies/defensive allies here?
+        #TODO: Could add offensive/defensive allies here, but we already have the hyperspace gate and defensive ally displays, hmm
         self.offense_color = StringVar()
         self.offense_color_label = Label(self.player_info_frame, textvariable=self.offense_color)
         self.offense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
@@ -67,6 +67,7 @@ class GuiPart(object):
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
         self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
+        self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection()))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
         self.hand_frame.grid(column=1,columnspan=2,row=2)
@@ -180,6 +181,13 @@ class GuiPart(object):
                 canvas.tag_raise(ship_list[-2],ship_list[-1]) #Bring the text in front of the background
                 colorcount += 1
 
+    def update_hand_info(self, current_selection):
+        #TODO: Use self.hand_cards[item] to get a card example and call a function that returns a string that explains what the card does. Put this result into a text object for the user
+        #NOTE: The length of current_selection should always be 1...I suppose we could assert this and then just process the element
+        for item in current_selection:
+            print('Current selection: ' + str(item))
+            print('Corresponds to: ' + self.hand_cards[item])
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -188,7 +196,6 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Add labels for other game state elements (current offense/defense/allies, etc.)
                 #TODO: Add a way for the player to learn more about what the cards in his or her hand do
                 #TODO: Add more diagnotics for the Aliens
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
@@ -332,7 +339,7 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*i)+planet_id].tag_raise(self.planets[-2],self.planets[-1]) #Bring the text in front of the background
                                 colorcount += 1
                             planet_id += 1
-                #TODO: Handle PlayerColors::Invalid for offense and defense and clear this info from the GUI when relevant?
+                #TODO: Handle PlayerColors::Invalid for offense and defense and clear this info from the GUI when relevant? Not a huge deal because it's obvious when these are valid via turn phase, but this is a "nice to have"
                 if msg.find('[offense_update]') != -1: #Update the offense label
                     tag_found = True
                     offense_color_match = re.search('\[offense_update\] (.*)',msg)

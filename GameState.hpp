@@ -119,7 +119,7 @@ public:
 	unsigned prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const;
 	void dump_current_stack() const;
 	void draw_cosmic_card(PlayerInfo &player);
-	void move_ship_to_colony(PlayerInfo &p, PlanetInfoFull<PlayerColors> &source);
+	void move_ship_to_colony(PlayerInfo &p, PlanetInfoVector<PlayerColors> &source);
 	void move_ship_from_warp_to_colony(PlayerInfo &p);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
@@ -131,7 +131,7 @@ public:
 	const std::string get_cosmic_discard() const;
 	const std::string get_destiny_discard() const;
 	const std::string get_planets() const;
-	const std::string get_PlanetInfo(const PlanetInfoFull<PlayerColors> &source, const std::string name) const;
+	const std::string get_PlanetInfo(const PlanetInfoVector<PlayerColors> &source, const std::string name) const;
 	const std::string get_warp_str() const;
 	const std::string get_game_board() const;
 	const CosmicServer& get_server() const { return server; }
@@ -195,9 +195,9 @@ private:
 	bool is_second_encounter_for_offense;
 	unsigned encounter_num;
 	CosmicServer &server;
-	PlanetInfoFull< std::pair<PlayerColors,unsigned> > warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
-	PlanetInfoFull<PlayerColors> hyperspace_gate;
-	PlanetInfoFull<PlayerColors> defensive_ally_ships;
+	PlanetInfoVector< std::pair<PlayerColors,unsigned> > warp; //Vector of (ship,timestamp) pairs. We will rarely care about the timestamp
+	PlanetInfoVector<PlayerColors> hyperspace_gate;
+	PlanetInfoVector<PlayerColors> defensive_ally_ships;
 	PlayerAssignments assignments;
 };
 

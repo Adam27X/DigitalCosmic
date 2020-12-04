@@ -8,10 +8,10 @@
 //Wrapper around std::vector that has a side effect when pushing or erasing elements of the vector
 //In this case the side effect is to send data to the client to update the GUI's display of the warp, hyperspace gate, etc.
 template <class T>
-class PlanetInfoFull
+class PlanetInfoVector
 {
 public:
-	PlanetInfoFull(std::function<void()> callback) : server_callback(callback) { }
+	PlanetInfoVector(std::function<void()> callback) : server_callback(callback) { }
 
 	void push_back(T item)
 	{
