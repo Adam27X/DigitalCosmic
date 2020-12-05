@@ -48,18 +48,21 @@ class GuiPart(object):
         self.player_color = StringVar()
         self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color)
         self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
-        #TODO: Add Alien info here? Can briefly mention the alien name and power and on click/mouseover give more details elsewhere
+        self.alien_name = StringVar()
+        self.alien_desc = ''
+        self.alien_label = Label(self.player_info_frame, textvariable=self.alien_name)
+        self.alien_label.bind('<Enter>', lambda e: self.update_alien_info())
         #TODO: Could add offensive/defensive allies here, but we already have the hyperspace gate and defensive ally displays, hmm
         self.offense_color = StringVar()
         self.offense_color_label = Label(self.player_info_frame, textvariable=self.offense_color)
         self.offense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
-        self.offense_color_label.grid(column=0,row=1)
-        self.offense_color_canvas.grid(column=1,row=1)
+        self.offense_color_label.grid(column=0,row=2)
+        self.offense_color_canvas.grid(column=1,row=2)
         self.defense_color = StringVar()
         self.defense_color_label = Label(self.player_info_frame, textvariable=self.defense_color)
         self.defense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
-        self.defense_color_label.grid(column=0,row=2)
-        self.defense_color_canvas.grid(column=1,row=2)
+        self.defense_color_label.grid(column=0,row=3)
+        self.defense_color_canvas.grid(column=1,row=3)
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
         self.description_box_frame = ttk.Frame(self.master, padding="5 5 5 5")
@@ -100,6 +103,7 @@ class GuiPart(object):
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
         #Game board
+        #TODO: Add player Aliens as they're revealed
         self.game_board_frame = ttk.Frame(self.master, padding="5 5 5 5")
         self.game_board_frame.grid(column=1, row=1)
         self.warp_width = 400
@@ -190,6 +194,7 @@ class GuiPart(object):
                 canvas.tag_raise(ship_list[-2],ship_list[-1]) #Bring the text in front of the background
                 colorcount += 1
 
+    #The user clicked on a card in their hand so display what the card does in the description box
     def update_hand_info(self, current_selection):
         if len(current_selection) != 1: #The user should only be able to select one item at a time but this protects against the case where no item is selected
             return
@@ -227,6 +232,13 @@ class GuiPart(object):
         self.description_box.insert('end',str(msg)+'\n')
         self.description_box['state'] = 'disabled'
 
+    #The user moused over their Alien's name so display what the alien does in the description box
+    def update_alien_info(self):
+        self.description_box['state'] = 'normal'
+        self.description_box.delete(1.0,'end')
+        self.description_box.insert('end',str(self.alien_desc)+'\n')
+        self.description_box['state'] = 'disabled'
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -236,7 +248,10 @@ class GuiPart(object):
                 print(msg)
                 #Process options if there are any
                 #TODO: Add more diagnotics for the Aliens
+                #TODO: Display the number of cards in hand for each opponent?
+                #TODO: Display the discard pile for the cosmic and destiny decks?
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
+                #TODO: Highlight the current planet that is under attack (normally we would point the hyperspace gate at it)
                 tag_found = False
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
@@ -324,7 +339,7 @@ class GuiPart(object):
                         #TODO: We can probably do a better job of organizing this data, but this is a good start
                         for i in range(len(players)):
                             for j in range(num_planets): #Create a row for each planet
-                                self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
+                                self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? Perhaps an image of stars like space? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
                                 self.planet_canvases[(num_planets*i)+j].grid(column=i,row=2+(2*j)+1)
                     else: #Reset the canvas
                         #Reset the canvases
@@ -394,6 +409,15 @@ class GuiPart(object):
                         self.defense_color_canvas.configure(bg=defense_color_match.group(1))
                     else:
                         raise Exception("Failed to match defense update regex")
+                if msg.find('[alien_update]') != -1: #Update the player's alien
+                    tag_found = True
+                    tag = '[alien_update]'
+                    alien_name = re.search('===== (.*) =====',msg)
+                    assert alien_name, "Failed to parse alien name!"
+                    if len(self.alien_name.get()) == 0:
+                        self.alien_name.set('Your Alien is: ' + alien_name.group(1))
+                        self.alien_desc = msg[msg.find(tag)+len(tag):]
+                        self.alien_label.grid(column=0,row=1)
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

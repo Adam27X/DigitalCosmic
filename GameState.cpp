@@ -219,7 +219,8 @@ void GameState::assign_alien(const PlayerColors color, std::unique_ptr<AlienBase
 		if(player.color == color)
 		{
 			player.alien = std::move(alien);
-			const std::string msg = player.get_alien_desc();
+			std::string msg("[alien_update]");
+			msg.append(player.get_alien_desc());
 			server.send_message_to_client(color,msg);
 			break;
 		}
