@@ -61,12 +61,21 @@ class GuiPart(object):
         self.defense_color_label.grid(column=0,row=2)
         self.defense_color_canvas.grid(column=1,row=2)
 
+        #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
+        self.description_box_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.description_box_frame.grid(column=2, row=2)
+        self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
+        self.description_box_label.grid(column=0, row=0)
+        self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
+        self.description_box.grid(column=0, row=1)
+        #TODO: Should probably add a scrollbar in case there's some Alien with a really long description
+
         #Player hand
         self.hand_frame = ttk.Frame(self.master, padding="5 5 5 5") #Group the label, hand, and scrollbar together
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
-        self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper) #Height here is the number of lines the box will display without scrolling
+        self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper, selectmode='browse') #Height here is the number of lines the box will display without scrolling; 'browse' indicates only one item can be selected at a time
         self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection()))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
@@ -182,11 +191,41 @@ class GuiPart(object):
                 colorcount += 1
 
     def update_hand_info(self, current_selection):
-        #TODO: Use self.hand_cards[item] to get a card example and call a function that returns a string that explains what the card does. Put this result into a text object for the user
-        #NOTE: The length of current_selection should always be 1...I suppose we could assert this and then just process the element
-        for item in current_selection:
-            print('Current selection: ' + str(item))
-            print('Corresponds to: ' + self.hand_cards[item])
+        if len(current_selection) != 1: #The user should only be able to select one item at a time but this protects against the case where no item is selected
+            return
+        sel = current_selection[0]
+        card = self.hand_cards[sel]
+        msg = self.hand_cards[sel] + '\n'
+        attack_match = re.match('Attack (.*)',card)
+        reinforcement_match = re.match('Reinforcement \+(.*)',card)
+        if attack_match:
+            msg += '[Encounter card] Opposed by attack: Higher total (ships + ' + attack_match.group(1) + ') wins. Opposed by Negotiate: Wins, but opponent collects compensation.'
+        elif re.match('Negotiate',card):
+            msg += '[Encounter card] Opposed by attack: Loses, but collects compensation. Opposed by Negotiate: Players have one minute to make a deal or lose three ships to the warp.'
+        elif re.match('Morph',card):
+            msg += '[Encounter card] Duplicates opponent\'s encounter card when revealed.'
+        elif reinforcement_match:
+            msg += '[Reinforcement card] Adds ' + reinforcement_match.group(1) + ' to either side\'s total. Play after encounter cards are revealed. [Play as a main player or ally only] [Play during the reveal phase only]'
+        elif re.match('Card Zap',card):
+            msg += '[Artifact card] Negates Cards. Play this card at any time to negate a flare or artifact card just as a player attempts to use it. The flare or artifact must then be discarded. [As any player] [During any turn phase]'
+        elif re.match('Cosmic Zap',card):
+            msg += '[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien\'s power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]'
+        elif re.match('Mobius Tubes',card):
+            msg += '[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners\' colonies. [Play as the offense only] [ Play during the regroup phase only]'
+        elif re.match('Plague',card):
+            msg += '[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]'
+        elif re.match('Force Field',card):
+            msg += '[Artifact card] Stops Allies. Play after alliances are formed during an encounter. You may cancel the alliances of any or all players. Cancelled allies return their ships to any of their colonies. [As any player] [Play during the alliance phase only]'
+        elif re.match('Emotion Control',card):
+            msg += '[Artifact card] Alters Attack. Play after encounter cards are revealed to treat all attack cards played this encounter as negotiate cards. The main players must then attempt to make a deal. [As any player] [Play during the reveal phase only]'
+        elif re.match('Quash',card):
+            msg += '[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]'
+        elif re.match('Ionic Gas',card):
+            msg += '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
+        self.description_box['state'] = 'normal'
+        self.description_box.delete(1.0,'end')
+        self.description_box.insert('end',str(msg)+'\n')
+        self.description_box['state'] = 'disabled'
 
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
@@ -196,7 +235,6 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Add a way for the player to learn more about what the cards in his or her hand do
                 #TODO: Add more diagnotics for the Aliens
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 tag_found = False

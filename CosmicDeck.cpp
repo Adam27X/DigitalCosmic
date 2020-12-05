@@ -108,7 +108,7 @@ std::string to_string(const CosmicCardType &c)
 		break;
 
 		case CosmicCardType::CosmicZap:
-			ret = "CosmicZap";
+			ret = "Cosmic Zap";
 		break;
 
 		case CosmicCardType::MobiusTubes:
