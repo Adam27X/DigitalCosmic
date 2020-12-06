@@ -259,6 +259,7 @@ class GuiPart(object):
                 #TODO: Display the discard pile for the cosmic and destiny decks?
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 #TODO: Highlight the current planet that is under attack (normally we would point the hyperspace gate at it)
+                #TODO: Add GUI support for the number of Tick-Tock tokens remaining
                 tag_found = False
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
@@ -266,7 +267,7 @@ class GuiPart(object):
                     self.choice_label_var.set("Please choose one of the following options:")
                     self.choice_label.grid(column=0, row=0)
                     for line in msg.splitlines():
-                        option_match = re.match('([0-9]): (.*)',line) #TODO: Should we use [0-9]* here?  This setup currently only works for up to 10 options
+                        option_match = re.match('([0-9]*): (.*)',line)
                         if line.find('[needs_response]') != -1: #This line is delivered after the options
                             break
                         if option_match:
