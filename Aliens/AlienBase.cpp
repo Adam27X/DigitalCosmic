@@ -133,7 +133,8 @@ std::function<void()> AlienBase::get_callback_if_action_taken(GameState *g, cons
 	if(!revealed)
 	{
 		std::stringstream message;
-		message << "The " << to_string(player) << " player is the " << name << "!\n";
+		message << "[alien_reveal]\n";
+		message << "The " << to_string(player) << " player is " << name << "!\n";
 		message << name << " has the power of " << power << "\n";
 		message << "Required player role for this power: " << to_string(role) << "\n";
 		message << "Is this power mandatory? " << mandatory << "\n";

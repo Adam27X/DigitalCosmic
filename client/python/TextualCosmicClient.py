@@ -103,7 +103,6 @@ class GuiPart(object):
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
         #Game board
-        #TODO: Add player Aliens as they're revealed
         self.game_board_frame = ttk.Frame(self.master, padding="5 5 5 5")
         self.game_board_frame.grid(column=1, row=1)
         self.warp_width = 400
@@ -124,10 +123,13 @@ class GuiPart(object):
         Label(self.game_board_frame, text="Defensive ally ships:").grid(column=2,row=0)
         self.defensive_ally_canvas.grid(column=2,row=1)
 
+        self.player_aliens = {} #Dict that maps player color to a tuple of alien information (stringvar,label,desc)
+
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
         self.planets = []
         self.planet_labels = []
+        self.planet_labels_written = False
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -239,6 +241,12 @@ class GuiPart(object):
         self.description_box.insert('end',str(self.alien_desc)+'\n')
         self.description_box['state'] = 'disabled'
 
+    def update_revealed_alien_info(self, desc):
+        self.description_box['state'] = 'normal'
+        self.description_box.delete(1.0,'end')
+        self.description_box.insert('end',str(desc)+'\n')
+        self.description_box['state'] = 'disabled'
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -247,7 +255,6 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Add more diagnotics for the Aliens
                 #TODO: Display the number of cards in hand for each opponent?
                 #TODO: Display the discard pile for the cosmic and destiny decks?
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
@@ -340,7 +347,7 @@ class GuiPart(object):
                         for i in range(len(players)):
                             for j in range(num_planets): #Create a row for each planet
                                 self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? Perhaps an image of stars like space? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
-                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=2+(2*j)+1)
+                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=3+(2*j)+1)
                     else: #Reset the canvas
                         #Reset the canvases
                         for i in range(len(players)):
@@ -348,13 +355,23 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*i)+j].delete("all")
                         self.planets = []
                     #Fill in the details
+                    planet_labels_written = False
                     for i in range(len(players)):
                         for j in range(num_planets):
                             #TODO: Improve on this approach by sending over basic server data such as the number of players and the colors chosen, etc.
-                            if len(self.planet_labels) < len(players)*num_planets and players[0].split(' ')[0] != players[len(players)-1].split(' ')[0]: #Only fill in the labels the first time we have complete planet information, ugh
+                            if len(self.planet_labels) < len(players)*num_planets and players[0].split(' ')[0] != players[len(players)-1].split(' ')[0] and not self.planet_labels_written: #Only fill in the labels the first time we have complete planet information, ugh
                                 player = players[i].split(' ')[0]
                                 labeltext = player + ' Planet ' + str(j) + ':'
-                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=2+2*j))
+                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=3+2*j))
+                                #Add a label for the player's Alien
+                                if j == 0:
+                                    self.player_aliens[player] = (StringVar(),)
+                                    self.player_aliens[player] += (Label(self.game_board_frame, textvariable=self.player_aliens[player][0]),)
+                                    self.player_aliens[player][0].set(player + ' player alien: unrevealed') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
+                                    self.player_aliens[player][1].grid(column=i,row=2)
+                                planet_labels_written = True
+                    if planet_labels_written:
+                        self.planet_labels_written = True
                     for i in range(len(players)):
                         player = players[i].split(' ')[0]
                         last_lbrace = players[i].find('{')
@@ -415,9 +432,20 @@ class GuiPart(object):
                     alien_name = re.search('===== (.*) =====',msg)
                     assert alien_name, "Failed to parse alien name!"
                     if len(self.alien_name.get()) == 0:
-                        self.alien_name.set('Your Alien is: ' + alien_name.group(1))
+                        self.alien_name.set('Your Alien is ' + alien_name.group(1))
                         self.alien_desc = msg[msg.find(tag)+len(tag):]
                         self.alien_label.grid(column=0,row=1)
+                if msg.find('[alien_reveal]') != -1: #A player's alien was revealed, update the alien label
+                    tag_found = True
+                    alien_match = re.search('The (.*) player is (.*)!',msg)
+                    assert alien_match, "Failed to parse alien name from reveal!"
+                    player = alien_match.group(1)
+                    alien_name = alien_match.group(2)
+                    alien_desc = msg[msg.find('!\n')+2:]
+                    #TODO: Make this information more prominent once it has been revealed?
+                    self.player_aliens[player][0].set(player + ' player alien: ' + alien_name)
+                    self.player_aliens[player] += (alien_desc,)
+                    self.player_aliens[player][1].bind('<Enter>', lambda e: self.update_revealed_alien_info(self.player_aliens[player][2]))
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'
