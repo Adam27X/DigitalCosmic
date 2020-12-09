@@ -20,8 +20,28 @@ class GuiPart(object):
         self.master = master
         self.master.withdraw()
 
+        #Master frame that contains all subframes, mainly used to add scrolling
+        self.container_frame = ttk.Frame(self.master)
+        #FIXME: 20 is pretty arbitrary here and essentially requires the user to maximize their window...we would rather have the canvas size update dynamically
+        #Instead of 1024x768 we could grab the window size and use a size that essentially fills that window
+        self.container_canvas = Canvas(self.container_frame, width=1024, height=768)
+        #self.master.bind('<Configure>', lambda e: self.resize_canvas(e))
+        self.master_yscroll = ttk.Scrollbar(self.container_frame, orient='vertical', command=self.container_canvas.yview)
+        self.master_xscroll = ttk.Scrollbar(self.container_frame, orient='horizontal', command=self.container_canvas.xview)
+        self.master_frame = ttk.Frame(self.container_canvas)
+        #FIXME: Consdering resizing the canvas on this reconfiguration event too? The scrollregion command may have to come after the resizing
+        #Put these details into self.resize_canvas
+        self.master_frame.bind('<Configure>', lambda e: self.container_canvas.configure(scrollregion=self.container_canvas.bbox('all')))
+        self.container_canvas.create_window((0,0), window=self.master_frame, anchor='nw')
+        self.container_canvas.configure(yscrollcommand=self.master_yscroll.set, xscrollcommand=self.master_xscroll.set)
+        self.container_frame.grid()
+        self.container_canvas.grid(column=0, row=0)
+        self.master_yscroll.grid(column=1, row=0, sticky=(N,S))
+        self.master_xscroll.grid(column=0, row=1, sticky=(E,W))
+        #self.master_frame.grid()
+
         #Server log
-        self.server_log_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.server_log_frame.grid(column=2, row=1)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
@@ -34,7 +54,7 @@ class GuiPart(object):
 
         #Player choices
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
-        self.choice_frame = ttk.Frame(self.master, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
+        self.choice_frame = ttk.Frame(self.master_frame, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
         self.choice_frame.grid(column=0,row=1)
         self.choice_list = []
         self.client_choice = StringVar()
@@ -43,7 +63,7 @@ class GuiPart(object):
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
 
         #Player/Turn info
-        self.player_info_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.player_info_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.player_info_frame.grid(column=0,row=2)
         self.player_color = StringVar()
         self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color)
@@ -65,7 +85,7 @@ class GuiPart(object):
         self.defense_color_canvas.grid(column=1,row=3)
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
-        self.description_box_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.description_box_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.description_box_frame.grid(column=2, row=2)
         self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
         self.description_box_label.grid(column=0, row=0)
@@ -74,7 +94,7 @@ class GuiPart(object):
         #TODO: Should probably add a scrollbar in case there's some Alien with a really long description
 
         #Player hand
-        self.hand_frame = ttk.Frame(self.master, padding="5 5 5 5") #Group the label, hand, and scrollbar together
+        self.hand_frame = ttk.Frame(self.master_frame, padding="5 5 5 5") #Group the label, hand, and scrollbar together
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
@@ -85,7 +105,7 @@ class GuiPart(object):
         self.hand_frame.grid(column=1,columnspan=2,row=2)
 
         #Display the current turn phase
-        self.turn_phase_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.turn_phase_frame.grid(column=0, columnspan=3, row=0)
         self.turn_phase_labels = []
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Start Turn"))
@@ -103,7 +123,7 @@ class GuiPart(object):
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
         #Game board
-        self.game_board_frame = ttk.Frame(self.master, padding="5 5 5 5")
+        self.game_board_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.game_board_frame.grid(column=1, row=1)
         self.warp_width = 400
         self.warp_height = 80
@@ -168,6 +188,14 @@ class GuiPart(object):
         self.conn.destroy()
         self.master.state('normal')
         self.master.title("Textual Cosmic")
+
+    def resize_canvas(self, event):
+        print('E.width: ' + str(event.width) + '; E.height: ' + str(event.height))
+        self.container_canvas.configure(width=event.width,height=event.height)
+    #    print('Window is now: ' + str(self.master_frame.winfo_width()) + 'x' + str(self.master_frame.winfo_height()))
+    #    self.container_canvas.configure(width=self.master_frame.winfo_width(), height=self.master_frame.winfo_height())
+    #    #self.container_canvas.width = self.master.winfo_width()
+    #    #self.container_canvas.height = self.master.winfo_height()
 
     def update_source(self, msg, canvas, ship_list):
         ships = msg[msg.find('{')+1:msg.find('}')].split(',')
