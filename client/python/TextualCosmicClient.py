@@ -18,27 +18,26 @@ class GuiPart(object):
 
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
+        #Give the window some arbitrary starting size so the user doesn't see a bunch of resizing at the start of the program
+        self.master.geometry(str(self.master.winfo_screenwidth()-100)+'x'+str(self.master.winfo_screenheight()-100))
         self.master.withdraw()
 
         #Master frame that contains all subframes, mainly used to add scrolling
         self.container_frame = ttk.Frame(self.master)
-        #FIXME: 20 is pretty arbitrary here and essentially requires the user to maximize their window...we would rather have the canvas size update dynamically
-        #Instead of 1024x768 we could grab the window size and use a size that essentially fills that window
-        self.container_canvas = Canvas(self.container_frame, width=1024, height=768)
-        #self.master.bind('<Configure>', lambda e: self.resize_canvas(e))
+        self.container_frame.rowconfigure(0, weight=1)
+        self.container_frame.columnconfigure(0, weight=1)
+        self.container_canvas = Canvas(self.container_frame)
+        self.master.bind('<Configure>', lambda e: self.resize_canvas(e))
         self.master_yscroll = ttk.Scrollbar(self.container_frame, orient='vertical', command=self.container_canvas.yview)
         self.master_xscroll = ttk.Scrollbar(self.container_frame, orient='horizontal', command=self.container_canvas.xview)
         self.master_frame = ttk.Frame(self.container_canvas)
-        #FIXME: Consdering resizing the canvas on this reconfiguration event too? The scrollregion command may have to come after the resizing
-        #Put these details into self.resize_canvas
         self.master_frame.bind('<Configure>', lambda e: self.container_canvas.configure(scrollregion=self.container_canvas.bbox('all')))
         self.container_canvas.create_window((0,0), window=self.master_frame, anchor='nw')
         self.container_canvas.configure(yscrollcommand=self.master_yscroll.set, xscrollcommand=self.master_xscroll.set)
         self.container_frame.grid()
-        self.container_canvas.grid(column=0, row=0)
+        self.container_canvas.grid(column=0, row=0, sticky=(N,S,E,W))
         self.master_yscroll.grid(column=1, row=0, sticky=(N,S))
         self.master_xscroll.grid(column=0, row=1, sticky=(E,W))
-        #self.master_frame.grid()
 
         #Server log
         self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -189,13 +188,10 @@ class GuiPart(object):
         self.master.state('normal')
         self.master.title("Textual Cosmic")
 
+    #NOTE: The offset of 20 here is so the scrollbars are visible
     def resize_canvas(self, event):
-        print('E.width: ' + str(event.width) + '; E.height: ' + str(event.height))
-        self.container_canvas.configure(width=event.width,height=event.height)
-    #    print('Window is now: ' + str(self.master_frame.winfo_width()) + 'x' + str(self.master_frame.winfo_height()))
-    #    self.container_canvas.configure(width=self.master_frame.winfo_width(), height=self.master_frame.winfo_height())
-    #    #self.container_canvas.width = self.master.winfo_width()
-    #    #self.container_canvas.height = self.master.winfo_height()
+        if self.master.winfo_width() > 20 and self.master.winfo_height() > 20:
+            self.container_canvas.configure(width=self.master.winfo_width()-20, height=self.master.winfo_height()-20)
 
     def update_source(self, msg, canvas, ship_list):
         ships = msg[msg.find('{')+1:msg.find('}')].split(',')
