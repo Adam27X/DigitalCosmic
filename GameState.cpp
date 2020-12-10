@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); })
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); })
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -176,6 +176,13 @@ void GameState::update_defense() const
 	server.broadcast_message(msg);
 }
 
+void GameState::update_cosmic_discard() const
+{
+	std::string msg("[cosmic_discard_update]\n");
+	msg.append(get_cosmic_discard());
+	server.broadcast_message(msg);
+}
+
 void GameState::update_planets() const
 {
 	std::stringstream msg;
@@ -258,7 +265,7 @@ void GameState::deal_starting_hands()
 void GameState::shuffle_discard_into_cosmic_deck()
 {
 	assert(cosmic_deck.empty() && "Expected empty CosmicDeck when shuffling the discard pile back into the CosmicDeck");
-	for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
+	for(auto i=cosmic_discard.cbegin(),e=cosmic_discard.cend();i!=e;++i)
 	{
 		cosmic_deck.push_back(*i);
 	}
@@ -2448,9 +2455,9 @@ const std::string GameState::get_cosmic_discard() const
 {
 	std::stringstream ret;
 	ret << "Cosmic discard pile: {";
-	for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
+	for(auto i=cosmic_discard.cbegin(),e=cosmic_discard.cend();i!=e;++i)
 	{
-		if(i != cosmic_discard.begin())
+		if(i != cosmic_discard.cbegin())
 			ret << ",";
 		ret << to_string(*i);
 	}

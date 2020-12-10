@@ -41,7 +41,7 @@ class GuiPart(object):
 
         #Server log
         self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.server_log_frame.grid(column=2, row=1)
+        self.server_log_frame.grid(column=3, row=1)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
@@ -85,7 +85,7 @@ class GuiPart(object):
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
         self.description_box_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.description_box_frame.grid(column=2, row=2)
+        self.description_box_frame.grid(column=3, row=2)
         self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
         self.description_box_label.grid(column=0, row=0)
         self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
@@ -98,10 +98,21 @@ class GuiPart(object):
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
         self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper, selectmode='browse') #Height here is the number of lines the box will display without scrolling; 'browse' indicates only one item can be selected at a time
-        self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection()))
+        self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection(),self.hand_cards))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
-        self.hand_frame.grid(column=1,columnspan=2,row=2)
+        self.hand_frame.grid(column=2,row=2)
+
+        #Cosmic discard pile
+        self.cosmic_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.cosmic_discard_cards = []
+        self.cosmic_discard_cards_wrapper = StringVar(value=self.cosmic_discard_cards)
+        self.cosmic_discard_label = Label(self.cosmic_discard_frame, text='Cosmic discard pile:')
+        self.cosmic_discard_disp = Listbox(self.cosmic_discard_frame, height=8, listvariable=self.cosmic_discard_cards_wrapper, selectmode='browse')
+        self.cosmic_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.cosmic_discard_disp.curselection(),self.cosmic_discard_cards))
+        self.cosmic_discard_scroll = ttk.Scrollbar(self.cosmic_discard_frame, orient=VERTICAL, command=self.cosmic_discard_disp.yview)
+        self.cosmic_discard_disp['yscrollcommand'] = self.cosmic_discard_scroll.set
+        self.cosmic_discard_frame.grid(column=1,row=2)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -122,8 +133,9 @@ class GuiPart(object):
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
         #Game board
+        #FIXME: Shrink these elements to be more friendly to lower resolution settings
         self.game_board_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.game_board_frame.grid(column=1, row=1)
+        self.game_board_frame.grid(column=1, row=1, columnspan=2)
         self.warp_width = 400
         self.warp_height = 80
 
@@ -221,12 +233,12 @@ class GuiPart(object):
                 colorcount += 1
 
     #The user clicked on a card in their hand so display what the card does in the description box
-    def update_hand_info(self, current_selection):
+    def update_hand_info(self, current_selection, array):
         if len(current_selection) != 1: #The user should only be able to select one item at a time but this protects against the case where no item is selected
             return
         sel = current_selection[0]
-        card = self.hand_cards[sel]
-        msg = self.hand_cards[sel] + '\n'
+        card = array[sel]
+        msg = array[sel] + '\n'
         attack_match = re.match('Attack (.*)',card)
         reinforcement_match = re.match('Reinforcement \+(.*)',card)
         if attack_match:
@@ -471,6 +483,19 @@ class GuiPart(object):
                     self.player_aliens[player][0].set(player + ' player alien: ' + alien_name)
                     self.player_aliens[player] += (alien_desc,)
                     self.player_aliens[player][1].bind('<Enter>', lambda e: self.update_revealed_alien_info(self.player_aliens[player][2]))
+                if msg.find('[cosmic_discard_update]') != -1: #Cards have moved to or have been removed from the cosmic discard pile
+                    tag_found = True
+                    lbrace = msg.find('{')
+                    rbrace = msg.find('}')
+                    cards = msg[lbrace+1:rbrace].split(',')
+                    self.cosmic_discard_cards = []
+                    for card in cards:
+                        self.cosmic_discard_cards.append(card)
+                    #Anytime we change the list, we need to update the StringVar wrapper
+                    self.cosmic_discard_cards_wrapper.set(self.cosmic_discard_cards)
+                    self.cosmic_discard_label.grid(column=0, row=0)
+                    self.cosmic_discard_disp.grid(column=0,row=1)
+                    self.cosmic_discard_scroll.grid(column=1,row=1, sticky=(N,S))
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

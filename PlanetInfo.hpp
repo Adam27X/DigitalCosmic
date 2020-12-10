@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 
-//TODO: Rename this to PlanetInfo once it's fully working
+//TODO: Rename this to something more descriptive like CallbackVector, since it can be generally used for any sort of callback
 
 //Wrapper around std::vector that has a side effect when pushing or erasing elements of the vector
 //In this case the side effect is to send data to the client to update the GUI's display of the warp, hyperspace gate, etc.
@@ -29,6 +29,12 @@ public:
 
 	unsigned size() const { return data.size(); }
 	bool empty() const { return data.empty(); }
+
+	void clear()
+	{
+		data.clear();
+		server_callback();
+	}
 
 	typename std::vector<T>::const_iterator cbegin() const { return data.cbegin(); }
 	typename std::vector<T>::const_iterator cend() const { return data.cend(); }

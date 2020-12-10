@@ -179,12 +179,12 @@ private:
 	void update_defensive_ally_ships() const;
 	void update_offense() const;
 	void update_defense() const;
+	void update_cosmic_discard() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
 	DestinyDeck destiny_deck;
 	CosmicDeck cosmic_deck;
-	std::vector<CosmicCardType> cosmic_discard;
 	std::stack<GameEvent> stack;
 	TurnPhase state;
 	bool invalidate_next_callback;
@@ -199,5 +199,6 @@ private:
 	PlanetInfoVector<PlayerColors> hyperspace_gate;
 	PlanetInfoVector<PlayerColors> defensive_ally_ships;
 	PlayerAssignments assignments;
+	PlanetInfoVector<CosmicCardType> cosmic_discard;
 };
 
