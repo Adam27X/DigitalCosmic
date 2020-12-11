@@ -120,8 +120,7 @@ class GuiPart(object):
         self.destiny_discard_cards_wrapper = StringVar(value=self.destiny_discard_cards)
         self.destiny_discard_label = Label(self.destiny_discard_frame, text='Destiny discard pile:')
         self.destiny_discard_disp = Listbox(self.destiny_discard_frame, height=8, listvariable=self.destiny_discard_cards_wrapper, selectmode='browse')
-        #TODO: Support destiny card explanations and add the following binding once supported
-        #self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
+        self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
         self.destiny_discard_scroll = ttk.Scrollbar(self.destiny_discard_frame, orient=VERTICAL, command=self.destiny_discard_disp.yview)
         self.destiny_discard_disp['yscrollcommand'] = self.destiny_discard_scroll.set
         self.destiny_discard_frame.grid(column=1,row=2)
@@ -253,6 +252,8 @@ class GuiPart(object):
         msg = array[sel] + '\n'
         attack_match = re.match('Attack (.*)',card)
         reinforcement_match = re.match('Reinforcement \+(.*)',card)
+        def get_destiny_desc(color):
+            return '[Destiny card] Have an encounter with the ' + color + ' player in his or her home system. However, if you are the ' + color + ' player, either: A) Have an encounter with any other player in your home system or B) Discard this card and draw again.'
         if attack_match:
             msg += '[Encounter card] Opposed by attack: Higher total (ships + ' + attack_match.group(1) + ') wins. Opposed by Negotiate: Wins, but opponent collects compensation.'
         elif re.match('Negotiate',card):
@@ -277,6 +278,24 @@ class GuiPart(object):
             msg += '[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]'
         elif re.match('Ionic Gas',card):
             msg += '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
+        elif re.match('Red',card):
+            msg += get_destiny_desc('Red')
+        elif re.match('Blue',card):
+            msg += get_destiny_desc('Blue')
+        elif re.match('Purple',card):
+            msg += get_destiny_desc('Purple')
+        elif re.match('Yellow',card):
+            msg += get_destiny_desc('Yellow')
+        elif re.match('Green', card):
+            msg += get_destiny_desc('Green')
+        elif re.match('Special: Fewest ships in warp', card):
+            msg += '[Destiny card] Have an encounter with the player who has the fewest ships in the warp. Break ties to your left.'
+        elif re.match('Special: Most cards in hand', card):
+            msg += '[Destiny card] Have an encounter with the player who has the most cards in hand. Break ties to your left.'
+        elif re.match('Special: Most foreign colonies', card):
+            msg += '[Destiny card] Have an encounter with the player who has the most foreign colonies. Break ties to your left.'
+        elif re.match('Wild', card):
+            msg += '[Destiny card] Have an encounter with a player of your choice in the chosen player\'s home system.'
         self.description_box['state'] = 'normal'
         self.description_box.delete(1.0,'end')
         self.description_box.insert('end',str(msg)+'\n')
