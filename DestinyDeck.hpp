@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "PlayerColors.hpp"
+#include "PlanetInfo.hpp"
 
 enum class DestinyCardType
 {
@@ -25,7 +26,7 @@ PlayerColors to_PlayerColors(const DestinyCardType &c);
 class DestinyDeck
 {
 public:
-	DestinyDeck(unsigned nplayers);
+	DestinyDeck(unsigned nplayers, std::function<void()> discard_callback);
 	void shuffle();
 	void dump() const;
 	PlayerColors draw_for_first_player_and_shuffle();
@@ -33,6 +34,6 @@ public:
 	const std::string get_discard() const;
 private:
 	std::vector<DestinyCardType> deck;
-	std::vector<DestinyCardType> discard;
+	PlanetInfoVector<DestinyCardType> discard;
 };
 

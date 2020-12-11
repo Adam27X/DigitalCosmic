@@ -13,7 +13,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers)), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); })
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); })
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -180,6 +180,13 @@ void GameState::update_cosmic_discard() const
 {
 	std::string msg("[cosmic_discard_update]\n");
 	msg.append(get_cosmic_discard());
+	server.broadcast_message(msg);
+}
+
+void GameState::update_destiny_discard() const
+{
+	std::string msg("[destiny_discard_update]\n");
+	msg.append(get_destiny_discard());
 	server.broadcast_message(msg);
 }
 
@@ -2104,6 +2111,9 @@ void GameState::execute_turn()
 	//Before cards are selected effects can now resolve
 	check_for_game_events();
 
+	//FIXME: Don't discard encounter cards until both have been selected (but remove it from the player's hand immediately)
+	//	 Otherwise, the defense can see the offense's chosen card in the discard pile while they're still choosing!
+	//	 Wait until the reveal phase so that the cards aren't face down anymore (though I guess technically they're discarded on resolution?)
 	std::string prompt("Which encounter card would you like to play?\n");
 	std::vector<std::string> options;
 	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)

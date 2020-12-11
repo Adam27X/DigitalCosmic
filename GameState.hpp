@@ -180,6 +180,7 @@ private:
 	void update_offense() const;
 	void update_defense() const;
 	void update_cosmic_discard() const;
+	void update_destiny_discard() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

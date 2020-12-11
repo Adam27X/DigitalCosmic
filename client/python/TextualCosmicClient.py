@@ -41,7 +41,7 @@ class GuiPart(object):
 
         #Server log
         self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.server_log_frame.grid(column=3, row=1)
+        self.server_log_frame.grid(column=4, row=1)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
@@ -85,7 +85,7 @@ class GuiPart(object):
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
         self.description_box_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.description_box_frame.grid(column=3, row=2)
+        self.description_box_frame.grid(column=4, row=2)
         self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
         self.description_box_label.grid(column=0, row=0)
         self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
@@ -101,7 +101,7 @@ class GuiPart(object):
         self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection(),self.hand_cards))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
-        self.hand_frame.grid(column=2,row=2)
+        self.hand_frame.grid(column=3,row=2)
 
         #Cosmic discard pile
         self.cosmic_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -112,7 +112,19 @@ class GuiPart(object):
         self.cosmic_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.cosmic_discard_disp.curselection(),self.cosmic_discard_cards))
         self.cosmic_discard_scroll = ttk.Scrollbar(self.cosmic_discard_frame, orient=VERTICAL, command=self.cosmic_discard_disp.yview)
         self.cosmic_discard_disp['yscrollcommand'] = self.cosmic_discard_scroll.set
-        self.cosmic_discard_frame.grid(column=1,row=2)
+        self.cosmic_discard_frame.grid(column=2,row=2)
+
+        #Destiny discard pile
+        self.destiny_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.destiny_discard_cards = []
+        self.destiny_discard_cards_wrapper = StringVar(value=self.destiny_discard_cards)
+        self.destiny_discard_label = Label(self.destiny_discard_frame, text='Cosmic discard pile:')
+        self.destiny_discard_disp = Listbox(self.destiny_discard_frame, height=8, listvariable=self.destiny_discard_cards_wrapper, selectmode='browse')
+        #TODO: Support destiny card explanations and add the following binding once supported
+        #self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
+        self.destiny_discard_scroll = ttk.Scrollbar(self.destiny_discard_frame, orient=VERTICAL, command=self.destiny_discard_disp.yview)
+        self.destiny_discard_disp['yscrollcommand'] = self.destiny_discard_scroll.set
+        self.destiny_discard_frame.grid(column=1,row=2)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -135,7 +147,7 @@ class GuiPart(object):
         #Game board
         #FIXME: Shrink these elements to be more friendly to lower resolution settings
         self.game_board_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.game_board_frame.grid(column=1, row=1, columnspan=2)
+        self.game_board_frame.grid(column=1, row=1, columnspan=3)
         self.warp_width = 400
         self.warp_height = 80
 
@@ -292,10 +304,10 @@ class GuiPart(object):
                 print(msg)
                 #Process options if there are any
                 #TODO: Display the number of cards in hand for each opponent?
-                #TODO: Display the discard pile for the cosmic and destiny decks?
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 #TODO: Highlight the current planet that is under attack (normally we would point the hyperspace gate at it)
                 #TODO: Add GUI support for the number of Tick-Tock tokens remaining
+                #TODO: Subclassify diagnostics to improve the UI
                 tag_found = False
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
@@ -496,6 +508,19 @@ class GuiPart(object):
                     self.cosmic_discard_label.grid(column=0, row=0)
                     self.cosmic_discard_disp.grid(column=0,row=1)
                     self.cosmic_discard_scroll.grid(column=1,row=1, sticky=(N,S))
+                if msg.find('[destiny_discard_update]') != -1: #Cards have been removed or added to the destiny discard pile
+                    tag_found = True
+                    lbrace = msg.find('{')
+                    rbrace = msg.find('}')
+                    cards = msg[lbrace+1:rbrace].split(',')
+                    self.destiny_discard_cards = []
+                    for card in cards:
+                        self.destiny_discard_cards.append(card)
+                    #Anytime we change the list, we need to update the StringVar wrapper
+                    self.destiny_discard_cards_wrapper.set(self.destiny_discard_cards)
+                    self.destiny_discard_label.grid(column=0, row=0)
+                    self.destiny_discard_disp.grid(column=0,row=1)
+                    self.destiny_discard_scroll.grid(column=1,row=1, sticky=(N,S))
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

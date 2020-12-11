@@ -85,7 +85,7 @@ PlayerColors to_PlayerColors(const DestinyCardType &c)
 	}
 }
 
-DestinyDeck::DestinyDeck(unsigned nplayers)
+DestinyDeck::DestinyDeck(unsigned nplayers, std::function<void()> discard_callback) : discard(discard_callback)
 {
 	//Again we're assigning colors in a specific order here
 	const unsigned destiny_cards_per_player = 3;
@@ -178,9 +178,9 @@ const std::string DestinyDeck::get_discard() const
 {
 	std::stringstream ret;
 	ret << "Destiny discard pile: {";
-	for(auto i=discard.begin(),e=discard.end();i!=e;++i)
+	for(auto i=discard.cbegin(),e=discard.cend();i!=e;++i)
 	{
-		if(i != discard.begin())
+		if(i != discard.cbegin())
 			ret << ",";
 		ret << to_string(*i);
 	}
