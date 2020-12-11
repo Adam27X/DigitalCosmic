@@ -2111,11 +2111,9 @@ void GameState::execute_turn()
 	//Before cards are selected effects can now resolve
 	check_for_game_events();
 
-	//FIXME: Don't discard encounter cards until both have been selected (but remove it from the player's hand immediately)
-	//	 Otherwise, the defense can see the offense's chosen card in the discard pile while they're still choosing!
-	//	 Wait until the reveal phase so that the cards aren't face down anymore (though I guess technically they're discarded on resolution?)
 	std::string prompt("Which encounter card would you like to play?\n");
 	std::vector<std::string> options;
+	std::vector<CosmicCardType> cards_to_be_discarded;
 	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
 	{
 		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
@@ -2133,7 +2131,7 @@ void GameState::execute_turn()
 			if(option == response)
 			{
 				assignments.offensive_encounter_card = *i;
-				cosmic_discard.push_back(*i);
+				cards_to_be_discarded.push_back(*i);
 				offense.hand_erase(i);
 				break;
 			}
@@ -2159,7 +2157,7 @@ void GameState::execute_turn()
 			if(option == response)
 			{
 				assignments.defensive_encounter_card = *i;
-				cosmic_discard.push_back(*i);
+				cards_to_be_discarded.push_back(*i);
 				defense.hand_erase(i);
 				break;
 			}
@@ -2181,6 +2179,13 @@ void GameState::execute_turn()
 	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
 	announce << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
 	server.broadcast_message(announce.str());
+
+	//Now that the cards are known, we can add them to the discard pile (NOTE: game state effects might dictate that these cards are discarded later, during resolution)
+	for(auto i=cards_to_be_discarded.begin(),e=cards_to_be_discarded.end();i!=e;++i)
+	{
+		cosmic_discard.push_back(*i);
+	}
+	cards_to_be_discarded.clear();
 
 	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)

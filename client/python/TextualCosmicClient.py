@@ -118,7 +118,7 @@ class GuiPart(object):
         self.destiny_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.destiny_discard_cards = []
         self.destiny_discard_cards_wrapper = StringVar(value=self.destiny_discard_cards)
-        self.destiny_discard_label = Label(self.destiny_discard_frame, text='Cosmic discard pile:')
+        self.destiny_discard_label = Label(self.destiny_discard_frame, text='Destiny discard pile:')
         self.destiny_discard_disp = Listbox(self.destiny_discard_frame, height=8, listvariable=self.destiny_discard_cards_wrapper, selectmode='browse')
         #TODO: Support destiny card explanations and add the following binding once supported
         #self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
