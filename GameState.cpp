@@ -312,6 +312,15 @@ void GameState::send_player_hand(const PlayerColors player) const
 	server.send_message_to_client(player,player_hand);
 }
 
+void GameState::broadcast_player_hand_size(const PlayerColors player) const
+{
+	const unsigned player_hand_size = get_player_const(player).hand_size();
+	std::stringstream message;
+	message << "[player_hand_size] ";
+	message << to_string(player) << ": " << player_hand_size;
+	server.broadcast_message(message.str());
+}
+
 void GameState::dump_player_hands() const
 {
 	for(auto i=players.begin(),e=players.end();i!=e;++i)

@@ -319,18 +319,19 @@ const std::string PlayerInfo::get_alien_desc() const
 void PlayerInfo::update_client_hand() const
 {
 	game->send_player_hand(color);
+	game->broadcast_player_hand_size(color);
 }
 
 void PlayerInfo::hand_push_back(const CosmicCardType c)
 {
 	hand.push_back(c);
-	game->send_player_hand(color);
+	update_client_hand();
 }
 
 void PlayerInfo::hand_clear()
 {
 	hand.clear();
-	game->send_player_hand(color);
+	update_client_hand();
 }
 
 void PlayerInfo::set_game_state(GameState *g)

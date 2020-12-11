@@ -103,6 +103,7 @@ class GuiPart(object):
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
         self.hand_frame.grid(column=3,row=2)
 
+        #TODO: Move these discard piles to column 0 under the option frame
         #Cosmic discard pile
         self.cosmic_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.cosmic_discard_cards = []
@@ -166,6 +167,7 @@ class GuiPart(object):
         self.defensive_ally_canvas.grid(column=2,row=1)
 
         self.player_aliens = {} #Dict that maps player color to a tuple of alien information (stringvar,label,desc)
+        self.player_hand_size_labels = {} #Dict that maps player to color to labels displaying that player's hand size
 
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
@@ -322,7 +324,6 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Display the number of cards in hand for each opponent?
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 #TODO: Highlight the current planet that is under attack (normally we would point the hyperspace gate at it)
                 #TODO: Add GUI support for the number of Tick-Tock tokens remaining
@@ -415,7 +416,7 @@ class GuiPart(object):
                         for i in range(len(players)):
                             for j in range(num_planets): #Create a row for each planet
                                 self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? Perhaps an image of stars like space? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
-                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=3+(2*j)+1)
+                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=4+(2*j)+1)
                     else: #Reset the canvas
                         #Reset the canvases
                         for i in range(len(players)):
@@ -430,7 +431,7 @@ class GuiPart(object):
                             if len(self.planet_labels) < len(players)*num_planets and players[0].split(' ')[0] != players[len(players)-1].split(' ')[0] and not self.planet_labels_written: #Only fill in the labels the first time we have complete planet information, ugh
                                 player = players[i].split(' ')[0]
                                 labeltext = player + ' Planet ' + str(j) + ':'
-                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=3+2*j))
+                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=4+2*j))
                                 #Add a label for the player's Alien
                                 if j == 0:
                                     self.player_aliens[player] = (StringVar(),)
@@ -540,6 +541,17 @@ class GuiPart(object):
                     self.destiny_discard_label.grid(column=0, row=0)
                     self.destiny_discard_disp.grid(column=0,row=1)
                     self.destiny_discard_scroll.grid(column=1,row=1, sticky=(N,S))
+                if msg.find('[player_hand_size]') != -1: #Update the number of cards in the given player's hand
+                    tag_found = True
+                    player_hand_match = re.search('\[player_hand_size\] (.*): (.*)',msg)
+                    assert player_hand_match, "Failed to parse player hand size message"
+                    player = player_hand_match.group(1)
+                    if player not in self.player_hand_size_labels:
+                        self.player_hand_size_labels[player] = Label(self.game_board_frame, text='Hand size: ' + player_hand_match.group(2))
+                        #NOTE: This column choice is exploiting how the player hands are dealt in order; ideally we should probably have a map from color to indices for better organization
+                        self.player_hand_size_labels[player].grid(column=len(self.player_hand_size_labels)-1,row=3)
+                    else:
+                        self.player_hand_size_labels[player].configure(text='Hand size: ' + player_hand_match.group(2))
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'
