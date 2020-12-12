@@ -313,7 +313,7 @@ class GuiPart(object):
     def update_revealed_alien_info(self, desc):
         self.description_box['state'] = 'normal'
         self.description_box.delete(1.0,'end')
-        self.description_box.insert('end',str(desc)+'\n')
+        self.description_box.insert('end',desc+'\n')
         self.description_box['state'] = 'disabled'
 
     def processIncoming(self):
@@ -325,7 +325,6 @@ class GuiPart(object):
                 print(msg)
                 #Process options if there are any
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
-                #TODO: Add GUI support for the number of Tick-Tock tokens remaining
                 tag_found = False
                 #TODO: Subclassify diagnostics requiring responses to improve the UI
                 if msg.find('[needs_response]') != -1:
@@ -437,8 +436,9 @@ class GuiPart(object):
                                 self.planet_labels[-1].grid(column=i,row=4+2*j)
                                 #Add a label for the player's Alien
                                 if j == 0:
-                                    self.player_aliens[player] = (StringVar(),)
-                                    self.player_aliens[player] += (Label(self.game_board_frame, textvariable=self.player_aliens[player][0]),)
+                                    self.player_aliens[player] = []
+                                    self.player_aliens[player].append(StringVar())
+                                    self.player_aliens[player].append(Label(self.game_board_frame, textvariable=self.player_aliens[player][0]))
                                     self.player_aliens[player][0].set(player + ' player alien: unrevealed') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
                                     self.player_aliens[player][1].grid(column=i,row=2)
                                 planet_labels_written = True
@@ -516,8 +516,17 @@ class GuiPart(object):
                     alien_desc = msg[msg.find('!\n')+2:]
                     #TODO: Make this information more prominent once it has been revealed?
                     self.player_aliens[player][0].set(player + ' player alien: ' + alien_name)
-                    self.player_aliens[player] += (alien_desc,)
+                    self.player_aliens[player].append(alien_desc)
                     self.player_aliens[player][1].bind('<Enter>', lambda e: self.update_revealed_alien_info(self.player_aliens[player][2]))
+                if msg.find('[alien_aux_update]') != -1: #Some other alien information was received from the server
+                    tick_tock_aux_match = re.search('\[alien_aux_update\]\n(.*) tokens remaining: (.*)',msg)
+                    assert tick_tock_aux_match, "Failed to parse alien aux update!"
+                    for alien, alien_info in self.player_aliens.items():
+                        if alien_info[0].get().find(tick_tock_aux_match.group(1)) != -1: #If this alien is indeed Tick-Tock
+                            if alien_info[2].find('Tokens remaining') != -1: #Replace the existing aux data
+                                alien_info[2] = re.sub('Tokens remaining: (.*)','Tokens remaining: ' + tick_tock_aux_match.group(2), alien_info[2])
+                            else:
+                                alien_info[2] += 'Tokens remaining: ' + tick_tock_aux_match.group(2)
                 if msg.find('[cosmic_discard_update]') != -1: #Cards have moved to or have been removed from the cosmic discard pile
                     tag_found = True
                     lbrace = msg.find('{')

@@ -1922,6 +1922,14 @@ void GameState::resolve_human_encounter_win()
 	}
 }
 
+void GameState::update_tick_tock_tokens(unsigned tokens) const
+{
+	std::stringstream message;
+	message << "[alien_aux_update]\n";
+	message << "Tick-Tock tokens remaining: " << tokens << "\n";
+	server.broadcast_message(message.str());
+}
+
 void GameState::start_game()
 {
 	execute_turn();

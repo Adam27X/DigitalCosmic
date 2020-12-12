@@ -137,6 +137,7 @@ public:
 	const std::string get_game_board() const;
 	const CosmicServer& get_server() const { return server; }
 	void update_planets() const;
+	void update_tick_tock_tokens(unsigned tokens) const;
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
