@@ -1155,6 +1155,7 @@ void GameState::choose_opponent_planet()
 	assignments.planet_id = chosen_option;
 
 	std::stringstream announce;
+	announce << "[targeted_planet]\n";
 	announce << "The offense (" << to_string(assignments.get_offense()) << ") will have an encounter with the " << to_string(assignments.get_defense()) << " player on " << to_string(assignments.planet_location) << " Planet " << assignments.planet_id << "\n";
 	server.broadcast_message(announce.str());
 }

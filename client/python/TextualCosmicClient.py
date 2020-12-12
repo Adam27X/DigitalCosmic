@@ -325,10 +325,9 @@ class GuiPart(object):
                 print(msg)
                 #Process options if there are any
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
-                #TODO: Highlight the current planet that is under attack (normally we would point the hyperspace gate at it)
                 #TODO: Add GUI support for the number of Tick-Tock tokens remaining
-                #TODO: Subclassify diagnostics to improve the UI
                 tag_found = False
+                #TODO: Subclassify diagnostics requiring responses to improve the UI
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     option_num = None
@@ -397,6 +396,9 @@ class GuiPart(object):
                             self.turn_phase_labels[i].config(bg="Orange")
                         else:
                             self.turn_phase_labels[i].config(bg=self.default_label_bg)
+                    if phase_index == 0: #Reset the highlighted planet for the next encounter
+                        for planet_label in self.planet_labels:
+                            planet_label.configure(background=self.default_label_bg)
                 if msg.find('[warp_update]') != -1: #Redraw the warp
                     tag_found = True
                     self.update_source(msg,self.warp_canvas,self.warp_ships)
@@ -431,7 +433,8 @@ class GuiPart(object):
                             if len(self.planet_labels) < len(players)*num_planets and players[0].split(' ')[0] != players[len(players)-1].split(' ')[0] and not self.planet_labels_written: #Only fill in the labels the first time we have complete planet information, ugh
                                 player = players[i].split(' ')[0]
                                 labeltext = player + ' Planet ' + str(j) + ':'
-                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext).grid(column=i,row=4+2*j))
+                                self.planet_labels.append(Label(self.game_board_frame,text=labeltext))
+                                self.planet_labels[-1].grid(column=i,row=4+2*j)
                                 #Add a label for the player's Alien
                                 if j == 0:
                                     self.player_aliens[player] = (StringVar(),)
@@ -552,6 +555,14 @@ class GuiPart(object):
                         self.player_hand_size_labels[player].grid(column=len(self.player_hand_size_labels)-1,row=3)
                     else:
                         self.player_hand_size_labels[player].configure(text='Hand size: ' + player_hand_match.group(2))
+                if msg.find('[targeted_planet]') != -1:
+                    tag_found = True
+                    target_planet_match = re.search('player on (.*) Planet (.*)',msg)
+                    assert target_planet_match, "Failed to parse targeted planet!"
+                    for planet_label in self.planet_labels:
+                        if planet_label and planet_label.cget('text').find(target_planet_match.group(1)) != -1 and planet_label.cget('text').find(target_planet_match.group(2)) != -1:
+                            planet_label.config(background='Orange')
+                            break
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'
