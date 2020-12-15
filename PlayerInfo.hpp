@@ -69,6 +69,13 @@ public:
 	bool alien_enabled() const;
 	const std::string get_alien_desc() const;
 	bool alien_revealed() const;
+	void discard_card_callback_helper(const CosmicCardType c) const;
+
+	template<typename T>
+	std::function<void()> discard_card_callback(T i)
+	{
+		return [this,i] () { this->discard_card_callback_helper(*i); this->hand_erase(i); };
+	}
 
 	void update_client_hand() const;
 	void hand_push_back(const CosmicCardType c);
@@ -97,7 +104,6 @@ public:
 		return ret;
 	}
 
-	//Does this need a forward decl?
 	GameState *game; //Intended for callbacks and should be used sparingly
 
 private:
