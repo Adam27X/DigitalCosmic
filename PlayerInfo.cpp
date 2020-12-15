@@ -120,7 +120,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
 				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -134,7 +134,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -148,7 +148,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -162,13 +162,11 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
 	}
-	//FIXME: We can respond to a plague with a mobius tubes (for instance, to avoid discarding it)
-	//	 More generally, we can respond with any card that can be played during the same phase as the plague (regroup)
 	else if(g.event_type == GameEventType::Plague)
 	{
 		//We can respond if we have a CardZap
@@ -178,7 +176,16 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
+				vret.push_back(ret);
+			}
+			//NOTE: More generally, we can respond with any card that can be played during the same phase as the plague (regroup)
+			//For now we sort of implicitly respect this rule but it would be better to use a more explicit approach that checks the phases
+			else if(*i == CosmicCardType::MobiusTubes) //Respond to the Plague with Mobius Tubes (to avoid discarding it, for instance)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::MobiusTubes);
+				ret.callback_if_resolved = [this] () { this->game->free_all_ships_from_warp(); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -192,7 +199,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -206,7 +213,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -222,21 +229,21 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement3)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 					vret.push_back(ret);
 				}
 				else if(*i == CosmicCardType::Reinforcement5)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
 					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
-					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+					ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 					vret.push_back(ret);
 				}
 			}
@@ -251,7 +258,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -265,7 +272,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}
@@ -279,7 +286,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Quash);
 				ret.callback_if_resolved = [this] () { this->game->get_deal_params().successful = false; };
-				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand.erase(i); this->game->send_player_hand(this->color); };
+				ret.callback_if_action_taken = [this,i] () { this->game->add_to_discard_pile(*i); this->hand_erase(i); };
 				vret.push_back(ret);
 			}
 		}

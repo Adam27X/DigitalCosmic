@@ -138,6 +138,7 @@ public:
 	const CosmicServer& get_server() const { return server; }
 	void update_planets() const;
 	void update_tick_tock_tokens(unsigned tokens) const;
+	void free_all_ships_from_warp();
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -148,7 +149,6 @@ private:
 	void draw_from_destiny_deck();
 	void shuffle_cosmic_deck();
 	void shuffle_discard_into_cosmic_deck();
-	void free_all_ships_from_warp();
 	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
 	void check_for_game_events();
 	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color) const;
