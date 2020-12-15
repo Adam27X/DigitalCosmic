@@ -19,6 +19,7 @@ class GuiPart(object):
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
         #Give the window some arbitrary starting size so the user doesn't see a bunch of resizing at the start of the program
+        #FIXME: For multi-monitor setups the width will use all of the monitors; either have some maximum width or figure out how to account for one of the monitors
         self.master.geometry(str(self.master.winfo_screenwidth()-100)+'x'+str(self.master.winfo_screenheight()-100))
         self.master.withdraw()
 
@@ -145,7 +146,6 @@ class GuiPart(object):
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
 
         #Game board
-        #FIXME: Shrink these elements to be more friendly to lower resolution settings
         self.game_board_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.game_board_frame.grid(column=1, row=1, columnspan=3)
         self.warp_width = 400
