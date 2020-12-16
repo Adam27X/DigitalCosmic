@@ -2343,18 +2343,41 @@ void GameState::move_ship_to_colony(PlayerInfo &p, PlanetInfoVector<PlayerColors
 
 	if(!valid_colonies.size())
 	{
+		bool placed_on_hyperspace_gate = false;
 		if(p.color == assignments.get_offense())
 		{
-			std::stringstream announce;
-			announce << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
-			server.broadcast_message(announce.str());
-			hyperspace_gate.push_back(p.color);
+			unsigned num_offensive_ships_in_hyperspace_gate = 0;
+			for(auto i=hyperspace_gate.cbegin(),e=hyperspace_gate.cend();i!=e;++i)
+			{
+				if(*i == p.color)
+					num_offensive_ships_in_hyperspace_gate++;
+			}
+
+			if(num_offensive_ships_in_hyperspace_gate < 4)
+			{
+				std::stringstream announce;
+				announce << "The  " << to_string(p.color) << " player has no valid colonies! Placing the ship directly on the hyperspace gate.\n";
+				server.broadcast_message(announce.str());
+				hyperspace_gate.push_back(p.color);
+				placed_on_hyperspace_gate = true;
+			}
 		}
-		else
+
+		if(!placed_on_hyperspace_gate)
 		{
 			//No colony to return the ship to!
-			//FIXME: What if a player has one remaining ship on one colony and then used it to ally and then a force field was played? Where does the ship go?
-			return;
+			//"If a situation arises where a player must relocate ships but he or she has no colonies anywhere on the board, those ships go to the warp." (https://boardgames.stackexchange.com/questions/13245/what-happens-when-a-player-loses-all-of-their-colonies-in-cosmic-encounter)
+			std::stringstream announce;
+			if(p.color == assignments.get_offense())
+			{
+				announce << "The " << to_string(p.color) << " player already has four ships on the hyperspace gate. Since they have no valid colonies, additional recovered ships go directly to the warp.\n";
+			}
+			else
+			{
+				announce << "The " << to_string(p.color) << " player has no valid colonies! Their retrieved ship goes directly to the warp.\n";
+			}
+			server.broadcast_message(announce.str());
+			warp.push_back(std::make_pair(p.color,encounter_num));
 		}
 	}
 	else
