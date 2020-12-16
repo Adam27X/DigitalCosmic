@@ -103,6 +103,11 @@ void PlayerInfo::discard_card_callback_helper(const CosmicCardType c) const
 	game->add_to_discard_pile(c);
 }
 
+std::function<void()> PlayerInfo::set_invalidate_next_callback_helper() const
+{
+	return [this] () { this->game->set_invalidate_next_callback(true); };
+}
+
 std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 {
 	std::vector<GameEvent> vret;
@@ -136,10 +141,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -150,10 +152,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -164,10 +163,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -178,10 +174,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 			//NOTE: More generally, we can respond with any card that can be played during the same phase as the plague (regroup)
 			//For now we sort of implicitly respect this rule but it would be better to use a more explicit approach that checks the phases
@@ -201,10 +194,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -215,10 +205,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -260,10 +247,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
@@ -274,10 +258,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); };
-				ret.callback_if_action_taken = discard_card_callback(i);
-				vret.push_back(ret);
+				add_card_zap_response(vret,i);
 			}
 		}
 	}
