@@ -19,8 +19,10 @@ class GuiPart(object):
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
         #Give the window some arbitrary starting size so the user doesn't see a bunch of resizing at the start of the program
-        #FIXME: For multi-monitor setups the width will use all of the monitors; either have some maximum width or figure out how to account for one of the monitors
-        self.master.geometry(str(self.master.winfo_screenwidth()-100)+'x'+str(self.master.winfo_screenheight()-100))
+        #Saturate the window size at 1080p because the screen{width,height} functions accumulate the total space across all monitors
+        window_width = min(self.master.winfo_screenwidth(),1920)
+        window_height = min(self.master.winfo_screenheight(),1080)
+        self.master.geometry(str(window_width-100)+'x'+str(window_height-100))
         self.master.withdraw()
 
         #Master frame that contains all subframes, mainly used to add scrolling
