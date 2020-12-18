@@ -668,15 +668,13 @@ void GameState::stop_allies()
 //	 More generally, if anything resolves the first time this function is called we need to call it again (what's tricky here is that we also have to be sure that we don't allow events to resolve twice, such as Alien powers...we may have to mark them as 'used')
 //TODO: Prompt players even when they have no options here? Slows down the game a bit but does a better job of keeping players aware of what's going on
 //	Additionally, the "None" option should probably read 'Proceed to the <next_phase> Phase' (or 'Proceed to the next encounter' for resolution)
-//FIXME: If the player order is A->B->C->D->E and player B plays a card and players C, D, and E choose not to respond the current implementation will end up asking them a second time when this function recurses
-//	 Perhaps it would actually be better to loop around players until we go through a full rotation where no one has acted; keep track of the last player to act and return when it gets back to that player? In that case we may not even need the recursion...
 void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase)
 {
-	bool action_taken = false;
-
 	std::vector<PlayerColors> player_order = get_player_order();
 
-	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
+	unsigned satisfied_players = 0; //When all of the players decline to make a play (or have no play to make), we can move on
+	unsigned current_player_index = 0;
+	while(satisfied_players < players.size())
 	{
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
@@ -722,7 +720,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 
 			if(chosen_option != valid_plays.size()) //An action was taken
 			{
-				action_taken = true;
+				satisfied_players = 0;
 				GameEvent g = valid_plays[chosen_option];
 				if(g.event_type != GameEventType::AlienPower)
 				{
@@ -786,15 +784,16 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				}
 			}
 		}
+		satisfied_players++;
+		current_player_index++;
+		if(current_player_index == players.size())
+		{
+			current_player_index = 0;
+		}
 	}
 
 	//Recalculate player scores
 	update_player_scores();
-
-	if(action_taken)
-	{
-		check_for_game_events_helper(used_aliens_this_phase);
-	}
 }
 
 void GameState::check_for_game_events()
