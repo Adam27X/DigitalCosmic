@@ -668,6 +668,8 @@ void GameState::stop_allies()
 //	 More generally, if anything resolves the first time this function is called we need to call it again (what's tricky here is that we also have to be sure that we don't allow events to resolve twice, such as Alien powers...we may have to mark them as 'used')
 //TODO: Prompt players even when they have no options here? Slows down the game a bit but does a better job of keeping players aware of what's going on
 //	Additionally, the "None" option should probably read 'Proceed to the <next_phase> Phase' (or 'Proceed to the next encounter' for resolution)
+//FIXME: If the player order is A->B->C->D->E and player B plays a card and players C, D, and E choose not to respond the current implementation will end up asking them a second time when this function recurses
+//	 Perhaps it would actually be better to loop around players until we go through a full rotation where no one has acted; keep track of the last player to act and return when it gets back to that player? In that case we may not even need the recursion...
 void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase)
 {
 	bool action_taken = false;
