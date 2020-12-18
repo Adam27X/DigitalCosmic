@@ -659,7 +659,7 @@ void GameState::stop_allies()
 	allies_to_be_stopped.clear();
 }
 
-//FIXME: This function can be called multiple times per turn
+//NOTE:  This function can be called multiple times per turn
 //	 Consider the following scenario:
 //	 Blue player is offense during regroup and choose not to cast Mobius Tubes
 //	 The Green player, next to act, casts Plague on the Blue Player
@@ -668,8 +668,10 @@ void GameState::stop_allies()
 //	 More generally, if anything resolves the first time this function is called we need to call it again (what's tricky here is that we also have to be sure that we don't allow events to resolve twice, such as Alien powers...we may have to mark them as 'used')
 //TODO: Prompt players even when they have no options here? Slows down the game a bit but does a better job of keeping players aware of what's going on
 //	Additionally, the "None" option should probably read 'Proceed to the <next_phase> Phase' (or 'Proceed to the next encounter' for resolution)
-void GameState::check_for_game_events()
+void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase)
 {
+	bool action_taken = false;
+
 	std::vector<PlayerColors> player_order = get_player_order();
 
 	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
@@ -686,11 +688,10 @@ void GameState::check_for_game_events()
 			}
 		}
 
-		bool alien_power_used = false;
 		bool alien_power_available = false;
 		bool alien_power_mandatory = false;
 		GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
-		if(alien_power.event_type != GameEventType::None)
+		if(alien_power.event_type != GameEventType::None && used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
 		{
 			assert(alien_power.event_type == GameEventType::AlienPower);
 			valid_plays.push_back(alien_power);
@@ -719,6 +720,7 @@ void GameState::check_for_game_events()
 
 			if(chosen_option != valid_plays.size()) //An action was taken
 			{
+				action_taken = true;
 				GameEvent g = valid_plays[chosen_option];
 				if(g.event_type != GameEventType::AlienPower)
 				{
@@ -741,7 +743,7 @@ void GameState::check_for_game_events()
 				}
 				else
 				{
-					alien_power_used = true;
+					used_aliens_this_phase.insert(current_player.color);
 				}
 
 				if(g.callback_if_action_taken)
@@ -760,7 +762,7 @@ void GameState::check_for_game_events()
 					}
 				}
 
-				if(!alien_power_used)
+				if(used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
 				{
 					GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
 					if(alien_power.event_type != GameEventType::None)
@@ -772,7 +774,7 @@ void GameState::check_for_game_events()
 			}
 			else
 			{
-				if(alien_power_available && alien_power_mandatory && !alien_power_used)
+				if(alien_power_available && alien_power_mandatory && used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
 				{
 					server.send_message_to_client(current_player.color,"Mandatory alien power not yet chosen, try again.\n");
 				}
@@ -786,6 +788,20 @@ void GameState::check_for_game_events()
 
 	//Recalculate player scores
 	update_player_scores();
+
+	if(action_taken)
+	{
+		check_for_game_events_helper(used_aliens_this_phase);
+	}
+}
+
+void GameState::check_for_game_events()
+{
+	//Set of player colors that have had their alien power used this phase of this encounter
+	//This prevents alien powers from being used more than once per encounter phase (is this too strict?)
+	std::set<PlayerColors> used_aliens_this_phase;
+
+	check_for_game_events_helper(used_aliens_this_phase);
 }
 
 void GameState::update_player_scores()
