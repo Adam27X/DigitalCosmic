@@ -16,6 +16,10 @@ class GuiPart(object):
         self.queue = queue
         self.s0 = socket
 
+        #General game information
+        self.num_players = None
+        self.player_color = '' #Filled in with the client's color
+
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
         #Give the window some arbitrary starting size so the user doesn't see a bunch of resizing at the start of the program
@@ -67,8 +71,8 @@ class GuiPart(object):
         #Player/Turn info
         self.player_info_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
         self.player_info_frame.grid(column=0,row=2)
-        self.player_color = StringVar()
-        self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color)
+        self.player_color_label_var = StringVar()
+        self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color_label_var)
         self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         self.alien_name = StringVar()
         self.alien_desc = ''
@@ -176,6 +180,7 @@ class GuiPart(object):
         self.planets = []
         self.planet_labels = []
         self.planet_labels_written = False
+        self.colony_bindings = []
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -318,6 +323,12 @@ class GuiPart(object):
         self.description_box.insert('end',desc+'\n')
         self.description_box['state'] = 'disabled'
 
+    def on_colony_click(self, planet_color, planet_num, option_num):
+        def hide_options_colony():
+            return self.hide_options_colony(planet_color,planet_num,option_num)
+        self.confirmation_button.configure(text='Confirm ' + planet_color + ' planet ' + str(planet_num), command=hide_options_colony)
+        self.confirmation_button.grid(column=0, row=1)
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -332,30 +343,59 @@ class GuiPart(object):
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
-                    option_num = None
-                    self.choice_label_var.set("Please choose one of the following options:")
-                    self.choice_label.grid(column=0, row=0)
-                    for line in msg.splitlines():
-                        option_match = re.match('([0-9]*): (.*)',line)
-                        if line.find('[needs_response]') != -1: #This line is delivered after the options
-                            break
-                        if option_match:
-                            option_num = option_match.group(1)
-                            prompt = option_match.group(2)
-                            self.choice_list.append(ttk.Radiobutton(self.choice_frame, text=prompt, variable=self.client_choice, value=option_num))
-                            option_row = int(option_num)+1
-                            self.choice_list[int(option_num)].grid(column=0,row=option_row)
-                    if option_num == None:
-                        print('ERROR:\n' + msg)
-                        raise Exception('A response is required but we failed to find any options!')
-                    confirmation_row = int(option_num)+2
-                    self.confirmation_button.grid(column=0, row=confirmation_row)
+                    if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
+                        self.choice_label_var.set("Please choose one of your colonies.")
+                        self.choice_label.grid(column=0, row=0)
+                        #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
+                        #TODO: Would be really cool to have the mouse change from a standard pointer to the index finger icon when the user mouses over one of their ships
+                        #Each set of ships (e.g. a canvas oval) is tagged with it's color and planet number. Search through planet canvas to find these tags and when the tag is found, create a binding for when the ship is clicked
+                        for line in msg.splitlines():
+                            option_match = re.match('([0-9]*): (.*)',line)
+                            if line.find('[needs_response]') != -1: #This line is delivered after the options
+                                break
+                            if option_match:
+                                colony = option_match.group(2) #Of the form: Blue Planet 2
+                                colony_match = re.match('(.*) Planet ([0-9])',colony)
+                                assert colony_match, "Expected format for colony option!"
+                                planet_color = colony_match.group(1)
+                                planet_num = colony_match.group(2)
+                                #Search the planet canvases to find this planet and then look for the ovals corresponding to the player's color. Can find ovals with the planet_color and planet_num tags and then verify that they're fill color matches self.player_color?
+                                num_planets = 5
+                                for i in range(self.num_players):
+                                    for j in range(num_planets): #Create a row for each planet
+                                        ship_tag = self.player_color + ' _ships_' + planet_color + '_planet_' + str(planet_num) #Example: Blue_ships_Red_planet_4 means a Blue colony on Red planet 4
+                                        if len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) != 0:
+                                            assert len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) == 1, "Found multiple colonies for a single player on a single planet!"
+                                            #Add a bind to this object; note the default values in the lambda are used to capture the current values of planet color/num; otherwise the latest value in the interpreter would be used whenever the user clicks
+                                            self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_colony_click(planet_color, planet_num, option_num))
+                                            self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
+                    else:
+                        option_num = None
+                        self.choice_label_var.set("Please choose one of the following options:")
+                        self.choice_label.grid(column=0, row=0)
+                        for line in msg.splitlines():
+                            option_match = re.match('([0-9]*): (.*)',line)
+                            if line.find('[needs_response]') != -1: #This line is delivered after the options
+                                break
+                            if option_match:
+                                option_num = option_match.group(1)
+                                prompt = option_match.group(2)
+                                self.choice_list.append(ttk.Radiobutton(self.choice_frame, text=prompt, variable=self.client_choice, value=option_num))
+                                option_row = int(option_num)+1
+                                self.choice_list[int(option_num)].grid(column=0,row=option_row)
+                        if option_num == None:
+                            print('ERROR:\n' + msg)
+                            raise Exception('A response is required but we failed to find any options!')
+                        confirmation_row = int(option_num)+2
+                        self.confirmation_button.grid(column=0, row=confirmation_row)
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     tag_found = True
-                    if len(self.player_color.get()) == 0:
+                    if len(self.player_color_label_var.get()) == 0:
                         player_color_match = re.search('Hand for the (.*) player',msg)
                         if player_color_match:
-                            self.player_color.set("You are the " + player_color_match.group(1) + " player")
+                            assert player_color_match.group(1) == 'Red' or player_color_match.group(1) == 'Blue' or player_color_match.group(1) == 'Purple' or player_color_match.group(1) == 'Green' or player_color_match.group(1) == 'Yellow', "Found an unexpected player color!"
+                            self.player_color = player_color_match.group(1)
+                            self.player_color_label_var.set("You are the " + player_color_match.group(1) + " player")
                             self.player_color_label.grid(column=0,row=0)
                             self.player_color_canvas.configure(bg=player_color_match.group(1))
                             self.player_color_canvas.grid(column=1,row=0)
@@ -416,6 +456,7 @@ class GuiPart(object):
                     players = list(filter(None, players)) #Remove empty entries
                     num_planets = 5
                     if len(self.planet_canvases) == 0: #Draw the canvases for the first time
+                        self.num_players = len(players)
                         #TODO: We can probably do a better job of organizing this data, but this is a good start
                         for i in range(len(players)):
                             for j in range(num_planets): #Create a row for each planet
@@ -477,7 +518,8 @@ class GuiPart(object):
                                 top = 0
                                 bottom = self.warp_height
                                 center_ver = (top+bottom)/2
-                                self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_oval(left,top,right,bottom,fill=color,outline='black'))
+                                ship_tag = color + ' _ships_' + player + '_planet_' + str(planet_id) #Example: Blue_ships_Red_planet_4 means a Blue colony on Red planet 4
+                                self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_oval(left,top,right,bottom,fill=color,outline='black',tags=(ship_tag,))) #Tag each stack of ships with the color planet and planet number they're on
                                 self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_text(center_hor,center_ver,text=str(num),fill='white')) #Is white easier to see here? Can we make the text larger or bold it to make it more prominent?
                                 bbox = self.planet_canvases[(num_planets*i)+planet_id].bbox(self.planets[-1]) #Get a bounding box for the newly created text object
                                 self.planets.append(self.planet_canvases[(num_planets*i)+planet_id].create_rectangle(bbox, fill="black")) #Add a black background to the bounding box
@@ -602,6 +644,21 @@ class GuiPart(object):
             self.confirmation_button.grid_forget()
             self.choice_label_var.set("Waiting on other players...")
             self.send_message_to_server(self.client_choice.get())
+
+    def hide_options_colony(self,planet_color,planet_num,option_num):
+        #Once a choice is confirmed we need to remove the colony on click bindings, remove the button, and send the response to the server
+        #We'll also need to reconfigure the confirmation button to its standard state
+        #There's a decent chance this scheme to undo the bindings isn't even necessary because the canvas objects will be deleted and redrawn anyway
+        num_planets = 5
+        for binding in self.colony_bindings:
+            i = binding[0]
+            j = binding[1]
+            ship_tag = binding[2]
+            self.planet_canvases[(num_planets*i)+j].tag_unbind(ship_tag, '<ButtonPress-1>')
+        self.confirmation_button.grid_forget()
+        self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)
+        self.choice_label_var.set("Waiting on other players...")
+        self.send_message_to_server(option_num)
 
 class ThreadedClient(object):
     """

@@ -1184,6 +1184,7 @@ void GameState::send_in_ships(const PlayerColors player)
 	prompt << "The " << to_string(player) << " player can choose up to four ships from any of their valid colonies\n";
 	unsigned launched_ships = 0;
 	unsigned choice;
+	//FIXME: This logic should be using prompt_valid_colonies
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
 	do
 	{
@@ -2321,7 +2322,7 @@ std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(co
 const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies)
 {
 	std::stringstream prompt;
-	prompt << "The " << to_string(color) << " player has the following valid colonies to choose from:\n";
+	prompt << "[colony_response] The " << to_string(color) << " player has the following valid colonies to choose from:\n";
 	std::vector<std::string> options;
 	for(unsigned i=0; i<valid_colonies.size(); i++)
 	{
@@ -2476,7 +2477,7 @@ void GameState::move_ship_from_warp_to_colony(PlayerInfo &p)
 		}
 		else
 		{
-			//No colony to return the ship to!
+			//No colony to return the ship to! The ship stays in the warp
 			return;
 		}
 	}

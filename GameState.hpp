@@ -18,7 +18,6 @@
 
 bool is_only_digits(const std::string &s);
 
-//TODO: Restructure this to share information with the client
 class PlayerAssignments
 {
 public:
