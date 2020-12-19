@@ -18,14 +18,6 @@ TickTock::TickTock() : num_tokens(10)
 void TickTock::discard_token()
 {
 	num_tokens--;
-
-	//FIXME: Handle this event in a more...exciting way? At least send a message to the client so that it's more obvious what's going on
-	//	 Do that by pushing the game ending functionality into GameState::update_tick_tock_tokens
-	if(num_tokens == 0)
-	{
-		std::cout << "Tick-Tock has run out of tokens and has won the game!\n";
-		std::exit(0);
-	}
 }
 
 bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const

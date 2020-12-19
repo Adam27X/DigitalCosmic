@@ -329,6 +329,7 @@ class GuiPart(object):
                 #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
                 tag_found = False
                 #TODO: Subclassify diagnostics requiring responses to improve the UI
+                #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     option_num = None
