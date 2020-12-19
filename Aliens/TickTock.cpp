@@ -15,12 +15,12 @@ TickTock::TickTock() : num_tokens(10)
 	set_description("You start the game with ten tokens. Each time any player wins an encounter as the defense or a successful deal is made between any two players, *use* this power to discard one token. If you have no more tokens, you immediately win the game. You may still win the game via the normal method.");
 }
 
-//TODO: Send the number of tokens to the client; the client can display them in the info window
 void TickTock::discard_token()
 {
 	num_tokens--;
 
 	//FIXME: Handle this event in a more...exciting way? At least send a message to the client so that it's more obvious what's going on
+	//	 Do that by pushing the game ending functionality into GameState::update_tick_tock_tokens
 	if(num_tokens == 0)
 	{
 		std::cout << "Tick-Tock has run out of tokens and has won the game!\n";

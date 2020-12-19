@@ -83,8 +83,9 @@ bool PlayerInfo::alien_enabled() const
 
 	if(num_home_colonies < 3)
 	{
-		//TODO: Would be nice to broadcast this information
-		std::cout << "The " << to_string(color) << " player cannot use their alien power because they do not control at least three of their home planets!\n";
+		std::stringstream msg;
+		msg << "The " << to_string(color) << " player cannot use their alien power because they do not control at least three of their home planets!\n";
+		game->get_server().broadcast_message(msg.str());
 		return false;
 	}
 	else
