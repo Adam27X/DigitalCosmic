@@ -156,7 +156,7 @@ private:
 	void cast_force_field(const PlayerColors casting_player);
 	void plague_player();
 	void stop_allies();
-	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies);
+	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies, bool allow_none = false);
 	void choose_opponent_planet();
 	void send_in_ships(const PlayerColors player);
 	std::set<PlayerColors> invite_allies(const std::set<PlayerColors> &potential_allies, bool offense);

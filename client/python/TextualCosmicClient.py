@@ -67,6 +67,8 @@ class GuiPart(object):
         self.choice_label_var = StringVar()
         self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
+        self.no_colony_option = ''
+        self.no_colony_button = ttk.Button(self.choice_frame, text='Choose no additional ships', command= lambda: self.hide_options_colony('','',''))
 
         #Player/Turn info
         self.player_info_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -354,21 +356,25 @@ class GuiPart(object):
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
                                 break
                             if option_match:
-                                colony = option_match.group(2) #Of the form: Blue Planet 2
-                                colony_match = re.match('(.*) Planet ([0-9])',colony)
-                                assert colony_match, "Expected format for colony option!"
-                                planet_color = colony_match.group(1)
-                                planet_num = colony_match.group(2)
-                                #Search the planet canvases to find this planet and then look for the ovals corresponding to the player's color. Can find ovals with the planet_color and planet_num tags and then verify that they're fill color matches self.player_color?
-                                num_planets = 5
-                                for i in range(self.num_players):
-                                    for j in range(num_planets): #Create a row for each planet
-                                        ship_tag = self.player_color + ' _ships_' + planet_color + '_planet_' + str(planet_num) #Example: Blue_ships_Red_planet_4 means a Blue colony on Red planet 4
-                                        if len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) != 0:
-                                            assert len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) == 1, "Found multiple colonies for a single player on a single planet!"
-                                            #Add a bind to this object; note the default values in the lambda are used to capture the current values of planet color/num; otherwise the latest value in the interpreter would be used whenever the user clicks
-                                            self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_colony_click(planet_color, planet_num, option_num))
-                                            self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
+                                if line.find('None') != -1:
+                                    self.no_colony_button.grid(column=0, row=2)
+                                    self.no_colony_option = option_match.group(1)
+                                else:
+                                    colony = option_match.group(2) #Of the form: Blue Planet 2
+                                    colony_match = re.match('(.*) Planet ([0-9])',colony)
+                                    assert colony_match, "Expected format for colony option!"
+                                    planet_color = colony_match.group(1)
+                                    planet_num = colony_match.group(2)
+                                    #Search the planet canvases to find this planet and then look for the ovals corresponding to the player's color. Can find ovals with the planet_color and planet_num tags and then verify that they're fill color matches self.player_color?
+                                    num_planets = 5
+                                    for i in range(self.num_players):
+                                        for j in range(num_planets):
+                                            ship_tag = self.player_color + ' _ships_' + planet_color + '_planet_' + str(planet_num) #Example: Blue_ships_Red_planet_4 means a Blue colony on Red planet 4
+                                            if len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) != 0:
+                                                assert len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) == 1, "Found multiple colonies for a single player on a single planet!"
+                                                #Add a bind to this object; note the default values in the lambda are used to capture the current values of planet color/num; otherwise the latest value in the interpreter would be used whenever the user clicks
+                                                self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_colony_click(planet_color, planet_num, option_num))
+                                                self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
                     else:
                         option_num = None
                         self.choice_label_var.set("Please choose one of the following options:")
@@ -655,9 +661,12 @@ class GuiPart(object):
             j = binding[1]
             ship_tag = binding[2]
             self.planet_canvases[(num_planets*i)+j].tag_unbind(ship_tag, '<ButtonPress-1>')
+        self.no_colony_button.grid_forget()
         self.confirmation_button.grid_forget()
         self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)
         self.choice_label_var.set("Waiting on other players...")
+        if planet_color == '' and planet_num == '' and option_num == '':
+            option_num = self.no_colony_option
         self.send_message_to_server(option_num)
 
 class ThreadedClient(object):

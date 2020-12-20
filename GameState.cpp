@@ -1180,26 +1180,14 @@ void GameState::choose_opponent_planet()
 void GameState::send_in_ships(const PlayerColors player)
 {
 	//List the player's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
-	std::stringstream prompt;
-	prompt << "The " << to_string(player) << " player can choose up to four ships from any of their valid colonies\n";
 	unsigned launched_ships = 0;
-	unsigned choice;
-	//FIXME: This logic should be using prompt_valid_colonies
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
+	std::pair<PlayerColors,unsigned> chosen_colony;
 	do
 	{
 		valid_colonies = get_valid_colonies(player);
-		std::vector<std::string> options;
-		for(unsigned i=0; i<valid_colonies.size(); i++)
-		{
-			std::stringstream opt;
-			opt << to_string(valid_colonies[i].first) << " planet " << valid_colonies[i].second;
-			options.push_back(opt.str());
-		}
-		options.push_back("None");
-
-		choice = prompt_player(player,prompt.str(),options);
-		if(choice < valid_colonies.size())
+		chosen_colony = prompt_valid_colonies(player,valid_colonies,launched_ships != 0);
+		if(chosen_colony.first != PlayerColors::Invalid)
 		{
 			if(assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
 			{
@@ -1215,8 +1203,8 @@ void GameState::send_in_ships(const PlayerColors player)
 				hyperspace_gate.push_back(player); //Add the ship to the hyperspace gate
 			}
 			//Remove the ship from the chosen colony
-			PlayerInfo &host = get_player(valid_colonies[choice].first);
-			const unsigned planet_id = valid_colonies[choice].second;
+			PlayerInfo &host = get_player(chosen_colony.first);
+			const unsigned planet_id = chosen_colony.second;
 			for(auto i=host.planets.planet_begin(planet_id),e=host.planets.planet_end(planet_id);i!=e;++i)
 			{
 				if(*i == player)
@@ -1227,13 +1215,7 @@ void GameState::send_in_ships(const PlayerColors player)
 			}
 			launched_ships++;
 		}
-	} while(((choice < valid_colonies.size()) && launched_ships < 4) || choice > valid_colonies.size());
-
-	if(launched_ships == 0 && !valid_colonies.empty())
-	{
-		server.send_message_to_client(player,"The offense and allies *must* commit at least one ship to the encounter if able. Try again.\n");
-		send_in_ships(player);
-	}
+	} while(((chosen_colony.first != PlayerColors::Invalid) && launched_ships < 4));
 }
 
 std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &potential_allies, bool offense)
@@ -2319,7 +2301,7 @@ std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(co
 	return valid_colonies;
 }
 
-const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies)
+const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies, bool allow_none)
 {
 	std::stringstream prompt;
 	prompt << "[colony_response] The " << to_string(color) << " player has the following valid colonies to choose from:\n";
@@ -2330,9 +2312,20 @@ const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const Pl
 		opt << to_string(valid_colonies[i].first) << " Planet " << valid_colonies[i].second;
 		options.push_back(opt.str());
 	}
+	if(allow_none)
+	{
+		options.push_back("None");
+	}
 	unsigned chosen_option = prompt_player(color,prompt.str(),options);
 
-	return valid_colonies[chosen_option];
+	if(chosen_option == valid_colonies.size()) //The player chose the "none" option
+	{
+		return std::make_pair(PlayerColors::Invalid,0);
+	}
+	else
+	{
+		return valid_colonies[chosen_option];
+	}
 }
 
 bool GameState::player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const
