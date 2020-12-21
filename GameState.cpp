@@ -2584,7 +2584,7 @@ void GameState::dump_current_stack() const
 	std::stack<GameEvent> copy_stack = stack;
 
 	std::stringstream announce;
-	announce << "Current game stack:\n";
+	announce << "[stack_update]\n";
 	while(!copy_stack.empty())
 	{
 		GameEvent g = copy_stack.top();
@@ -2758,5 +2758,6 @@ void GameState::resolve_game_event(const GameEvent g)
 		}
 	}
 	stack.pop();
+	dump_current_stack();
 }
 

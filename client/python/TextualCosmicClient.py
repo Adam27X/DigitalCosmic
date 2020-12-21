@@ -47,8 +47,9 @@ class GuiPart(object):
         self.master_xscroll.grid(column=0, row=1, sticky=(E,W))
 
         #Server log
+        #TODO: Consider using a Labelframe here instead?
         self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.server_log_frame.grid(column=4, row=1)
+        self.server_log_frame.grid(column=4, row=2)
         self.server_log_label = Label(self.server_log_frame, text="Server log:")
         self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
@@ -58,10 +59,18 @@ class GuiPart(object):
         self.server_log_scroll.grid(column=1,row=1,sticky=(N,S))
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
 
+        #Stack info
+        self.stack_info_frame = ttk.Labelframe(self.master_frame, text='Current Stack', padding="5 5 5 5")
+        self.stack_info_frame.grid(column=4, row=1)
+        #TODO: Consider making this a listbox where the user can click on each stack item for a more detailed description
+        #      For instance, the plague item should tell users who was targeted by the plague, etc.
+        self.stack_info_text = Text(self.stack_info_frame, state='disabled', width=50, height=6)
+        self.stack_info_text.grid(column=0,row=0)
+
         #Player choices
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
         self.choice_frame = ttk.Frame(self.master_frame, padding="5 5 5 5") #Use a frame to group the options and confirmation button together as one widget in the main window
-        self.choice_frame.grid(column=0,row=1)
+        self.choice_frame.grid(column=0,row=2)
         self.choice_list = []
         self.client_choice = StringVar()
         self.choice_label_var = StringVar()
@@ -72,7 +81,7 @@ class GuiPart(object):
 
         #Player/Turn info
         self.player_info_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.player_info_frame.grid(column=0,row=2)
+        self.player_info_frame.grid(column=0,row=3)
         self.player_color_label_var = StringVar()
         self.player_color_label = Label(self.player_info_frame, textvariable=self.player_color_label_var)
         self.player_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
@@ -93,8 +102,9 @@ class GuiPart(object):
         self.defense_color_canvas.grid(column=1,row=3)
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
+        #TODO: Consider using a Labelframe here instead?
         self.description_box_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.description_box_frame.grid(column=4, row=2)
+        self.description_box_frame.grid(column=4, row=3)
         self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
         self.description_box_label.grid(column=0, row=0)
         self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
@@ -110,7 +120,7 @@ class GuiPart(object):
         self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection(),self.hand_cards))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
-        self.hand_frame.grid(column=3,row=2)
+        self.hand_frame.grid(column=3,row=3)
 
         #TODO: Move these discard piles to column 0 under the option frame
         #Cosmic discard pile
@@ -137,7 +147,7 @@ class GuiPart(object):
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.turn_phase_frame.grid(column=0, columnspan=3, row=0)
+        self.turn_phase_frame.grid(column=1, columnspan=3, row=0)
         self.turn_phase_labels = []
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Start Turn"))
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Regroup"))
@@ -155,7 +165,7 @@ class GuiPart(object):
 
         #Game board
         self.game_board_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
-        self.game_board_frame.grid(column=1, row=1, columnspan=3)
+        self.game_board_frame.grid(column=1, row=1, columnspan=3, rowspan=2)
         self.warp_width = 400
         self.warp_height = 80
 
@@ -324,6 +334,12 @@ class GuiPart(object):
         self.description_box.delete(1.0,'end')
         self.description_box.insert('end',desc+'\n')
         self.description_box['state'] = 'disabled'
+
+    def update_stack_info(self, info):
+        self.stack_info_text['state'] = 'normal'
+        self.stack_info_text.delete(1.0,'end')
+        self.stack_info_text.insert('end',info+'\n')
+        self.stack_info_text['state'] = 'disabled'
 
     def on_colony_click(self, planet_color, planet_num, option_num):
         def hide_options_colony():
@@ -624,6 +640,13 @@ class GuiPart(object):
                         if planet_label and planet_label.cget('text').find(target_planet_match.group(1)) != -1 and planet_label.cget('text').find(target_planet_match.group(2)) != -1:
                             planet_label.config(background='Orange')
                             break
+                if msg.find('[stack_update]') != -1:
+                    tag_found = True
+                    #Put the stack info in its own box
+                    stack_info = ''
+                    if msg.find('{') != -1: #If the stack isn't empty
+                        stack_info = msg[msg.find('{'):]
+                    self.update_stack_info(stack_info)
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'
