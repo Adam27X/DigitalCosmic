@@ -47,16 +47,13 @@ class GuiPart(object):
         self.master_xscroll.grid(column=0, row=1, sticky=(E,W))
 
         #Server log
-        #TODO: Consider using a Labelframe here instead?
-        self.server_log_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.server_log_frame = ttk.Labelframe(self.master_frame, text='Server log', padding="5 5 5 5")
         self.server_log_frame.grid(column=4, row=2)
-        self.server_log_label = Label(self.server_log_frame, text="Server log:")
-        self.server_log_label.grid(column=0, row=0)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
-        self.text.grid(column=0,row=1)
+        self.text.grid(column=0,row=0)
         self.server_log_scroll = ttk.Scrollbar(self.server_log_frame, orient=VERTICAL, command=self.text.yview)
         self.text['yscrollcommand'] = self.server_log_scroll.set
-        self.server_log_scroll.grid(column=1,row=1,sticky=(N,S))
+        self.server_log_scroll.grid(column=1,row=0,sticky=(N,S))
         self.master.protocol("WM_DELETE_WINDOW", endCommand)
 
         #Stack info
@@ -102,13 +99,10 @@ class GuiPart(object):
         self.defense_color_canvas.grid(column=1,row=3)
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
-        #TODO: Consider using a Labelframe here instead?
-        self.description_box_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.description_box_frame = ttk.Labelframe(self.master_frame, text='Card/Alien description', padding="5 5 5 5")
         self.description_box_frame.grid(column=4, row=3)
-        self.description_box_label = Label(self.description_box_frame, text='Card/Alien description:')
-        self.description_box_label.grid(column=0, row=0)
         self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
-        self.description_box.grid(column=0, row=1)
+        self.description_box.grid(column=0, row=0)
         #TODO: Should probably add a scrollbar in case there's some Alien with a really long description
 
         #Player hand
@@ -362,6 +356,7 @@ class GuiPart(object):
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
+                        #FIXME: Generalize this approach to whatever colonies are offered as options; the current setup breaks when the player has to choose a colony that doesn't belong to them
                         self.choice_label_var.set("Please choose one of your colonies.")
                         self.choice_label.grid(column=0, row=0)
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
@@ -388,6 +383,7 @@ class GuiPart(object):
                                             if len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) != 0:
                                                 assert len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) == 1, "Found multiple colonies for a single player on a single planet!"
                                                 #Add a bind to this object; note the default values in the lambda are used to capture the current values of planet color/num; otherwise the latest value in the interpreter would be used whenever the user clicks
+                                                #TODO: Consider highlighting colonies that can be chosen this way...
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_colony_click(planet_color, planet_num, option_num))
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Enter>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor='hand2'))
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Leave>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor=''))
@@ -506,7 +502,7 @@ class GuiPart(object):
                                     self.player_aliens[player] = []
                                     self.player_aliens[player].append(StringVar())
                                     self.player_aliens[player].append(Label(self.game_board_frame, textvariable=self.player_aliens[player][0]))
-                                    self.player_aliens[player][0].set(player + ' player alien: unrevealed') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
+                                    self.player_aliens[player][0].set(player + ' player alien: ???') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
                                     self.player_aliens[player][1].grid(column=i,row=2)
                                 planet_labels_written = True
                     if planet_labels_written:
