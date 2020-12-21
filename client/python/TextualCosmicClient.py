@@ -349,7 +349,6 @@ class GuiPart(object):
                         self.choice_label_var.set("Please choose one of your colonies.")
                         self.choice_label.grid(column=0, row=0)
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
-                        #TODO: Would be really cool to have the mouse change from a standard pointer to the index finger icon when the user mouses over one of their ships
                         #Each set of ships (e.g. a canvas oval) is tagged with it's color and planet number. Search through planet canvas to find these tags and when the tag is found, create a binding for when the ship is clicked
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
@@ -374,6 +373,8 @@ class GuiPart(object):
                                                 assert len(self.planet_canvases[(num_planets*i)+j].find_withtag(ship_tag)) == 1, "Found multiple colonies for a single player on a single planet!"
                                                 #Add a bind to this object; note the default values in the lambda are used to capture the current values of planet color/num; otherwise the latest value in the interpreter would be used whenever the user clicks
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_colony_click(planet_color, planet_num, option_num))
+                                                self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Enter>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor='hand2'))
+                                                self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Leave>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor=''))
                                                 self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
                     else:
                         option_num = None
@@ -661,6 +662,8 @@ class GuiPart(object):
             j = binding[1]
             ship_tag = binding[2]
             self.planet_canvases[(num_planets*i)+j].tag_unbind(ship_tag, '<ButtonPress-1>')
+            self.planet_canvases[(num_planets*i)+j].tag_unbind(ship_tag, '<Enter>')
+            self.planet_canvases[(num_planets*i)+j].tag_unbind(ship_tag, '<Leave>')
         self.no_colony_button.grid_forget()
         self.confirmation_button.grid_forget()
         self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)

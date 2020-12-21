@@ -1152,6 +1152,7 @@ void GameState::draw_from_destiny_deck()
 	}
 }
 
+//TODO: Use prompt_valid_colonies here with a different tag for the GUI since the GUI assumes decisions involve the client's colonies rather than the planets of the other players
 void GameState::choose_opponent_planet()
 {
 	//If the offense is having an encounter on their home system they've already chosen a planet, so there's nothing to do here
