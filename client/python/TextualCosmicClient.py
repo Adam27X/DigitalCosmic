@@ -19,6 +19,7 @@ class GuiPart(object):
         #General game information
         self.num_players = None
         self.player_color = '' #Filled in with the client's color
+        self.color_to_num = {}
 
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
@@ -187,6 +188,7 @@ class GuiPart(object):
         self.planet_labels = []
         self.planet_labels_written = False
         self.colony_bindings = []
+        self.planet_bindings = []
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
@@ -341,6 +343,12 @@ class GuiPart(object):
         self.confirmation_button.configure(text='Confirm ' + planet_color + ' planet ' + str(planet_num), command=hide_options_colony)
         self.confirmation_button.grid(column=0, row=1)
 
+    def on_planet_click(self, planet_color, planet_num, option_num):
+        def hide_options_planet():
+            return self.hide_options_planet(planet_color,planet_num,option_num)
+        self.confirmation_button.configure(text='Confirm ' + planet_color + ' planet ' + str(planet_num), command=hide_options_planet)
+        self.confirmation_button.grid(column=0, row=1)
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -357,6 +365,7 @@ class GuiPart(object):
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
                         #FIXME: Generalize this approach to whatever colonies are offered as options; the current setup breaks when the player has to choose a colony that doesn't belong to them
+                        #       To get this working we need to have the server distinguish between when the player is choosing a colony of theirs and when the player is choosing a planet
                         self.choice_label_var.set("Please choose one of your colonies.")
                         self.choice_label.grid(column=0, row=0)
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
@@ -388,6 +397,27 @@ class GuiPart(object):
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Enter>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor='hand2'))
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Leave>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor=''))
                                                 self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
+                    elif msg.find('[planet_response]') != -1:
+                        self.choice_label_var.set("Please choose a planet.")
+                        self.choice_label.grid(column=0,row=0)
+                        for line in msg.splitlines():
+                            option_match = re.match('([0-9]*): (.*)',line)
+                            if line.find('[needs_response]') != -1: #This line is delivered after the options
+                                break
+                            elif line.find('[planet_response]') != -1:
+                                continue
+                            else:
+                                assert option_match, "Expected an option but didn't find one!"
+                                planet = option_match.group(2) #Of the form: Blue Planet 2
+                                planet_match = re.match('(.*) Planet ([0-9])',planet)
+                                planet_color = planet_match.group(1)
+                                planet_num = int(planet_match.group(2))
+                                player_id = self.color_to_num[planet_color]
+                                num_planets = 5
+                                self.planet_canvases[(num_planets*player_id)+planet_num].bind('<ButtonPress-1>', lambda e,planet_color=planet_color,planet_num=planet_num,option_num=option_match.group(1): self.on_planet_click(planet_color, planet_num, option_num))
+                                self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Enter>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor='hand2'))
+                                self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Leave>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor=''))
+                                self.planet_bindings.append((player_id,planet_num))
                     else:
                         option_num = None
                         self.choice_label_var.set("Please choose one of the following options:")
@@ -504,6 +534,7 @@ class GuiPart(object):
                                     self.player_aliens[player].append(Label(self.game_board_frame, textvariable=self.player_aliens[player][0]))
                                     self.player_aliens[player][0].set(player + ' player alien: ???') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
                                     self.player_aliens[player][1].grid(column=i,row=2)
+                                    self.color_to_num[player] = i
                                 planet_labels_written = True
                     if planet_labels_written:
                         self.planet_labels_written = True
@@ -689,6 +720,19 @@ class GuiPart(object):
         self.choice_label_var.set("Waiting on other players...")
         if planet_color == '' and planet_num == '' and option_num == '':
             option_num = self.no_colony_option
+        self.send_message_to_server(option_num)
+
+    def hide_options_planet(self,planet_color,planet_num,option_num):
+        num_planets = 5
+        for binding in self.planet_bindings:
+            i = binding[0]
+            j = binding[1]
+            self.planet_canvases[(num_planets*i)+j].unbind('<ButtonPress-1>')
+            self.planet_canvases[(num_planets*i)+j].unbind('<Enter>')
+            self.planet_canvases[(num_planets*i)+j].unbind('<Leave>')
+        self.confirmation_button.grid_forget()
+        self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)
+        self.choice_label_var.set("Waiting on other players...")
         self.send_message_to_server(option_num)
 
 class ThreadedClient(object):
