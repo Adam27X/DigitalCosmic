@@ -107,37 +107,40 @@ class GuiPart(object):
         #TODO: Should probably add a scrollbar in case there's some Alien with a really long description
 
         #Player hand
-        self.hand_frame = ttk.Frame(self.master_frame, padding="5 5 5 5") #Group the label, hand, and scrollbar together
+        self.hand_frame = ttk.Labelframe(self.master_frame, text='Player hand', padding="5 5 5 5") #Group the label, hand, and scrollbar together
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
-        self.hand_disp_label = Label(self.hand_frame, text='Player hand:')
         self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper, selectmode='browse') #Height here is the number of lines the box will display without scrolling; 'browse' indicates only one item can be selected at a time
         self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection(),self.hand_cards))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
+        self.hand_disp.grid(column=0,row=0)
+        self.hand_disp_scroll.grid(column=1,row=0, sticky=(N,S))
         self.hand_frame.grid(column=3,row=3)
 
         #TODO: Move these discard piles to column 0 under the option frame
         #Cosmic discard pile
-        self.cosmic_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.cosmic_discard_frame = ttk.Labelframe(self.master_frame, text='Cosmic discard pile', padding="5 5 5 5")
         self.cosmic_discard_cards = []
         self.cosmic_discard_cards_wrapper = StringVar(value=self.cosmic_discard_cards)
-        self.cosmic_discard_label = Label(self.cosmic_discard_frame, text='Cosmic discard pile:')
         self.cosmic_discard_disp = Listbox(self.cosmic_discard_frame, height=8, listvariable=self.cosmic_discard_cards_wrapper, selectmode='browse')
         self.cosmic_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.cosmic_discard_disp.curselection(),self.cosmic_discard_cards))
         self.cosmic_discard_scroll = ttk.Scrollbar(self.cosmic_discard_frame, orient=VERTICAL, command=self.cosmic_discard_disp.yview)
         self.cosmic_discard_disp['yscrollcommand'] = self.cosmic_discard_scroll.set
+        self.cosmic_discard_disp.grid(column=0,row=0)
+        self.cosmic_discard_scroll.grid(column=1,row=0, sticky=(N,S))
         self.cosmic_discard_frame.grid(column=2,row=3)
 
         #Destiny discard pile
-        self.destiny_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
+        self.destiny_discard_frame = ttk.Labelframe(self.master_frame, text='Destiny discard pile', padding="5 5 5 5")
         self.destiny_discard_cards = []
         self.destiny_discard_cards_wrapper = StringVar(value=self.destiny_discard_cards)
-        self.destiny_discard_label = Label(self.destiny_discard_frame, text='Destiny discard pile:')
         self.destiny_discard_disp = Listbox(self.destiny_discard_frame, height=8, listvariable=self.destiny_discard_cards_wrapper, selectmode='browse')
         self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
         self.destiny_discard_scroll = ttk.Scrollbar(self.destiny_discard_frame, orient=VERTICAL, command=self.destiny_discard_disp.yview)
         self.destiny_discard_disp['yscrollcommand'] = self.destiny_discard_scroll.set
+        self.destiny_discard_disp.grid(column=0,row=0)
+        self.destiny_discard_scroll.grid(column=1,row=0, sticky=(N,S))
         self.destiny_discard_frame.grid(column=1,row=3)
 
         #Display the current turn phase
@@ -359,6 +362,7 @@ class GuiPart(object):
                 #Process options if there are any
                 #TODO: Make it so that choices involving cards require submitting a card
                 #      Double check how Arena handles this...we may want to highlight which cards are playable at a given moment while always having a button to proceed to the next phase
+                #TODO: Display current offense and defense scores as they change
                 tag_found = False
                 #TODO: Subclassify diagnostics requiring responses to improve the UI
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
@@ -458,9 +462,6 @@ class GuiPart(object):
                     assert hand_found, "Error processing player hand!"
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.hand_cards_wrapper.set(self.hand_cards)
-                    self.hand_disp_label.grid(column=0, row=0)
-                    self.hand_disp.grid(column=0,row=1)
-                    self.hand_disp_scroll.grid(column=1,row=1, sticky=(N,S))
                 if msg.find('[turn_phase]') != -1: #Update the current turn phase
                     tag_found = True
                     phase_index = None
@@ -576,6 +577,7 @@ class GuiPart(object):
                                 colorcount += 1
                             planet_id += 1
                 #TODO: Handle PlayerColors::Invalid for offense and defense and clear this info from the GUI when relevant? Not a huge deal because it's obvious when these are valid via turn phase, but this is a "nice to have"
+                #       We can clear this when the turn phase changes to 'Start Turn'
                 if msg.find('[offense_update]') != -1: #Update the offense label
                     tag_found = True
                     offense_color_match = re.search('\[offense_update\] (.*)',msg)
@@ -631,9 +633,6 @@ class GuiPart(object):
                         self.cosmic_discard_cards.append(card)
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.cosmic_discard_cards_wrapper.set(self.cosmic_discard_cards)
-                    self.cosmic_discard_label.grid(column=0, row=0)
-                    self.cosmic_discard_disp.grid(column=0,row=1)
-                    self.cosmic_discard_scroll.grid(column=1,row=1, sticky=(N,S))
                 if msg.find('[destiny_discard_update]') != -1: #Cards have been removed or added to the destiny discard pile
                     tag_found = True
                     lbrace = msg.find('{')
@@ -644,9 +643,6 @@ class GuiPart(object):
                         self.destiny_discard_cards.append(card)
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.destiny_discard_cards_wrapper.set(self.destiny_discard_cards)
-                    self.destiny_discard_label.grid(column=0, row=0)
-                    self.destiny_discard_disp.grid(column=0,row=1)
-                    self.destiny_discard_scroll.grid(column=1,row=1, sticky=(N,S))
                 if msg.find('[player_hand_size]') != -1: #Update the number of cards in the given player's hand
                     tag_found = True
                     player_hand_match = re.search('\[player_hand_size\] (.*): (.*)',msg)
