@@ -127,7 +127,7 @@ class GuiPart(object):
         self.cosmic_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.cosmic_discard_disp.curselection(),self.cosmic_discard_cards))
         self.cosmic_discard_scroll = ttk.Scrollbar(self.cosmic_discard_frame, orient=VERTICAL, command=self.cosmic_discard_disp.yview)
         self.cosmic_discard_disp['yscrollcommand'] = self.cosmic_discard_scroll.set
-        self.cosmic_discard_frame.grid(column=2,row=2)
+        self.cosmic_discard_frame.grid(column=2,row=3)
 
         #Destiny discard pile
         self.destiny_discard_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -138,7 +138,7 @@ class GuiPart(object):
         self.destiny_discard_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.destiny_discard_disp.curselection(),self.destiny_discard_cards))
         self.destiny_discard_scroll = ttk.Scrollbar(self.destiny_discard_frame, orient=VERTICAL, command=self.destiny_discard_disp.yview)
         self.destiny_discard_disp['yscrollcommand'] = self.destiny_discard_scroll.set
-        self.destiny_discard_frame.grid(column=1,row=2)
+        self.destiny_discard_frame.grid(column=1,row=3)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -152,8 +152,8 @@ class GuiPart(object):
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Planning"))
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Reveal"))
         self.turn_phase_labels.append(Label(self.turn_phase_frame, text="Resolution"))
-        #TODO: Add vertical separators between each phase for clarity?
         for i in range(len(self.turn_phase_labels)):
+            self.turn_phase_labels[i].configure(padx=10)
             self.turn_phase_labels[i].grid(column=i,row=0)
         ttk.Separator(self.turn_phase_frame, orient='horizontal').grid(column=0, columnspan=8, row=1, sticky='ew')
         self.default_label_bg = self.turn_phase_labels[0].cget('bg')
@@ -357,15 +357,14 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Make it so that choices involving colonies receive input from the colonies and choices involving cards require submitting a card
+                #TODO: Make it so that choices involving cards require submitting a card
+                #      Double check how Arena handles this...we may want to highlight which cards are playable at a given moment while always having a button to proceed to the next phase
                 tag_found = False
                 #TODO: Subclassify diagnostics requiring responses to improve the UI
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
-                        #FIXME: Generalize this approach to whatever colonies are offered as options; the current setup breaks when the player has to choose a colony that doesn't belong to them
-                        #       To get this working we need to have the server distinguish between when the player is choosing a colony of theirs and when the player is choosing a planet
                         self.choice_label_var.set("Please choose one of your colonies.")
                         self.choice_label.grid(column=0, row=0)
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
