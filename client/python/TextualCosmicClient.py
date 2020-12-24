@@ -50,7 +50,7 @@ class GuiPart(object):
 
         #Server log
         self.server_log_frame = ttk.Labelframe(self.master_frame, text='Server log', padding="5 5 5 5")
-        self.server_log_frame.grid(column=4, row=2)
+        self.server_log_frame.grid(column=4, row=2, columnspan=2)
         self.text = Text(self.server_log_frame, state='disabled', width=50, height=24)
         self.text.grid(column=0,row=0)
         self.server_log_scroll = ttk.Scrollbar(self.server_log_frame, orient=VERTICAL, command=self.text.yview)
@@ -60,7 +60,7 @@ class GuiPart(object):
 
         #Stack info
         self.stack_info_frame = ttk.Labelframe(self.master_frame, text='Current Stack', padding="5 5 5 5")
-        self.stack_info_frame.grid(column=4, row=1)
+        self.stack_info_frame.grid(column=0, row=1)
         #TODO: Consider making this a listbox where the user can click on each stack item for a more detailed description
         #      For instance, the plague item should tell users who was targeted by the plague, etc.
         self.stack_info_text = Text(self.stack_info_frame, state='disabled', width=50, height=6)
@@ -108,7 +108,7 @@ class GuiPart(object):
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
         self.description_box_frame = ttk.Labelframe(self.master_frame, text='Card/Alien description', padding="5 5 5 5")
-        self.description_box_frame.grid(column=4, row=3)
+        self.description_box_frame.grid(column=4, row=3, columnspan=2)
         self.description_box = Text(self.description_box_frame, state='disabled', width=50, height=12)
         self.description_box.grid(column=0, row=0)
         #TODO: Should probably add a scrollbar in case there's some Alien with a really long description
@@ -126,9 +126,8 @@ class GuiPart(object):
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
         self.hand_disp.grid(column=0,row=0)
         self.hand_disp_scroll.grid(column=1,row=0, sticky=(N,S))
-        self.hand_frame.grid(column=3,row=3)
+        self.hand_frame.grid(column=1,row=3,columnspan=3)
 
-        #TODO: Move these discard piles to column 0 under the option frame? Could also move them to where the stack is and move the stack to column 0
         #Cosmic discard pile
         self.cosmic_discard_frame = ttk.Labelframe(self.master_frame, text='Cosmic discard pile', padding="5 5 5 5")
         self.cosmic_discard_cards = []
@@ -139,7 +138,7 @@ class GuiPart(object):
         self.cosmic_discard_disp['yscrollcommand'] = self.cosmic_discard_scroll.set
         self.cosmic_discard_disp.grid(column=0,row=0)
         self.cosmic_discard_scroll.grid(column=1,row=0, sticky=(N,S))
-        self.cosmic_discard_frame.grid(column=2,row=3)
+        self.cosmic_discard_frame.grid(column=4,row=1)
 
         #Destiny discard pile
         self.destiny_discard_frame = ttk.Labelframe(self.master_frame, text='Destiny discard pile', padding="5 5 5 5")
@@ -151,7 +150,7 @@ class GuiPart(object):
         self.destiny_discard_disp['yscrollcommand'] = self.destiny_discard_scroll.set
         self.destiny_discard_disp.grid(column=0,row=0)
         self.destiny_discard_scroll.grid(column=1,row=0, sticky=(N,S))
-        self.destiny_discard_frame.grid(column=1,row=3)
+        self.destiny_discard_frame.grid(column=5,row=1)
 
         #Display the current turn phase
         self.turn_phase_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -380,8 +379,6 @@ class GuiPart(object):
                 print('From queue:\n')
                 print(msg)
                 #Process options if there are any
-                #TODO: Make it so that choices involving cards require submitting a card
-                #      Double check how Arena handles this...we may want to highlight which cards are playable at a given moment while always having a button to proceed to the next phase
                 #TODO: Display current offense and defense scores as they change
                 #TODO: Provide better diagnostics for other choices (choosing allies, having a second encounter, etc.)
                 #TODO: Create a separate window for making deals?
