@@ -1227,11 +1227,10 @@ void GameState::send_in_ships(const PlayerColors player)
 std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &potential_allies, bool offense)
 {
 	std::set<PlayerColors> invited;
-	std::string inviter = offense ? "offense" : "defense";
 	for(auto i=potential_allies.begin(),e=potential_allies.end();i!=e;++i)
 	{
 		std::stringstream prompt;
-		prompt << "Would the " << inviter << " like to invite the " << to_string(*i) << " player as an ally?\n";
+		prompt << "Would you like to invite the " << to_string(*i) << " player as an ally?\n";
 		std::vector<std::string> options;
 		options.push_back("Y");
 		options.push_back("N");
@@ -1958,7 +1957,7 @@ void GameState::start_game()
 		if(assignments.successful_encounter && !is_second_encounter_for_offense)
 		{
 			//The offense has the option of having a second encounter
-			std::string prompt("The offense just had their first successful encounter of the turn. Would they like to have a second encounter?\n");
+			std::string prompt("You just had your first successful encounter of the turn. Would you like to have a second encounter?\n");
 			std::vector<std::string> options;
 			options.push_back("Y");
 			options.push_back("N");

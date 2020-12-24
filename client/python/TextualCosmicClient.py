@@ -376,14 +376,14 @@ class GuiPart(object):
         while self.queue.qsize():
             try:
                 msg = self.queue.get(0)
-                print('From queue:\n')
+                if ord(msg[0]) == 0: #For some reason the messages tend to start with a null character? Might be a server-side issue, but it's easy enough to deal with here
+                    msg = msg[1:]
+                print('From queue:')
                 print(msg)
                 #Process options if there are any
                 #TODO: Display current offense and defense scores as they change
-                #TODO: Provide better diagnostics for other choices (choosing allies, having a second encounter, etc.)
                 #TODO: Create a separate window for making deals?
                 tag_found = False
-                #TODO: Subclassify diagnostics requiring responses to improve the UI
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
@@ -475,17 +475,24 @@ class GuiPart(object):
                                     assert found_corresponding_card, "Failed to find card " + play + " in the following option list: " + msg
                     else:
                         option_num = None
-                        self.choice_label_var.set("Please choose one of the following options:")
+                        prompt = ''
+                        #self.choice_label_var.set("Please choose one of the following options:")
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
                                 break
                             if option_match:
+                                if option_num == None: #If this is the first option we've found we now have the entire prompt
+                                    self.choice_label_var.set(prompt)
                                 option_num = option_match.group(1)
                                 prompt = option_match.group(2)
                                 self.choice_list.append(ttk.Radiobutton(self.choice_frame, text=prompt, variable=self.client_choice, value=option_num))
                                 option_row = int(option_num)+1
                                 self.choice_list[int(option_num)].grid(column=0,row=option_row)
+                            elif option_num == None: #We haven't found an option yet, so we're still reading the prompt
+                                if len(prompt) != 0:
+                                    prompt += '\n'
+                                prompt += line
                         if option_num == None:
                             print('ERROR:\n' + msg)
                             raise Exception('A response is required but we failed to find any options!')
