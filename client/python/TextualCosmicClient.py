@@ -20,6 +20,7 @@ class GuiPart(object):
         self.num_players = None
         self.player_color = '' #Filled in with the client's color
         self.color_to_num = {}
+        self.turn_phase = 0
 
         #Initial setup for the game window, hidden until we use it in set_up_main_window
         self.master = master
@@ -72,10 +73,16 @@ class GuiPart(object):
         self.choice_list = []
         self.client_choice = StringVar()
         self.choice_label_var = StringVar()
+        self.choice_label_var.set("Waiting on other players...")
         self.choice_label = Label(self.choice_frame, textvariable=self.choice_label_var)
+        self.choice_label.grid(column=0, row=0)
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
         self.no_colony_option = ''
         self.no_colony_button = ttk.Button(self.choice_frame, text='Choose no additional ships', command= lambda: self.hide_options_colony('','',''))
+        self.play_card_button = ttk.Button(self.choice_frame)
+        self.play_alien_button = ttk.Button(self.choice_frame)
+        self.play_alien_option = ''
+        self.hand_options = {} #Map a card in hand to its option num, if it can be used to make a play at this moment
 
         #Player/Turn info
         self.player_info_frame = ttk.Frame(self.master_frame, padding="5 5 5 5")
@@ -111,14 +118,17 @@ class GuiPart(object):
         self.hand_cards = []
         self.hand_cards_wrapper = StringVar(value=self.hand_cards)
         self.hand_disp = Listbox(self.hand_frame, height=8, listvariable=self.hand_cards_wrapper, selectmode='browse') #Height here is the number of lines the box will display without scrolling; 'browse' indicates only one item can be selected at a time
-        self.hand_disp.bind("<<ListboxSelect>>", lambda e: self.update_hand_info(self.hand_disp.curselection(),self.hand_cards))
+        def combined_action(current_selection,hand_cards):
+            self.update_hand_info(current_selection,hand_cards)
+            self.update_hand_choice(current_selection)
+        self.hand_disp.bind("<<ListboxSelect>>", lambda e: combined_action(self.hand_disp.curselection(),self.hand_cards))
         self.hand_disp_scroll = ttk.Scrollbar(self.hand_frame, orient=VERTICAL, command=self.hand_disp.yview)
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
         self.hand_disp.grid(column=0,row=0)
         self.hand_disp_scroll.grid(column=1,row=0, sticky=(N,S))
         self.hand_frame.grid(column=3,row=3)
 
-        #TODO: Move these discard piles to column 0 under the option frame
+        #TODO: Move these discard piles to column 0 under the option frame? Could also move them to where the stack is and move the stack to column 0
         #Cosmic discard pile
         self.cosmic_discard_frame = ttk.Labelframe(self.master_frame, text='Cosmic discard pile', padding="5 5 5 5")
         self.cosmic_discard_cards = []
@@ -352,6 +362,16 @@ class GuiPart(object):
         self.confirmation_button.configure(text='Confirm ' + planet_color + ' planet ' + str(planet_num), command=hide_options_planet)
         self.confirmation_button.grid(column=0, row=1)
 
+    def update_hand_choice(self, current_selection):
+        if len(current_selection) != 1: #The user should only be able to select one item at a time but this protects against the case where no item is selected
+            return
+        sel = self.hand_cards[current_selection[0]]
+        if sel in self.hand_options:
+            #Update and display the button for the user to confirm this choice
+            play_card_text = 'Play ' + sel
+            self.play_card_button.configure(text=play_card_text, command=lambda: self.hide_options_empty_stack(self.hand_options[sel]))
+            self.play_card_button.grid(column=0, row=2)
+
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
         while self.queue.qsize():
@@ -363,6 +383,8 @@ class GuiPart(object):
                 #TODO: Make it so that choices involving cards require submitting a card
                 #      Double check how Arena handles this...we may want to highlight which cards are playable at a given moment while always having a button to proceed to the next phase
                 #TODO: Display current offense and defense scores as they change
+                #TODO: Provide better diagnostics for other choices (choosing allies, having a second encounter, etc.)
+                #TODO: Create a separate window for making deals?
                 tag_found = False
                 #TODO: Subclassify diagnostics requiring responses to improve the UI
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
@@ -370,7 +392,6 @@ class GuiPart(object):
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
                         self.choice_label_var.set("Please choose one of your colonies.")
-                        self.choice_label.grid(column=0, row=0)
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
                         #Each set of ships (e.g. a canvas oval) is tagged with it's color and planet number. Search through planet canvas to find these tags and when the tag is found, create a binding for when the ship is clicked
                         for line in msg.splitlines():
@@ -402,7 +423,6 @@ class GuiPart(object):
                                                 self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
                     elif msg.find('[planet_response]') != -1:
                         self.choice_label_var.set("Please choose a planet.")
-                        self.choice_label.grid(column=0,row=0)
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
@@ -421,10 +441,44 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Enter>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor='hand2'))
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Leave>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor=''))
                                 self.planet_bindings.append((player_id,planet_num))
+                    elif msg.find('[empty_stack_response]') != -1:
+                        #The client can either pass the turn, play a card from his or her hand, or use his or her alien power
+                        #Have one button with the option to proceed to the next turn, have a second for the Alien power, if it's available, and a third to choose the selected card in hand
+                        #TODO: Should we highlight the cards that the player can use here?
+                        self.choice_label_var.set("")
+                        #For each option, find the corresponding card and add a binding such that clicking on the card sets a button that casts the card upon confirmation
+                        #If one of the options is an alien power, provide another button for that use case
+                        for line in msg.splitlines():
+                            option_match = re.match('([0-9]*): (.*)',line)
+                            if line.find('[needs_response]') != -1: #This line is delivered after the options
+                                break
+                            elif line.find('[empty_stack_response]') != -1:
+                                continue
+                            elif option_match: #There are other diagnostic lines here, should we spit them out to the server log in an else clause?
+                                play = option_match.group(2)
+                                if play.find('Alien Power') != -1:
+                                    mandatory = (play.find('mandatory') != -1)
+                                    self.play_alien_option = option_match.group(1)
+                                    config_text = 'Use alien power'
+                                    if mandatory:
+                                        config_text += ' (mandatory)'
+                                    #FIXME: A separate variable for play_alien_option might not be necessary here after all
+                                    self.play_alien_button.configure(text=config_text, command= lambda: self.hide_options_empty_stack(self.play_alien_option))
+                                    self.play_alien_button.grid(column=0, row=3)
+                                elif play == 'None':
+                                    self.confirmation_button.configure(text='Continue to ' + self.get_next_turn_phase(), command= lambda option_num=option_match.group(1): self.hide_options_empty_stack(option_num))
+                                    #TODO: Consider not displaying this button if we find a mandatory alien power?
+                                    self.confirmation_button.grid(column=0, row=1)
+                                else: #Should correspond to a card in hand
+                                    found_corresponding_card = False
+                                    for card in self.hand_cards:
+                                        if card == play:
+                                            found_corresponding_card = True
+                                            self.hand_options[card] = option_match.group(1)
+                                    assert found_corresponding_card, "Failed to find card " + play + " in the following option list: " + msg
                     else:
                         option_num = None
                         self.choice_label_var.set("Please choose one of the following options:")
-                        self.choice_label.grid(column=0, row=0)
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
@@ -439,6 +493,7 @@ class GuiPart(object):
                             print('ERROR:\n' + msg)
                             raise Exception('A response is required but we failed to find any options!')
                         confirmation_row = int(option_num)+2
+                        self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)
                         self.confirmation_button.grid(column=0, row=confirmation_row)
                 if msg.find('[player_hand]') != -1: #Update the player's hand
                     tag_found = True
@@ -482,6 +537,7 @@ class GuiPart(object):
                     elif msg.find('Resolution') != -1:
                         phase_index = 7
                     assert phase_index is not None, "Error parsing the turn phase!"
+                    self.turn_phase = phase_index
                     for i in range(len(self.turn_phase_labels)):
                         if i == phase_index:
                             self.turn_phase_labels[i].config(bg="Orange")
@@ -727,6 +783,36 @@ class GuiPart(object):
             self.planet_canvases[(num_planets*i)+j].unbind('<Leave>')
         self.confirmation_button.grid_forget()
         self.confirmation_button.configure(text='Confirm choice', command=self.hide_options)
+        self.choice_label_var.set("Waiting on other players...")
+        self.send_message_to_server(option_num)
+
+    def get_next_turn_phase(self):
+        if self.turn_phase == 0:
+            return "Regroup"
+        elif self.turn_phase == 1:
+            return "Destiny"
+        elif self.turn_phase == 2:
+            return "Launch"
+        elif self.turn_phase == 3:
+            return "Alliance"
+        elif self.turn_phase == 4:
+            return "Planning"
+        elif self.turn_phase == 5:
+            return "Reveal"
+        elif self.turn_phase == 6:
+            return "Resolution"
+        elif self.turn_phase == 7:
+            return "Start Turn"
+        else:
+            assert False, "Unexpected turn phase!"
+
+    def hide_options_empty_stack(self, option_num):
+        #TODO: Send the choice back to the server and grid_forget the none, card, and alien choice buttons. Also need to reset self.hand_options and self.alien_play_option
+        self.confirmation_button.grid_forget()
+        self.play_card_button.grid_forget()
+        self.play_alien_button.grid_forget()
+        self.alien_play_option = ''
+        self.hand_options = {}
         self.choice_label_var.set("Waiting on other players...")
         self.send_message_to_server(option_num)
 

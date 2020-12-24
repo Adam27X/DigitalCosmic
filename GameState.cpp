@@ -659,7 +659,7 @@ void GameState::stop_allies()
 	allies_to_be_stopped.clear();
 }
 
-//NOTE:  This function can be called multiple times per turn
+//NOTE:  
 //	 Consider the following scenario:
 //	 Blue player is offense during regroup and choose not to cast Mobius Tubes
 //	 The Green player, next to act, casts Plague on the Blue Player
@@ -703,6 +703,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		while(valid_plays.size())
 		{
 			std::stringstream prompt;
+			prompt << "[empty_stack_response]\n";
 			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
 			std::vector<std::string> options;
 			for(unsigned i=0; i<valid_plays.size(); i++)
