@@ -441,7 +441,7 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Enter>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor='hand2'))
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Leave>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor=''))
                                 self.planet_bindings.append((player_id,planet_num))
-                    elif msg.find('[empty_stack_response]') != -1:
+                    elif msg.find('[stack_response]') != -1:
                         #The client can either pass the turn, play a card from his or her hand, or use his or her alien power
                         #Have one button with the option to proceed to the next turn, have a second for the Alien power, if it's available, and a third to choose the selected card in hand
                         #TODO: Should we highlight the cards that the player can use here?
@@ -452,7 +452,7 @@ class GuiPart(object):
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
                                 break
-                            elif line.find('[empty_stack_response]') != -1:
+                            elif line.find('[stack_response]') != -1:
                                 continue
                             elif option_match: #There are other diagnostic lines here, should we spit them out to the server log in an else clause?
                                 play = option_match.group(2)
@@ -465,7 +465,7 @@ class GuiPart(object):
                                     #FIXME: A separate variable for play_alien_option might not be necessary here after all
                                     self.play_alien_button.configure(text=config_text, command= lambda: self.hide_options_empty_stack(self.play_alien_option))
                                     self.play_alien_button.grid(column=0, row=3)
-                                elif play == 'None':
+                                elif play.find('None') != -1:
                                     self.confirmation_button.configure(text='Continue to ' + self.get_next_turn_phase(), command= lambda option_num=option_match.group(1): self.hide_options_empty_stack(option_num))
                                     #TODO: Consider not displaying this button if we find a mandatory alien power?
                                     self.confirmation_button.grid(column=0, row=1)
