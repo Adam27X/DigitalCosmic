@@ -1707,8 +1707,10 @@ void GameState::setup_attack()
 		announce << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
 		assignments.defense_attack_value += i->second;
 	}
+	server.broadcast_message(announce.str());
 
-	announce << "Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	announce.str("");
+	announce << "[score_update] Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
 	server.broadcast_message(announce.str());
 }
 
@@ -1891,7 +1893,7 @@ void GameState::add_reinforcements(const PlayerColors player, const unsigned val
 	}
 
 	std::stringstream announce;
-	announce << "After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	announce << "[score_update] After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
 	server.broadcast_message(announce.str());
 }
 

@@ -105,6 +105,10 @@ class GuiPart(object):
         self.defense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         self.defense_color_label.grid(column=0,row=3)
         self.defense_color_canvas.grid(column=1,row=3)
+        self.current_offense_score = StringVar()
+        self.current_offense_score_label = Label(self.player_info_frame, textvariable=self.current_offense_score)
+        self.current_defense_score = StringVar()
+        self.current_defense_score_label = Label(self.player_info_frame, textvariable=self.current_defense_score)
 
         #A box to describe portions of the board that the user is interacting with (cards, aliens, etc.)
         self.description_box_frame = ttk.Labelframe(self.master_frame, text='Card/Alien description', padding="5 5 5 5")
@@ -381,7 +385,6 @@ class GuiPart(object):
                 print('From queue:')
                 print(msg)
                 #Process options if there are any
-                #TODO: Display current offense and defense scores as they change
                 #TODO: Create a separate window for making deals?
                 tag_found = False
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
@@ -453,7 +456,8 @@ class GuiPart(object):
                                 continue
                             elif option_match: #There are other diagnostic lines here, should we spit them out to the server log in an else clause?
                                 play = option_match.group(2)
-                                if play.find('Alien Power') != -1:
+                                #Checking explicitly that this string occurs at the beginning of the option such that we don't match something like 'None (Resolve Alien Power)'
+                                if re.match('Alien Power',play):
                                     mandatory = (play.find('mandatory') != -1)
                                     self.play_alien_option = option_match.group(1)
                                     config_text = 'Use alien power'
@@ -550,6 +554,8 @@ class GuiPart(object):
                     if phase_index == 0: #Reset the highlighted planet for the next encounter
                         for planet_label in self.planet_labels:
                             planet_label.configure(background=self.default_label_bg)
+                        self.current_offense_score_label.grid_forget()
+                        self.current_defense_score_label.grid_forget()
                 if msg.find('[warp_update]') != -1: #Redraw the warp
                     tag_found = True
                     self.update_source(msg,self.warp_canvas,self.warp_ships)
@@ -729,6 +735,15 @@ class GuiPart(object):
                     if msg.find('{') != -1: #If the stack isn't empty
                         stack_info = msg[msg.find('{'):]
                     self.update_stack_info(stack_info)
+                if msg.find('[score_update]') != -1:
+                    tag_found = True
+                    scores_match = re.search('Offense = (.*); Defense = (.*)\n',msg)
+                    offense_score = scores_match.group(1)
+                    defense_score = scores_match.group(2)
+                    self.current_offense_score.set('Current offense score: ' + offense_score)
+                    self.current_offense_score_label.grid(column=0, row=4)
+                    self.current_defense_score.set('Current defense score: ' + defense_score)
+                    self.current_defense_score_label.grid(column=0, row=5)
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'
