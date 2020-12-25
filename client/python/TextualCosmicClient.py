@@ -422,7 +422,6 @@ class GuiPart(object):
                                                 self.planet_canvases[(num_planets*i)+j].tag_bind(ship_tag, '<Leave>', lambda e, num_planets=num_planets, i=i, j=j: self.planet_canvases[(num_planets*i)+j].configure(cursor=''))
                                                 self.colony_bindings.append((i,j,ship_tag)) #Bookkeeping for bindings to make it easier to remove them all
                     elif msg.find('[planet_response]') != -1:
-                        self.choice_label_var.set("Please choose a planet.")
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options
@@ -441,6 +440,8 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Enter>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor='hand2'))
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Leave>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor=''))
                                 self.planet_bindings.append((player_id,planet_num))
+                        #Here we're assuming that all of the planet options will have the same color; so far that assumption is safe but it could change
+                        self.choice_label_var.set("Please choose a " + planet_color + " planet.")
                     elif msg.find('[stack_response]') != -1:
                         #The client can either pass the turn, play a card from his or her hand, or use his or her alien power
                         #Have one button with the option to proceed to the next turn, have a second for the Alien power, if it's available, and a third to choose the selected card in hand
@@ -465,11 +466,11 @@ class GuiPart(object):
                                         config_text += ' (mandatory)'
                                     #FIXME: A separate variable for play_alien_option might not be necessary here after all
                                     self.play_alien_button.configure(text=config_text, command= lambda: self.hide_options_empty_stack(self.play_alien_option))
-                                    self.play_alien_button.grid(column=0, row=3)
+                                    self.play_alien_button.grid(column=0, row=1)
                                 elif play.find('None') != -1:
                                     self.confirmation_button.configure(text='Continue to ' + self.get_next_turn_phase(), command= lambda option_num=option_match.group(1): self.hide_options_empty_stack(option_num))
                                     #TODO: Consider not displaying this button if we find a mandatory alien power?
-                                    self.confirmation_button.grid(column=0, row=1)
+                                    self.confirmation_button.grid(column=0, row=3)
                                 else: #Should correspond to a card in hand
                                     found_corresponding_card = False
                                     for card in self.hand_cards:
