@@ -79,7 +79,6 @@ class GuiPart(object):
         self.confirmation_button = ttk.Button(self.choice_frame, text='Confirm choice', command=self.hide_options)
         self.no_colony_option = ''
         self.no_colony_button = ttk.Button(self.choice_frame, text='Choose no additional ships', command= lambda: self.hide_options_colony('','',''))
-        self.play_card_button = ttk.Button(self.choice_frame)
         self.play_alien_button = ttk.Button(self.choice_frame)
         self.play_alien_option = ''
         self.hand_options = {} #Map a card in hand to its option num, if it can be used to make a play at this moment
@@ -130,6 +129,7 @@ class GuiPart(object):
         self.hand_disp['yscrollcommand'] = self.hand_disp_scroll.set
         self.hand_disp.grid(column=0,row=0)
         self.hand_disp_scroll.grid(column=1,row=0, sticky=(N,S))
+        self.play_card_button = ttk.Button(self.hand_frame)
         self.hand_frame.grid(column=1,row=3,columnspan=3)
 
         #Cosmic discard pile
@@ -373,7 +373,7 @@ class GuiPart(object):
             #Update and display the button for the user to confirm this choice
             play_card_text = 'Play ' + sel
             self.play_card_button.configure(text=play_card_text, command=lambda: self.hide_options_empty_stack(self.hand_options[sel]))
-            self.play_card_button.grid(column=0, row=2)
+            self.play_card_button.grid(column=0, row=1)
 
     def processIncoming(self):
         """ Handle all messages currently in the queue, if any. """
@@ -391,6 +391,7 @@ class GuiPart(object):
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
+                        #TODO: Consider extracting the prompt here as well? There are different reasons to choose a colony, of course. Regroup, plague, mobius tubes, force field, end of a turn for allies, etc.
                         self.choice_label_var.set("Please choose one of your colonies.")
                         #TODO: We could have the user click and drag the planet from the source to the colony; this would require the server to send over the source
                         #Each set of ships (e.g. a canvas oval) is tagged with it's color and planet number. Search through planet canvas to find these tags and when the tag is found, create a binding for when the ship is clicked
@@ -470,7 +471,7 @@ class GuiPart(object):
                                 elif play.find('None') != -1:
                                     self.confirmation_button.configure(text='Continue to ' + self.get_next_turn_phase(), command= lambda option_num=option_match.group(1): self.hide_options_empty_stack(option_num))
                                     #TODO: Consider not displaying this button if we find a mandatory alien power?
-                                    self.confirmation_button.grid(column=0, row=3)
+                                    self.confirmation_button.grid(column=0, row=2)
                                 else: #Should correspond to a card in hand
                                     found_corresponding_card = False
                                     for card in self.hand_cards:
