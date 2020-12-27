@@ -1319,7 +1319,9 @@ void GameState::force_negotiation()
 	assignments.offensive_encounter_card = CosmicCardType::Negotiate;
 	assignments.defensive_encounter_card = CosmicCardType::Negotiate;
 
-	setup_negotiation();
+	//If the human is zapped and then someone tries to play emotion control then there shouldn't actually be a deal
+	if(!assignments.human_wins_encounter)
+		setup_negotiation();
 }
 
 void GameState::setup_negotiation()
@@ -2308,6 +2310,7 @@ std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(co
 	return valid_colonies;
 }
 
+//TODO: Add a prompt message here that gets passed onto the GUI so the player has a better understanding of what they're choosing a colony for
 const std::pair<PlayerColors,unsigned> GameState::prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies, bool allow_none)
 {
 	std::stringstream prompt;
