@@ -1406,6 +1406,11 @@ void GameState::setup_negotiation()
 	bool offense_done = false;
 	bool defense_done = false;
 	std::chrono::milliseconds span(500); //How long to wait for each client during each wait_for call
+
+	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_offense;
+	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_defense;
+	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_offense;
+	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_defense;
 	while(1)
 	{
 		if(!offense_done && offense_proposal.wait_for(span) == std::future_status::ready)
@@ -1413,7 +1418,47 @@ void GameState::setup_negotiation()
 			std::string offense_msg = offense_proposal.get();
 			if(offense_msg.find("[propose_deal]") != std::string::npos)
 			{
-				//The offense has proposed a deal, send it to the defense
+				//The offense has proposed a deal, record it and send it to the defense
+				const std::string offense_receives_colony_delim("Offense receives colony: ");
+				auto defense_to_offense_colony_loc = offense_msg.find(offense_receives_colony_delim) + offense_receives_colony_delim.size();
+				assert(defense_to_offense_colony_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+				auto defense_to_offense_colony_endloc = offense_msg.find('\n',defense_to_offense_colony_loc);
+				const std::string colony_to_offense(offense_msg.begin()+defense_to_offense_colony_loc,offense_msg.begin()+defense_to_offense_colony_endloc); //In the form of "Purple Planet 4" or "None"
+				const std::string planet_txt_delim(" Planet ");
+
+				if(colony_to_offense.compare("None") == 0)
+				{
+					offense_proposed_colony_to_offense = std::make_pair(PlayerColors::Invalid,0);
+				}
+				else
+				{
+					auto planet_txt_loc = colony_to_offense.find(planet_txt_delim) + planet_txt_delim.size();
+					assert(planet_txt_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+					const std::string colony_to_offense_planet_color(colony_to_offense.begin(),colony_to_offense.begin()+colony_to_offense.find(planet_txt_delim));
+					const std::string colony_to_offense_planet_num_str(colony_to_offense.begin()+planet_txt_loc,colony_to_offense.end());
+					std::cout << "Offense proposed colony to offense: " << colony_to_offense_planet_color << " Planet " << colony_to_offense_planet_num_str << "\n";
+					offense_proposed_colony_to_offense = std::make_pair(to_color(colony_to_offense_planet_color),std::stoi(colony_to_offense_planet_num_str));
+				}
+
+				const std::string defense_receives_colony_delim("Defense receives colony: ");
+				auto offense_to_defense_colony_loc = offense_msg.find(defense_receives_colony_delim) + defense_receives_colony_delim.size();
+				assert(offense_to_defense_colony_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+				auto offense_to_defense_colony_endloc = offense_msg.find('\n',offense_to_defense_colony_loc);
+				const std::string colony_to_defense(offense_msg.begin()+offense_to_defense_colony_loc,offense_msg.begin()+offense_to_defense_colony_endloc); //In the form of "Purple Planet 4"
+				if(colony_to_defense.compare("None") == 0)
+				{
+					offense_proposed_colony_to_defense = std::make_pair(PlayerColors::Invalid,0);
+				}
+				else
+				{
+					auto planet_txt_loc = colony_to_defense.find(planet_txt_delim) + planet_txt_delim.size();
+					assert(planet_txt_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+					const std::string colony_to_defense_planet_color(colony_to_defense.begin(),colony_to_defense.begin()+colony_to_defense.find(planet_txt_delim));
+					const std::string colony_to_defense_planet_num_str(colony_to_defense.begin()+planet_txt_loc,colony_to_defense.end());
+					std::cout << "Offense proposed colony to defense: " << colony_to_defense_planet_color << " Planet " << colony_to_defense_planet_num_str << "\n";
+					offense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
+				}
+
 				server.send_message_to_client(assignments.get_defense(),offense_msg);
 				offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense()); //Wait for the next message
 			}
@@ -1425,16 +1470,17 @@ void GameState::setup_negotiation()
 			}
 			else if(offense_msg.find("[accept_deal]") != std::string::npos)
 			{
+				std::cout << "The offense has accepted a deal from the defense\n";
 				deal_params.successful = true;
 				deal_params.num_cards_to_offense = 0;
 				deal_params.cards_to_offense_chosen_randomly = false;
 				deal_params.num_cards_to_defense = 0;
 				deal_params.cards_to_defense_chosen_randomly = false;
 
-				//FIXME: Extract the colony that was actually chosen!
 				if(offense_msg.find("offense will establish a colony") != std::string::npos)
 				{
 					deal_params.offense_receives_colony = true;
+					deal_params.colony_for_offense = defense_proposed_colony_to_offense; //Use the defense proposal here, because that's what was accepted
 				}
 				else
 				{
@@ -1444,6 +1490,7 @@ void GameState::setup_negotiation()
 				if(offense_msg.find("defense will establish a colony") != std::string::npos)
 				{
 					deal_params.defense_receives_colony = true;
+					deal_params.colony_for_defense = defense_proposed_colony_to_defense; //Use the defense proposal here, because that's what was accepted
 				}
 				else
 				{
@@ -1470,7 +1517,47 @@ void GameState::setup_negotiation()
 			std::string defense_msg = defense_proposal.get();
 			if(defense_msg.find("[propose_deal]") != std::string::npos)
 			{
-				//The defense has proposed a deal, send it to the offense
+				//The defense has proposed a deal, record it and send it to the offense
+				const std::string offense_receives_colony_delim("Offense receives colony: ");
+				auto defense_to_offense_colony_loc = defense_msg.find(offense_receives_colony_delim) + offense_receives_colony_delim.size();
+				assert(defense_to_offense_colony_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+				auto defense_to_offense_colony_endloc = defense_msg.find('\n',defense_to_offense_colony_loc);
+				const std::string colony_to_offense(defense_msg.begin()+defense_to_offense_colony_loc,defense_msg.begin()+defense_to_offense_colony_endloc); //In the form of "Purple Planet 4" or "None"
+				const std::string planet_txt_delim(" Planet ");
+
+				if(colony_to_offense.compare("None") == 0)
+				{
+					defense_proposed_colony_to_offense = std::make_pair(PlayerColors::Invalid,0);
+				}
+				else
+				{
+					auto planet_txt_loc = colony_to_offense.find(planet_txt_delim) + planet_txt_delim.size();
+					assert(planet_txt_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+					const std::string colony_to_offense_planet_color(colony_to_offense.begin(),colony_to_offense.begin()+colony_to_offense.find(planet_txt_delim));
+					const std::string colony_to_offense_planet_num_str(colony_to_offense.begin()+planet_txt_loc,colony_to_offense.end());
+					std::cout << "Defense proposed colony to offense: " << colony_to_offense_planet_color << " Planet " << colony_to_offense_planet_num_str << "\n";
+					defense_proposed_colony_to_offense = std::make_pair(to_color(colony_to_offense_planet_color),std::stoi(colony_to_offense_planet_num_str));
+				}
+
+				const std::string defense_receives_colony_delim("Defense receives colony: ");
+				auto offense_to_defense_colony_loc = defense_msg.find(defense_receives_colony_delim) + defense_receives_colony_delim.size();
+				assert(offense_to_defense_colony_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+				auto offense_to_defense_colony_endloc = defense_msg.find('\n',offense_to_defense_colony_loc);
+				const std::string colony_to_defense(defense_msg.begin()+offense_to_defense_colony_loc,defense_msg.begin()+offense_to_defense_colony_endloc); //In the form of "Purple Planet 4"
+				if(colony_to_defense.compare("None") == 0)
+				{
+					defense_proposed_colony_to_defense = std::make_pair(PlayerColors::Invalid,0);
+				}
+				else
+				{
+					auto planet_txt_loc = colony_to_defense.find(planet_txt_delim) + planet_txt_delim.size();
+					assert(planet_txt_loc != std::string::npos && "Failed to parse offensive deal proposal!");
+					const std::string colony_to_defense_planet_color(colony_to_defense.begin(),colony_to_defense.begin()+colony_to_defense.find(planet_txt_delim));
+					const std::string colony_to_defense_planet_num_str(colony_to_defense.begin()+planet_txt_loc,colony_to_defense.end());
+					std::cout << "Defense proposed colony to defense: " << colony_to_defense_planet_color << " Planet " << colony_to_defense_planet_num_str << "\n";
+					defense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
+				}
+
 				server.send_message_to_client(assignments.get_offense(),defense_msg);
 				defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense()); //Wait for the next message
 			}
@@ -1482,16 +1569,17 @@ void GameState::setup_negotiation()
 			}
 			else if(defense_msg.find("[accept_deal]") != std::string::npos)
 			{
+				std::cout << "The defense has accepted a deal from the offense\n";
 				deal_params.successful = true;
 				deal_params.num_cards_to_offense = 0;
 				deal_params.cards_to_offense_chosen_randomly = false;
 				deal_params.num_cards_to_defense = 0;
 				deal_params.cards_to_defense_chosen_randomly = false;
 
-				//FIXME: Extract the colony that was actually chosen!
 				if(defense_msg.find("offense will establish a colony") != std::string::npos)
 				{
 					deal_params.offense_receives_colony = true;
+					deal_params.colony_for_offense = offense_proposed_colony_to_offense; //Use the offense proposal here, because that's what was accepted
 				}
 				else
 				{
@@ -1501,6 +1589,7 @@ void GameState::setup_negotiation()
 				if(defense_msg.find("defense will establish a colony") != std::string::npos)
 				{
 					deal_params.defense_receives_colony = true;
+					deal_params.colony_for_defense = offense_proposed_colony_to_defense; //Use the offense proposal here, because that's what was accepted
 				}
 				else
 				{
@@ -1568,18 +1657,7 @@ void GameState::resolve_negotiation()
 				}
 			}
 
-			//Choose from any of the valid defense colonies
-			std::vector<std::string> options;
-			for(auto i=defense_valid_colonies.begin(),e=defense_valid_colonies.end();i!=e;++i)
-			{
-				std::stringstream opt;
-				opt << to_string(i->first) << " Planet " << i->second;
-				options.push_back(opt.str());
-			}
-			std::stringstream prompt;
-			prompt << "[planet_response]\n";
-			unsigned chosen_option = prompt_player(assignments.get_offense(),prompt.str(),options);
-			const std::pair<PlayerColors,unsigned> chosen_colony = defense_valid_colonies[chosen_option];
+			const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_offense;
 
 			//Finally, add the ship to the newly established colony
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
@@ -1611,18 +1689,7 @@ void GameState::resolve_negotiation()
 				}
 			}
 
-			//Choose from any of the valid offense colonies
-			std::vector<std::string> options;
-			for(auto i=offense_valid_colonies.begin(),e=offense_valid_colonies.end();i!=e;++i)
-			{
-				std::stringstream opt;
-				opt << to_string(i->first) << " Planet " << i->second;
-				options.push_back(opt.str());
-			}
-			std::stringstream prompt;
-			prompt << "[planet_response]\n";
-			unsigned chosen_option = prompt_player(assignments.get_defense(),prompt.str(),options);
-			const std::pair<PlayerColors,unsigned> chosen_colony = offense_valid_colonies[chosen_option];
+			const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_defense;
 
 			//Finally, add the ship to the newly established colony
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);

@@ -90,9 +90,22 @@ public:
 	bool cards_to_offense_chosen_randomly;
 	unsigned num_cards_to_defense;
 	bool cards_to_defense_chosen_randomly;
-	bool offense_receives_colony; //FIXME: Have the specific colony be a term of the deal rather than something decided as a part of its resolution
+	bool offense_receives_colony;
 	bool defense_receives_colony;
-	void clear() { successful = false; num_cards_to_offense = 0; cards_to_offense_chosen_randomly = 0; num_cards_to_defense = 0; cards_to_defense_chosen_randomly = 0; offense_receives_colony = false; defense_receives_colony = false; }
+	std::pair<PlayerColors,unsigned> colony_for_offense;
+	std::pair<PlayerColors,unsigned> colony_for_defense;
+	void clear()
+	{
+		successful = false;
+		num_cards_to_offense = 0;
+		cards_to_offense_chosen_randomly = 0;
+		num_cards_to_defense = 0;
+		cards_to_defense_chosen_randomly = 0;
+		offense_receives_colony = false;
+		defense_receives_colony = false;
+		colony_for_offense = std::make_pair(PlayerColors::Invalid,0);
+		colony_for_defense = std::make_pair(PlayerColors::Invalid,0);
+	}
 };
 
 class GameState

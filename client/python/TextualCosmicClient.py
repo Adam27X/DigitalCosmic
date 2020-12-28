@@ -586,8 +586,6 @@ class GuiPart(object):
                                 raise Exception('Unexpected line when parsing deal setup: ' + line)
                         assert offense_color is not None, "Error parsing deal setup"
                         assert defense_color is not None, "Error parsing deal setup"
-                        print('Deal setup:\nOffense = ' + offense_color + '\nDefense = ' + defense_color + '\nOffense colonies w/o defensive ships: ' + str(valid_offense_colonies) + '\nDefense colonies w/o offensive ships: ' + str(valid_defense_colonies))
-                        #TODO: Create the deal window given the above parameters and the client's hand
                         option_num = 0
                         for colony_choice in valid_offense_colonies:
                             self.offense_to_defense_colonies.append(ttk.Radiobutton(self.offense_to_defense_frame, text=colony_choice, variable=self.offense_to_defense_colony, value=colony_choice))

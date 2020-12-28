@@ -40,3 +40,33 @@ std::string to_string(const PlayerColors &p)
 	return ret;
 }
 
+PlayerColors to_color(const std::string &s)
+{
+	PlayerColors ret;
+	if(s.compare("Red") == 0)
+	{
+		ret = PlayerColors::Red;
+	}
+	else if(s.compare("Blue") == 0)
+	{
+		ret = PlayerColors::Blue;
+	}
+	else if(s.compare("Purple") == 0)
+	{
+		ret = PlayerColors::Purple;
+	}
+	else if(s.compare("Yellow") == 0)
+	{
+		ret = PlayerColors::Yellow;
+	}
+	else if(s.compare("Green") == 0)
+	{
+		ret = PlayerColors::Green;
+	}
+	else
+	{
+		ret = PlayerColors::Invalid;
+	}
+
+	return ret;
+}

@@ -13,4 +13,5 @@ enum class PlayerColors
 };
 
 std::string to_string(const PlayerColors &p);
+PlayerColors to_color(const std::string &s);
 
