@@ -28,6 +28,8 @@ public:
 	PlayerColors get_ship(unsigned planet_index, unsigned ship_index) const { return planets[planet_index][ship_index]; }
 	PlanetInfo::iterator planet_begin(unsigned planet_index) { return planets[planet_index].begin(); }
 	PlanetInfo::iterator planet_end(unsigned planet_index) { return planets[planet_index].end(); }
+	PlanetInfo::const_iterator planet_cbegin(unsigned planet_index) const { return planets[planet_index].cbegin(); }
+	PlanetInfo::const_iterator planet_cend(unsigned planet_index) const { return planets[planet_index].cend(); }
 	template<typename Iterator>
 	Iterator planet_erase(unsigned planet_index, Iterator pos)
 	{

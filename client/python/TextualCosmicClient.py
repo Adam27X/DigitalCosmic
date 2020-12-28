@@ -236,6 +236,40 @@ class GuiPart(object):
         self.conn.bind("<Return>", self.set_up_main_window)
         self.connected = False
 
+        #Create the deal window but hide it until it's needed
+        self.deal_window = Toplevel(self.master)
+        self.deal_window.withdraw()
+        self.deal_window.title("Textual Cosmic -- Deal brokering")
+
+        self.offense_to_defense_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
+        self.offense_colony_label = ttk.Label(self.offense_to_defense_frame, text='Potential colonies for the defense to establish')
+        self.offense_colony_label.grid(row=0, column=0)
+        self.offense_to_defense_colony = StringVar() #Which colony choice was made?
+        self.offense_to_defense_colonies = [] #List of colony options
+        self.offense_to_defense_frame.grid(row=0, column=0)
+
+        self.defense_to_offense_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
+        self.defense_colony_label = ttk.Label(self.defense_to_offense_frame, text='Potential colonies for the offense to establish')
+        self.defense_colony_label.grid(row=0, column=0)
+        self.defense_to_offense_colony = StringVar() #Which colony choice was made?
+        self.defense_to_offense_colonies = [] #List of colony options
+        self.defense_to_offense_frame.grid(row=0, column=1)
+
+        self.deal_confirmation_button = ttk.Button(self.deal_window, text="Propose deal", command=self.propose_deal)
+        self.deal_confirmation_button.grid(row=1,column=0,columnspan=2)
+
+        #Another window for accepting another player's proposed deal
+        self.deal_acceptance_window = Toplevel(self.master)
+        self.deal_acceptance_window.withdraw()
+        self.deal_acceptance_window.title("Textual Cosmic -- Deal proposal")
+        self.deal_terms = StringVar()
+        self.deal_terms_label = Label(self.deal_acceptance_window, textvariable=self.deal_terms)
+        self.deal_terms_label.grid(column=0, row=0)
+        self.deal_accept_button = ttk.Button(self.deal_acceptance_window, text='Accept', command=self.accept_deal)
+        self.deal_accept_button.grid(column=0, row=1)
+        self.deal_reject_button = ttk.Button(self.deal_acceptance_window, text='Reject', command=self.reject_deal)
+        self.deal_reject_button.grid(column=0, row=2)
+
     def set_up_main_window(self,*args):
         self.s0.connect((self.server_ip.get(),int(self.server_port.get())))
         self.connected = True
@@ -244,6 +278,32 @@ class GuiPart(object):
         self.conn.destroy()
         self.master.state('normal')
         self.master.title("Textual Cosmic")
+
+    def propose_deal(self):
+        if len(self.offense_to_defense_colony.get()) == 0  or len(self.defense_to_offense_colony.get()) == 0: #The user hasn't chosen an option on both sides yet
+            return
+        if self.defense_to_offense_colony.get() == 'None' and self.offense_to_defense_colony.get() == 'None': #The deal must have some sort of exchange
+            return
+        msg = '[needs_response]\n'
+        msg += '[propose_deal]\n'
+        msg += 'Offense receives colony: ' + self.defense_to_offense_colony.get() + '\n'
+        msg += 'Defense receives colony: ' + self.offense_to_defense_colony.get() + '\n'
+        self.send_message_to_server(msg)
+        self.deal_window.withdraw()
+
+    def accept_deal(self):
+        msg = '[needs_response]\n'
+        msg += '[accept_deal]\n'
+        msg += self.deal_terms.get()
+        self.send_message_to_server(msg)
+        self.deal_acceptance_window.withdraw()
+        self.deal_window.withdraw() #Remove the proposal window too now that a deal has been made
+
+    def reject_deal(self):
+        msg = '[needs_response]\n'
+        msg += '[reject_deal]\n'
+        self.send_message_to_server(msg)
+        self.deal_acceptance_window.withdraw()
 
     #NOTE: The offset of 20 here is so the scrollbars are visible
     def resize_canvas(self, event):
@@ -443,8 +503,8 @@ class GuiPart(object):
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Enter>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor='hand2'))
                                 self.planet_canvases[(num_planets*player_id)+planet_num].bind('<Leave>', lambda e, num_planets=num_planets,player_id=player_id,planet_num=planet_num: self.planet_canvases[(num_planets*player_id)+planet_num].configure(cursor=''))
                                 self.planet_bindings.append((player_id,planet_num))
-                        #Here we're assuming that all of the planet options will have the same color; so far that assumption is safe but it could change
-                        self.choice_label_var.set("Please choose a " + planet_color + " planet.")
+                        #FIXME: We have two similar but not identical contexts here: 1) choosing a planet to attack and 2) choosing where to spawn a new colony upon a successful deal. For the first case we can use planet_color to clarify the label. For the second case we would need an additional tag and the color of the other player in the deal
+                        self.choice_label_var.set("Please choose a planet.")
                     elif msg.find('[stack_response]') != -1:
                         #The client can either pass the turn, play a card from his or her hand, or use his or her alien power
                         #Have one button with the option to proceed to the next turn, have a second for the Alien power, if it's available, and a third to choose the selected card in hand
@@ -490,13 +550,81 @@ class GuiPart(object):
                                     if card in self.hand_options: #Check if the already selected card is a valid play and update the button accordingly
                                         self.play_card_button.configure(command=lambda: self.hide_options_empty_stack(self.hand_options[card]))
                                     else:
-                                        self.play_card_button.configure(command=lambda: self.hide_options_empty_stack(None)) 
+                                        self.play_card_button.configure(command=lambda: self.hide_options_empty_stack(None))
                                     self.play_card_button.configure(text=play_card_button_text)
                                     self.play_card_button.grid(column=0, row=1)
+                    elif msg.find('[deal_setup]') != -1:
+                        offense_color = None
+                        defense_color = None
+                        valid_offense_colonies_matched = False
+                        valid_offense_colonies = []
+                        valid_defense_colonies_matched = False
+                        valid_defense_colonies = []
+                        for line in msg.splitlines():
+                            offense_match = re.search('Offense = (.*)', line)
+                            defense_match = re.search('Defense = (.*)', line)
+                            valid_offense_colonies_match = re.search('Valid offense colonies', line)
+                            valid_defense_colonies_match = re.search('Valid defense colonies', line)
+                            if line.find('[needs_response]') != -1:
+                                continue
+                            elif line.find('[deal_setup]') != -1:
+                                continue
+                            elif offense_match:
+                                offense_color = offense_match.group(1)
+                            elif defense_match:
+                                defense_color = defense_match.group(1)
+                            elif valid_offense_colonies_match:
+                                valid_offense_colonies_matched = True
+                            elif valid_defense_colonies_match:
+                                valid_offense_colonies_matched = False
+                                valid_defense_colonies_matched = True
+                            elif valid_offense_colonies_matched:
+                                valid_offense_colonies.append(line)
+                            elif valid_defense_colonies_matched:
+                                valid_defense_colonies.append(line)
+                            else:
+                                raise Exception('Unexpected line when parsing deal setup: ' + line)
+                        assert offense_color is not None, "Error parsing deal setup"
+                        assert defense_color is not None, "Error parsing deal setup"
+                        print('Deal setup:\nOffense = ' + offense_color + '\nDefense = ' + defense_color + '\nOffense colonies w/o defensive ships: ' + str(valid_offense_colonies) + '\nDefense colonies w/o offensive ships: ' + str(valid_defense_colonies))
+                        #TODO: Create the deal window given the above parameters and the client's hand
+                        option_num = 0
+                        for colony_choice in valid_offense_colonies:
+                            self.offense_to_defense_colonies.append(ttk.Radiobutton(self.offense_to_defense_frame, text=colony_choice, variable=self.offense_to_defense_colony, value=colony_choice))
+                            self.offense_to_defense_colonies[-1].grid(column=0, row=1+option_num)
+                            option_num += 1
+                        self.offense_to_defense_colonies.append(ttk.Radiobutton(self.offense_to_defense_frame, text='None', variable=self.offense_to_defense_colony, value='None'))
+                        self.offense_to_defense_colonies[-1].grid(column=0, row=1+option_num)
+                        option_num = 0
+                        for colony_choice in valid_defense_colonies:
+                            self.defense_to_offense_colonies.append(ttk.Radiobutton(self.defense_to_offense_frame, text=colony_choice, variable=self.defense_to_offense_colony, value=colony_choice))
+                            self.defense_to_offense_colonies[-1].grid(column=0, row=1+option_num)
+                            option_num += 1
+                        self.defense_to_offense_colonies.append(ttk.Radiobutton(self.defense_to_offense_frame, text='None', variable=self.defense_to_offense_colony, value='None'))
+                        self.defense_to_offense_colonies[-1].grid(column=0, row=1+option_num)
+                        self.deal_window.state('normal') #Display the window
+                    elif msg.find('[propose_deal]') != -1:
+                        offense_receives_match = re.search('Offense receives colony: (.*)\n', msg)
+                        defense_receives_match = re.search('Defense receives colony: (.*)\n', msg)
+                        assert offense_receives_match, "Error parsing propsed deal"
+                        assert defense_receives_match, "Error parsing propsed deal"
+                        terms = ''
+                        if offense_receives_match.group(1) != 'None':
+                            terms += 'The offense will establish a colony on ' + offense_receives_match.group(1) + '.\n'
+                        if defense_receives_match.group(1) != 'None':
+                            terms += 'The defense will establish a colony on ' + defense_receives_match.group(1) + '.\n'
+                        self.deal_terms.set(terms)
+                        self.deal_acceptance_window.state('normal') #Display the window
+                    elif msg.find('[reject_deal]') != -1:
+                        #The other player rejected our deal, bring up the deal window in case we want to make a subsequent offer
+                        self.deal_window.state('normal')
+                    elif msg.find('[accept_deal]') != -1:
+                        #Our deal has been accepted, send an ack to the server since it's still looping on a response from us
+                        self.send_message_to_server('[ack]')
+                        self.deal_acceptance_window.withdraw() #If we were deciding on a different offer we can get rid of that window now; the deal_window should already be removed from the deal we proposed that has now been accepted
                     else:
                         option_num = None
                         prompt = ''
-                        #self.choice_label_var.set("Please choose one of the following options:")
                         for line in msg.splitlines():
                             option_match = re.match('([0-9]*): (.*)',line)
                             if line.find('[needs_response]') != -1: #This line is delivered after the options

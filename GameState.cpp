@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 #include <limits>
+#include <future>
 
 #include "GameState.hpp"
 
@@ -1326,7 +1327,6 @@ void GameState::force_negotiation()
 
 void GameState::setup_negotiation()
 {
-	//TODO: How to enforce a one minute timer?
 	//Allies return ships to their colonies; similar logic to the Force Field artifact card
 	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
 	{
@@ -1348,119 +1348,183 @@ void GameState::setup_negotiation()
 		}
 	}
 
-	//TODO: Handle this situation better once the client/server aspect of the game is solidifed; for now we can accept input from 'both' players
-	//Need to know how many cards will be exchanged by each player and if either (or both) players will receive a colony
-	//Players cannot see each other's cards during a deal. They can say whatever they want about their hand and it does not have to be true or false.
-	//Technically players can offer specific cards but if they do they *must* actually have the card. TODO: We could support this behavior at some point and enforce trading specific types of cards
-	std::stringstream prompt("Was the deal successful?\n");
-	std::vector<std::string> options;
-	options.push_back("Y");
-	options.push_back("N");
-	unsigned response = prompt_player(assignments.get_offense(),prompt.str(),options); //FIXME: Prompt both the offense and defense here?
-
-	if(response == 0)
+	std::stringstream prompt;
+	prompt << "[needs_response]\n";
+	prompt << "[deal_setup]\n";
+	prompt << "Offense = " << to_string(assignments.get_offense()) << "\n";
+	prompt << "Defense = " << to_string(assignments.get_defense()) << "\n";
+	std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.get_offense()); //A list of planet colors and indices
+	std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.get_defense()); //A list of planet colors and indices
+	prompt << "Valid offense colonies:\n";
+	for(auto i=offense_valid_colonies.begin(),e=offense_valid_colonies.end();i!=e;++i)
 	{
-		deal_params.successful = true;
+		//Validate that the defense does not already have a colony on this planet
+		PlayerInfo &host = get_player(i->first);
+		bool defense_found = false;
+		for(auto ii=host.planets.planet_cbegin(i->second),ee=host.planets.planet_cend(i->second); ii!=ee; ++ii) //TODO: If iterators are weird here we can use host.planet_size(i->second)
+		{
+			if(*ii == assignments.get_defense())
+			{
+				defense_found = true;
+				break;
+			}
+		}
+		if(!defense_found)
+		{
+			prompt << to_string(i->first) << " Planet " << i->second << "\n";
+		}
+	}
+	prompt << "Valid defense colonies:\n";
+	for(auto i=defense_valid_colonies.begin(),e=defense_valid_colonies.end();i!=e;++i)
+	{
+		//Validate that the offense does not already have a colony on this planet
+		PlayerInfo &host = get_player(i->first);
+		bool offense_found = false;
+		for(auto ii=host.planets.planet_cbegin(i->second),ee=host.planets.planet_cend(i->second); ii!=ee; ++ii) //TODO: If iterators are weird here we can use host.planet_size(i->second)
+		{
+			if(*ii == assignments.get_offense())
+			{
+				offense_found = true;
+				break;
+			}
+		}
+		if(!offense_found)
+		{
+			prompt << to_string(i->first) << " Planet " << i->second << "\n";
+		}
 	}
 
-	if(deal_params.successful) //Collect the terms of the deal
+	server.send_message_to_client(assignments.get_offense(),prompt.str());
+	server.send_message_to_client(assignments.get_defense(),prompt.str());
+
+	std::future<std::string> offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense());
+	std::future<std::string> defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense());
+
+	//Check for a response from either player
+	//TODO: Add a 1-2 minute timer that causes the deal to fail if time runs out
+	//TODO: Support trading cards (either at random or by choice and eventually allow the declaration of specific cards or even a specific type of card: "highest attack card" or  "any artifact card")
+	bool offense_done = false;
+	bool defense_done = false;
+	std::chrono::milliseconds span(500); //How long to wait for each client during each wait_for call
+	while(1)
 	{
-		bool valid_deal = false;
-		do
+		if(!offense_done && offense_proposal.wait_for(span) == std::future_status::ready)
 		{
-			std::vector< std::pair<PlayerColors,unsigned> > defense_valid_colonies = get_valid_colonies(assignments.get_defense()); //A list of planet colors and indices
-			std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.get_offense()); //A list of planet colors and indices
-
-			if(defense_valid_colonies.empty())
+			std::string offense_msg = offense_proposal.get();
+			if(offense_msg.find("[propose_deal]") != std::string::npos)
 			{
-				server.broadcast_message("Note: The defense has no valid colonies and therefore cannot allow the offense to establish a colony!\n");
+				//The offense has proposed a deal, send it to the defense
+				server.send_message_to_client(assignments.get_defense(),offense_msg);
+				offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense()); //Wait for the next message
 			}
-			else
+			else if(offense_msg.find("[reject_deal]") != std::string::npos)
 			{
-				prompt.str(std::string());
-				prompt << "Will the " << to_string(assignments.get_offense()) << " player (offense) establish a colony on any one planet where the " << to_string(assignments.get_defense()) << " player (defense) has a colony?\n";
-				//TODO: Prompt both the offense and defense and refuse to move on until they agree? That seems fairer
-				response = prompt_player(assignments.get_offense(),prompt.str(),options);
+				//We rejected a deal from the defense; inform the defense that they can attempt to propose another deal if they are so inclined
+				server.send_message_to_client(assignments.get_defense(),offense_msg);
+				offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense()); //Wait for the next message
+			}
+			else if(offense_msg.find("[accept_deal]") != std::string::npos)
+			{
+				deal_params.successful = true;
+				deal_params.num_cards_to_offense = 0;
+				deal_params.cards_to_offense_chosen_randomly = false;
+				deal_params.num_cards_to_defense = 0;
+				deal_params.cards_to_defense_chosen_randomly = false;
 
-				if(response == 0)
+				//FIXME: Extract the colony that was actually chosen!
+				if(offense_msg.find("offense will establish a colony") != std::string::npos)
 				{
 					deal_params.offense_receives_colony = true;
 				}
-			}
+				else
+				{
+					deal_params.offense_receives_colony = false;
+				}
 
-			if(offense_valid_colonies.empty())
-			{
-				server.broadcast_message("Note: The offense has no valid colonies and therefore cannot allow the defense to establish a colony!\n");
-			}
-			else
-			{
-				prompt.str(std::string());
-				prompt << "Will the " << to_string(assignments.get_defense()) << " player (defense) establish a colony on any one planet where the " << to_string(assignments.get_offense()) << " player (offense) has a colony?\n";
-				response = prompt_player(assignments.get_offense(),prompt.str(),options);
-
-				if(response == 0)
+				if(offense_msg.find("defense will establish a colony") != std::string::npos)
 				{
 					deal_params.defense_receives_colony = true;
 				}
-			}
-
-			prompt.str(std::string());
-			prompt << "How many cards will the " << to_string(assignments.get_offense()) << " (offense) receive from the " << to_string(assignments.get_defense()) << " player (defense)?\n";
-			options.clear();
-			options.push_back("0");
-			for(unsigned i=0; i<get_player(assignments.get_defense()).hand_size(); i++)
-			{
-				options.push_back(std::to_string(i+1));
-			}
-			deal_params.num_cards_to_offense = prompt_player(assignments.get_offense(),prompt.str(),options);
-
-			if(deal_params.num_cards_to_offense > 0)
-			{
-				prompt.str(std::string());
-				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.get_defense()) << " player (defense).\n";
-				options.clear();
-				options.push_back("Y");
-				options.push_back("N");
-				response = prompt_player(assignments.get_offense(),prompt.str(),options);
-
-				if(response == 0)
+				else
 				{
-					deal_params.cards_to_offense_chosen_randomly = true;
+					deal_params.defense_receives_colony = false;
 				}
+
+				//We need the defense_proposal thread to return before this parent function exits; send a message to the other player notifying them that the deal was accepted and they can send an ack that we can wait on for a more graceful exit here
+				server.send_message_to_client(assignments.get_defense(),offense_msg);
+				offense_done = true;
 			}
-
-			prompt.str(std::string());
-			prompt << "How many cards will the " << to_string(assignments.get_defense()) << " (defense) receive from the " << to_string(assignments.get_offense()) << " player (offense)?\n";
-			options.clear();
-			options.push_back("0");
-			for(unsigned i=0; i<get_player(assignments.get_offense()).hand_size(); i++)
+			else if(offense_msg.find("[ack]") != std::string::npos)
 			{
-				options.push_back(std::to_string(i+1));
+				break;
 			}
-			deal_params.num_cards_to_defense = prompt_player(assignments.get_offense(),prompt.str(),options);
-
-			if(deal_params.num_cards_to_defense > 0)
+			else
 			{
-				prompt.str(std::string());
-				prompt << "Will these cards be chosen randomly? (If not they will be chosen by the " << to_string(assignments.get_offense()) << " player (offense).\n";
-				options.clear();
-				options.push_back("Y");
-				options.push_back("N");
-				response = prompt_player(assignments.get_offense(),prompt.str(),options);
+				std::cerr << "Error: Unexpected message from client: " << offense_msg << "\n";
+				assert(0 && "Unexpected message from client");
+			}
+		}
 
-				if(response == 0)
+		if(!defense_done && defense_proposal.wait_for(span) == std::future_status::ready)
+		{
+			std::string defense_msg = defense_proposal.get();
+			if(defense_msg.find("[propose_deal]") != std::string::npos)
+			{
+				//The defense has proposed a deal, send it to the offense
+				server.send_message_to_client(assignments.get_offense(),defense_msg);
+				defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense()); //Wait for the next message
+			}
+			else if(defense_msg.find("[reject_deal]") != std::string::npos)
+			{
+				//We rejected a deal from the offense; inform the offense that they can attempt to propose another deal if they are so inclined
+				server.send_message_to_client(assignments.get_offense(),defense_msg);
+				defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense()); //Wait for the next message
+			}
+			else if(defense_msg.find("[accept_deal]") != std::string::npos)
+			{
+				deal_params.successful = true;
+				deal_params.num_cards_to_offense = 0;
+				deal_params.cards_to_offense_chosen_randomly = false;
+				deal_params.num_cards_to_defense = 0;
+				deal_params.cards_to_defense_chosen_randomly = false;
+
+				//FIXME: Extract the colony that was actually chosen!
+				if(defense_msg.find("offense will establish a colony") != std::string::npos)
 				{
-					deal_params.cards_to_defense_chosen_randomly = true;
+					deal_params.offense_receives_colony = true;
 				}
-			}
+				else
+				{
+					deal_params.offense_receives_colony = false;
+				}
 
-			valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
-			if(!valid_deal)
-			{
-				server.broadcast_message("Error: Successful deal chosen but nothing was exchanged. Try again.\n");
+				if(defense_msg.find("defense will establish a colony") != std::string::npos)
+				{
+					deal_params.defense_receives_colony = true;
+				}
+				else
+				{
+					deal_params.defense_receives_colony = false;
+				}
+
+				//We need the defense_proposal thread to return before this parent function exits; send a message to the other player notifying them that the deal was accepted and they can send an ack that we can wait on for a more graceful exit here
+				server.send_message_to_client(assignments.get_offense(),defense_msg);
+				defense_done = true;
 			}
-		} while(!valid_deal);
+			else if(defense_msg.find("[ack]") != std::string::npos)
+			{
+				break;
+			}
+			else
+			{
+				std::cerr << "Error: Unexpected message from client: " << defense_msg << "\n";
+				assert(0 && "Unexpected message from client");
+			}
+		}
 	}
+
+	bool valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
+	assert(valid_deal && "The client did not enforce a valid deal!");
 }
 
 void GameState::resolve_negotiation()
@@ -1482,21 +1546,54 @@ void GameState::resolve_negotiation()
 		{
 			assert(!defense_valid_colonies.empty());
 			//Choose from any of the valid defense colonies
-			std::string msg("Choose a location to establish a new colony\n");
+			std::vector<std::string> options;
+			for(auto i=defense_valid_colonies.begin(),e=defense_valid_colonies.end();i!=e;++i)
+			{
+				std::stringstream opt;
+				opt << to_string(i->first) << " Planet " << i->second;
+				options.push_back(opt.str());
+			}
+			std::stringstream prompt;
+			prompt << "[planet_response]\n";
+			unsigned chosen_option = prompt_player(assignments.get_offense(),prompt.str(),options);
+			const std::pair<PlayerColors,unsigned> chosen_colony = defense_valid_colonies[chosen_option];
+
+			//FIXME: Doesn't this logic create a new ship of out nowhere? The offense must choose one of their existing colonies to take a ship from!
+			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());
+
+			/*std::string msg("Choose a location to establish a new colony\n");
+			//FIXME: We need to choose a specific planet here, but for some reason we have a '[colony_response]' tag here
 			server.send_message_to_client(assignments.get_offense(),msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.get_offense(),defense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());*/
 		}
 		if(deal_params.defense_receives_colony)
 		{
 			assert(!offense_valid_colonies.empty());
 			//Choose from any of the valid offense colonies
-			std::string msg("Choose a location to establish a new colony\n");
+			std::vector<std::string> options;
+			for(auto i=offense_valid_colonies.begin(),e=offense_valid_colonies.end();i!=e;++i)
+			{
+				std::stringstream opt;
+				opt << to_string(i->first) << " Planet " << i->second;
+				options.push_back(opt.str());
+			}
+			std::stringstream prompt;
+			prompt << "[planet_response]\n";
+			unsigned chosen_option = prompt_player(assignments.get_defense(),prompt.str(),options);
+			const std::pair<PlayerColors,unsigned> chosen_colony = offense_valid_colonies[chosen_option];
+
+			//FIXME: Doesn't this logic create a new ship of out nowhere? The offense must choose one of their existing colonies to take a ship from!
+			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
+
+			/*std::string msg("Choose a location to establish a new colony\n");
 			server.send_message_to_client(assignments.get_defense(),msg);
 			const std::pair<PlayerColors,unsigned> chosen_colony = prompt_valid_colonies(assignments.get_defense(),offense_valid_colonies);
 			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
+			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());*/
 		}
 		std::vector<CosmicCardType> cards_to_offense;
 		//Choose which cards will be taken from the defense

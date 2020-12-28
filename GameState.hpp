@@ -90,7 +90,7 @@ public:
 	bool cards_to_offense_chosen_randomly;
 	unsigned num_cards_to_defense;
 	bool cards_to_defense_chosen_randomly;
-	bool offense_receives_colony;
+	bool offense_receives_colony; //FIXME: Have the specific colony be a term of the deal rather than something decided as a part of its resolution
 	bool defense_receives_colony;
 	void clear() { successful = false; num_cards_to_offense = 0; cards_to_offense_chosen_randomly = 0; num_cards_to_defense = 0; cards_to_defense_chosen_randomly = 0; offense_receives_colony = false; defense_receives_colony = false; }
 };
