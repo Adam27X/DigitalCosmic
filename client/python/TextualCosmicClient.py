@@ -447,7 +447,6 @@ class GuiPart(object):
                 print('From queue:')
                 print(msg)
                 #Process options if there are any
-                #TODO: Create a separate window for making deals?
                 tag_found = False
                 #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:

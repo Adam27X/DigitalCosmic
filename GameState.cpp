@@ -937,6 +937,8 @@ void GameState::draw_from_destiny_deck()
 					}
 				}
 			}
+
+			//FIXME: What if the offense wants to reclaim one on their planets and that planet happens to be empty?
 			if(valid_home_system_encounters.empty())
 			{
 				announce << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
@@ -1157,29 +1159,29 @@ void GameState::draw_from_destiny_deck()
 	}
 }
 
-//TODO: Use this function for when a negotiation results in new colonies
 void GameState::choose_opponent_planet()
 {
-	//If the offense is having an encounter on their home system they've already chosen a planet, so there's nothing to do here
-	if(assignments.planet_location == assignments.get_offense())
-		return;
-
 	std::stringstream announce;
-	announce << "The offense (" << to_string(assignments.get_offense()) << ") has chosen to have an encounter with the " << to_string(assignments.get_defense()) << " player.\n";
-	server.broadcast_message(announce.str());
 
-	std::vector<std::string> options;
-	const PlayerInfo &host = get_player(assignments.planet_location);
-	for(unsigned i=0; i<host.planets.size(); i++)
+	//If the offense is having an encounter on their home system they've already chosen a planet
+	if(assignments.planet_location != assignments.get_offense())
 	{
-		std::stringstream opt;
-		opt << to_string(host.color) << " Planet " << i;
-		options.push_back(opt.str());
+		announce << "The offense (" << to_string(assignments.get_offense()) << ") has chosen to have an encounter with the " << to_string(assignments.get_defense()) << " player.\n";
+		server.broadcast_message(announce.str());
+
+		std::vector<std::string> options;
+		const PlayerInfo &host = get_player(assignments.planet_location);
+		for(unsigned i=0; i<host.planets.size(); i++)
+		{
+			std::stringstream opt;
+			opt << to_string(host.color) << " Planet " << i;
+			options.push_back(opt.str());
+		}
+		std::stringstream prompt;
+		prompt << "[planet_response] " << to_string(assignments.planet_location) << "\n";
+		unsigned chosen_option = prompt_player(assignments.get_offense(),prompt.str(),options);
+		assignments.planet_id = chosen_option;
 	}
-	std::stringstream prompt;
-	prompt << "[planet_response] " << to_string(assignments.planet_location) << "\n";
-	unsigned chosen_option = prompt_player(assignments.get_offense(),prompt.str(),options);
-	assignments.planet_id = chosen_option;
 
 	announce.str("");
 	announce << "[targeted_planet]\n";
