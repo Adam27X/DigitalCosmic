@@ -14,9 +14,9 @@ Human::Human()
 	set_description("As a main player or ally, after encounter cards are revealed, *use* this power to add 4 to your side's total. If this power is zapped, however, your side automatically wins the encounter.");
 }
 
-std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
+std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
-	std::function<void()> ret = [g,player] () { g->add_reinforcements(player,4); };
+	std::function<void()> ret = [g,player,&this_event] () { g->add_reinforcements(this_event,4,false); };
 	return ret;
 }
 

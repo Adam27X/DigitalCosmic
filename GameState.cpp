@@ -879,15 +879,18 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 		break;
 
 		case CosmicCardType::Reinforcement2:
-			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,2); };
+			g.callback_if_action_taken = [this,&g] { this->setup_reinforcements(g); };
+			g.callback_if_resolved = [this,&g] () { this->add_reinforcements(g,2); }; //This lambda needs to capture a reference to g because we want it to have access to the object altered by setup_reinforcements, which will occur later
 		break;
 
 		case CosmicCardType::Reinforcement3:
-			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,3); };
+			g.callback_if_action_taken = [this,&g] { this->setup_reinforcements(g); };
+			g.callback_if_resolved = [this,&g] () { this->add_reinforcements(g,3); };
 		break;
 
 		case CosmicCardType::Reinforcement5:
-			g.callback_if_resolved = [this,g] () { this->add_reinforcements(g.player,5); };
+			g.callback_if_action_taken = [this,&g] { this->setup_reinforcements(g); };
+			g.callback_if_resolved = [this,&g] () { this->add_reinforcements(g,5); };
 		break;
 
 		case CosmicCardType::IonicGas:
@@ -2050,8 +2053,11 @@ void GameState::resolve_attack()
 	}
 }
 
-void GameState::add_reinforcements(const PlayerColors player, const unsigned value)
+//Called upon cast of reinforcements (so far these can't be countered but the player should choose which side they're targeting immediately)
+void GameState::setup_reinforcements(GameEvent &g)
 {
+	const PlayerColors player = g.player;
+
 	bool player_is_offense;
 	if(player == assignments.get_offense() || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
 	{
@@ -2084,15 +2090,62 @@ void GameState::add_reinforcements(const PlayerColors player, const unsigned val
 
 	if(choice == 0)
 	{
-		assignments.offense_attack_value += value;
+		g.reinforcements_to_offense = true;
 	}
-	else if(choice == 1)
+	else
 	{
-		assignments.defense_attack_value += value;
+		g.reinforcements_to_offense = false;
+	}
+}
+
+//Called upon resolution of reinforcements
+void GameState::add_reinforcements(const GameEvent &g, const unsigned value, bool can_choose_side)
+{
+	const PlayerColors player = g.player;
+
+	bool player_is_offense;
+	if(player == assignments.get_offense() || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
+	{
+		player_is_offense = true;
+	}
+	else if(player == assignments.get_defense() || assignments.defensive_allies.find(player) != assignments.defensive_allies.end())
+	{
+		player_is_offense = false;
+	}
+	else
+	{
+		assert(0 && "Invalid player casted reinforcement card!");
 	}
 
 	std::stringstream announce;
-	announce << "[score_update] After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	if(can_choose_side)
+	{
+
+		if(g.reinforcements_to_offense)
+		{
+			assignments.offense_attack_value += value;
+		}
+		else
+		{
+			assignments.defense_attack_value += value;
+		}
+
+		announce << "[score_update] After reinforcements, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	}
+	else //Human Alien power: the "reinforcements" must be applied to the side of the Human
+	{
+		if(player_is_offense)
+		{
+			assignments.offense_attack_value += value;
+		}
+		else
+		{
+			assignments.defense_attack_value += value;
+		}
+
+		announce << "[score_update] After applying the Human's alien power, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	}
+
 	server.broadcast_message(announce.str());
 }
 
@@ -2873,7 +2926,8 @@ void GameState::resolve_game_event(const GameEvent g)
 	for(unsigned current_player_index=0; current_player_index<players.size(); current_player_index++)
 	{
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
-		std::vector<GameEvent> valid_plays = current_player.can_respond(state,g);
+		std::vector<GameEvent> valid_plays;
+		current_player.can_respond(state,g,valid_plays); //Fill up valid_plays with potential GameEvent responses
 		//NOTE: As of right now there's never a need to actually respond to an event more than once (even with reinforcements you can cast one and then respond to that one)
 		//In general this property probably isn't true so this if stmt should eventually become a while stmt
 		//If we do make that change, be sure to recalculate valid_plays after taking an action

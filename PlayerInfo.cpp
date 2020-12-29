@@ -99,9 +99,35 @@ bool PlayerInfo::alien_revealed() const
 	return alien->get_revealed();
 }
 
-void PlayerInfo::discard_card_callback_helper(const CosmicCardType c) const
+void PlayerInfo::discard_card_callback(const CosmicCardType c)
 {
 	game->add_to_discard_pile(c);
+
+	bool card_found = false;
+	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+	{
+		if(*i == c)
+		{
+			card_found = true;
+
+			hand_erase(i);
+			break;
+		}
+	}
+
+	if(!card_found)
+	{
+		std::cerr << "Tried to erase " << to_string(c) << " from the " << to_string(color) << " player's hand, but couldn't find it!\n";
+		assert(0);
+	}
+}
+
+void PlayerInfo::add_card_zap_response(std::vector<GameEvent> &vret, const CosmicCardType c)
+{
+	GameEvent ret = GameEvent(color,GameEventType::CardZap);
+	ret.callback_if_resolved = set_invalidate_next_callback_helper();
+	ret.callback_if_action_taken = [this,c] { this->discard_card_callback(c); };
+	vret.push_back(ret);
 }
 
 std::function<void()> PlayerInfo::set_invalidate_next_callback_helper() const
@@ -109,13 +135,12 @@ std::function<void()> PlayerInfo::set_invalidate_next_callback_helper() const
 	return [this] () { this->game->set_invalidate_next_callback(true); };
 }
 
-std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
+void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &vret)
 {
-	std::vector<GameEvent> vret;
 	if(alien->can_respond(current_role,t,g,color) && alien_enabled())
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-		ret.callback_if_resolved = alien->get_resolution_callback(game,color,g);
+		ret.callback_if_resolved = alien->get_resolution_callback(game,color,ret,g);
 		ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
 		vret.push_back(ret);
 	}
@@ -130,7 +155,8 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
 				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
-				ret.callback_if_action_taken = discard_card_callback(i);
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
 			}
 		}
@@ -142,7 +168,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -153,7 +179,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -164,7 +190,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -175,7 +201,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 			//NOTE: More generally, we can respond with any card that can be played during the same phase as the plague (regroup)
 			//For now we sort of implicitly respect this rule but it would be better to use a more explicit approach that checks the phases
@@ -183,7 +209,8 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::MobiusTubes);
 				ret.callback_if_resolved = [this] () { this->game->free_all_ships_from_warp(); };
-				ret.callback_if_action_taken = discard_card_callback(i);
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
 			}
 		}
@@ -195,7 +222,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -206,7 +233,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -220,23 +247,29 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 				if(*i == CosmicCardType::Reinforcement2)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement2);
-					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,2); };
-					ret.callback_if_action_taken = discard_card_callback(i);
 					vret.push_back(ret);
+					GameEvent &ret_ref = vret.back();
+					const CosmicCardType c = *i;
+					ret_ref.callback_if_action_taken = [this,&ret_ref,c] { this->game->setup_reinforcements(ret_ref); discard_card_callback(c); };
+					ret_ref.callback_if_resolved = [this,&ret_ref] () { this->game->add_reinforcements(ret_ref,2); }; //This lambda needs to capture a reference to g because we want it to have access to the object altered by setup_reinforcements, which will occur later
 				}
 				else if(*i == CosmicCardType::Reinforcement3)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement3);
-					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,3); };
-					ret.callback_if_action_taken = discard_card_callback(i);
 					vret.push_back(ret);
+					GameEvent &ret_ref = vret.back();
+					const CosmicCardType c = *i;
+					ret_ref.callback_if_action_taken = [this,&ret_ref,c] { this->game->setup_reinforcements(ret_ref); discard_card_callback(c); };
+					ret_ref.callback_if_resolved = [this,&ret_ref] () { this->game->add_reinforcements(ret_ref,3); }; //This lambda needs to capture a reference to g because we want it to have access to the object altered by setup_reinforcements, which will occur later
 				}
 				else if(*i == CosmicCardType::Reinforcement5)
 				{
 					GameEvent ret = GameEvent(color,GameEventType::Reinforcement5);
-					ret.callback_if_resolved = [this] () { this->game->add_reinforcements(this->color,5); };
-					ret.callback_if_action_taken = discard_card_callback(i);
 					vret.push_back(ret);
+					GameEvent &ret_ref = vret.back();
+					const CosmicCardType c = *i;
+					ret_ref.callback_if_action_taken = [this,&ret_ref,c] { this->game->setup_reinforcements(ret_ref); discard_card_callback(c); };
+					ret_ref.callback_if_resolved = [this,&ret_ref] () { this->game->add_reinforcements(ret_ref,5); }; //This lambda needs to capture a reference to g because we want it to have access to the object altered by setup_reinforcements, which will occur later
 				}
 			}
 		}
@@ -248,7 +281,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -259,7 +292,7 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,i);
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
@@ -272,7 +305,8 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Quash);
 				ret.callback_if_resolved = [this] () { this->game->get_deal_params().successful = false; };
-				ret.callback_if_action_taken = discard_card_callback(i);
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { this->discard_card_callback(c); };
 				vret.push_back(ret);
 			}
 		}
@@ -285,8 +319,6 @@ std::vector<GameEvent> PlayerInfo::can_respond(TurnPhase t, GameEvent g)
 	{
 		assert(0);
 	}
-
-	return vret;
 }
 
 GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
@@ -295,7 +327,7 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 	{
 		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
 		GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
-		ret.callback_if_resolved = alien->get_resolution_callback(game,color,bogus);
+		ret.callback_if_resolved = alien->get_resolution_callback(game,color,ret,bogus);
 		ret.callback_if_countered = alien->get_callback_if_countered(game,color);
 		ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
 		return ret;

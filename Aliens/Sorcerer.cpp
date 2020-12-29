@@ -14,7 +14,7 @@ Sorcerer::Sorcerer()
 	set_description("As a main player, after encounter cards are selected, but before they are revealed, you *may use* this power to switch encounter cards with your opponent so that he or she reveals your card and you reveal your opponent's card.");
 }
 
-std::function<void()> Sorcerer::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
+std::function<void()> Sorcerer::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
 	std::function<void()> ret = [g] () { g->swap_encounter_cards(); };
 	return ret;

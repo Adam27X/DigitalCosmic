@@ -39,14 +39,14 @@ bool Remora::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors
 	}
 }
 
-std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
+std::function<void()> Remora::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
 	std::function<void()> ret;
-	if(ge.event_type == GameEventType::DrawCard)
+	if(responding_to.event_type == GameEventType::DrawCard)
 	{
 		ret = [g,player] () { g->draw_cosmic_card(g->get_player(player)); };
 	}
-	else if(ge.event_type == GameEventType::RetrieveWarpShip)
+	else if(responding_to.event_type == GameEventType::RetrieveWarpShip)
 	{
 		ret = [g,player] () { if(g->player_has_ship_in_warp_from_prior_encounter(player)) { g->move_ship_from_warp_to_colony(g->get_player(player)); } };
 	}

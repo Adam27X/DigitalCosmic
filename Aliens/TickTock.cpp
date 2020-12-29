@@ -37,7 +37,7 @@ bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColo
 	}
 }
 
-std::function<void()> TickTock::get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge)
+std::function<void()> TickTock::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
 	std::function<void()> ret = [this,g] () { this->discard_token(); g->update_tick_tock_tokens(num_tokens); };
 	return ret;

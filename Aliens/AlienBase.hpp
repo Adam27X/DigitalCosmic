@@ -34,7 +34,7 @@ public:
 	//By default, Aliens can go on the stack if their Player's role and the turn phase are valid for the Alien's power (Aliens that can only respond to stack actions should override this function and return false, see Remora)
 	virtual bool check_for_game_event(const EncounterRole e, const TurnPhase t) const;
 	//Every Alien should uniquely define what happens when their power resolves
-	virtual std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player, const GameEvent ge) = 0;
+	virtual	std::function<void()> get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to) = 0;
 	//By default, do nothing if countered (certain Aliens, like Human, will actually take an action if zapped)
 	virtual std::function<void()> get_callback_if_countered(GameState *g, const PlayerColors player) { return nullptr; }
 	const std::string& get_name() const { return name; }

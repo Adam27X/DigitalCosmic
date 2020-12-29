@@ -65,29 +65,16 @@ public:
 	void dump_hand() const;
 	std::string get_hand() const;
 	bool has_encounter_cards_in_hand() const;
-	std::vector<GameEvent> can_respond(TurnPhase t, GameEvent g);
+	void can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &vret);
 	void set_game_state(GameState *g);
 	GameEvent can_use_alien_with_empty_stack(const TurnPhase t);
 	bool alien_enabled() const;
 	const std::string get_alien_desc() const;
 	bool alien_revealed() const;
-	void discard_card_callback_helper(const CosmicCardType c) const;
+	void discard_card_callback(const CosmicCardType c);
 	std::function<void()> set_invalidate_next_callback_helper() const;
 
-	template<typename T>
-	std::function<void()> discard_card_callback(T i)
-	{
-		return [this,i] () { this->discard_card_callback_helper(*i); this->hand_erase(i); };
-	}
-
-	template<typename T>
-	void add_card_zap_response(std::vector<GameEvent> &vret, T i)
-	{
-		GameEvent ret = GameEvent(color,GameEventType::CardZap);
-		ret.callback_if_resolved = set_invalidate_next_callback_helper();
-		ret.callback_if_action_taken = discard_card_callback(i);
-		vret.push_back(ret);
-	}
+	void add_card_zap_response(std::vector<GameEvent> &vret, const CosmicCardType c);
 
 	void update_client_hand() const;
 	void hand_push_back(const CosmicCardType c);

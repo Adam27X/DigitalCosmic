@@ -136,7 +136,8 @@ public:
 	void move_ship_from_warp_to_colony(PlayerInfo &p);
 	void swap_encounter_cards(); //Sorcerer Alien power
 	void swap_main_player_hands(); //Trader Alien power
-	void add_reinforcements(const PlayerColors player, const unsigned value);
+	void setup_reinforcements(GameEvent &g);
+	void add_reinforcements(const GameEvent &g, const unsigned value, bool can_choose_side=true);
 	void human_encounter_win_condition();
 	void start_game();
 	bool player_has_ship_in_warp_from_prior_encounter(const PlayerColors player) const;

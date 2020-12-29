@@ -32,12 +32,15 @@ std::string to_string(const GameEventType &g);
 class GameEvent
 {
 public:
-	GameEvent(PlayerColors c, GameEventType g) : player(c), event_type(g) { }
+	GameEvent(PlayerColors c, GameEventType g) : player(c), event_type(g), reinforcements_to_offense(false) { }
 
 	PlayerColors player;
 	GameEventType event_type;
 	std::function<void()> callback_if_resolved; //Action to perform once the event resolves
 	std::function<void()> callback_if_action_taken; //Happens regardless if the event resolves
 	std::function<void()> callback_if_countered; //Rarely needed, but one case is for the Human; if the Human is zapped then their side wins the encounter
+
+	//Fields relevant to specific events
+	bool reinforcements_to_offense; //For reinforcement cards, will the reinforcements be added to the offense or defense?
 };
 
