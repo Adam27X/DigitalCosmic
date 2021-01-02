@@ -938,7 +938,7 @@ void GameState::draw_from_destiny_deck()
 				}
 			}
 
-			//FIXME: What if the offense wants to reclaim one on their planets and that planet happens to be empty?
+			//What if the offense wants to reclaim one on their planets and that planet happens to be empty? The destiny card explicitly says "an encounter with any other player in your home system", so I guess you can't. Weird...
 			if(valid_home_system_encounters.empty())
 			{
 				announce << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
@@ -1252,6 +1252,9 @@ std::set<PlayerColors> GameState::invite_allies(const std::set<PlayerColors> &po
 	return invited;
 }
 
+//Ashwath points out that an expansion has rules that make the acceptances of alliance offers unknown until all players have chosen to avoid biases.
+//The original rule book has pretty explicit rules on turn order here so I'm sticking with those rules for now:
+//"Only after a player has allied with a side (or declined all invitations) and committed ships does the next player accept or decline an invitation"
 void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense)
 {
 	unsigned player_index = max_player_sentinel;
@@ -1268,53 +1271,55 @@ void GameState::form_alliances(std::set<PlayerColors> &invited_by_offense, std::
 		unsigned current_player_index = (i+player_index) % players.size();
 		PlayerColors current_player_color = players[current_player_index].color;
 
-		if(get_valid_colonies(current_player_color).empty())
+		if(current_player_color == assignments.get_offense() || current_player_color == assignments.get_defense() || get_valid_colonies(current_player_color).empty())
 		{
-			//The potential ally has no ships to commit to the encounter and therefore cannot be an ally
+			//The potential ally is already involved or has no ships to commit to the encounter and therefore cannot be an ally
 			continue;
 		}
 
-		if(invited_by_offense.find(current_player_color) != invited_by_offense.end())
+		bool this_player_invited_by_offense = (invited_by_offense.find(current_player_color) != invited_by_offense.end());
+		bool this_player_invited_by_defense = (invited_by_defense.find(current_player_color) != invited_by_defense.end());
+		if(!this_player_invited_by_offense && !this_player_invited_by_defense)
 		{
-			std::stringstream prompt;
-			prompt << "Would the " << to_string(current_player_color) << " like to join with the offense?\n";
-			std::vector<std::string> options;
-			options.push_back("Y");
-			options.push_back("N");
-			unsigned response = prompt_player(current_player_color,prompt.str(),options);
-
-			if(response == 0)
-			{
-				assignments.offensive_allies.insert(std::make_pair(current_player_color,0));
-				PlayerInfo &ally = get_player(current_player_color);
-				ally.current_role = EncounterRole::OffensiveAlly;
-				send_in_ships(current_player_color);
-				if(invited_by_defense.find(current_player_color) != invited_by_defense.end()) //Cannot join both offense and defense as an ally, so remove from the defensive list
-				{
-					invited_by_defense.erase(current_player_color);
-				}
-			}
+			continue;
 		}
-
-		if(invited_by_defense.find(current_player_color) != invited_by_defense.end())
+		else
 		{
 			std::stringstream prompt;
-			prompt << "Would the " << to_string(current_player_color) << " like to join with the defense?\n";
+			prompt << "Would you like to form an alliance?\n";
 			std::vector<std::string> options;
-			options.push_back("Y");
-			options.push_back("N");
+			if(this_player_invited_by_offense)
+			{
+				std::stringstream msg;
+				msg << "Form alliance with the offense (" << to_string(assignments.get_offense()) << " player)";
+				options.push_back(msg.str());
+			}
+			if(this_player_invited_by_defense)
+			{
+				std::stringstream msg;
+				msg << "Form alliance with the defense (" << to_string(assignments.get_defense()) << " player)";
+				options.push_back(msg.str());
+			}
+			options.push_back("Sit out of this encounter");
+
 			unsigned response = prompt_player(current_player_color,prompt.str(),options);
 
-			if(response == 0)
+			if(response != (options.size()-1)) //If the player chose an alliance
 			{
-				assignments.defensive_allies.insert(std::make_pair(current_player_color,0));
-				PlayerInfo &ally = get_player(current_player_color);
-				ally.current_role = EncounterRole::DefensiveAlly;
-				send_in_ships(current_player_color);
-				if(invited_by_offense.find(current_player_color) != invited_by_offense.end()) //Cannot join both offense and defense as an ally, so remove from the offensive list
+				bool allied_with_offense = (this_player_invited_by_offense && response == 0);
+				if(allied_with_offense)
 				{
-					invited_by_offense.erase(current_player_color);
+					assignments.offensive_allies.insert(std::make_pair(current_player_color,0));
+					PlayerInfo &ally = get_player(current_player_color);
+					ally.current_role = EncounterRole::OffensiveAlly;
 				}
+				else //Allied with the defense
+				{
+					assignments.defensive_allies.insert(std::make_pair(current_player_color,0));
+					PlayerInfo &ally = get_player(current_player_color);
+					ally.current_role = EncounterRole::DefensiveAlly;
+				}
+				send_in_ships(current_player_color);
 			}
 		}
 	}
