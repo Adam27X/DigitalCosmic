@@ -197,6 +197,8 @@ private:
 	void update_defense() const;
 	void update_cosmic_discard() const;
 	void update_destiny_discard() const;
+	void add_score_from_ships();
+	void broadcast_encounter_scores() const;
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

@@ -1344,6 +1344,7 @@ void GameState::setup_negotiation()
 	}
 	stop_allies();
 	//Return offensive ships to their colonies as well (does the timing ever matter here?)
+	//NOTE: For now we're not adding up scores and sending them to the GUIs like we do for normal attacks and compensation scenarios
 	PlayerInfo &offense = get_player(assignments.get_offense());
 	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
 	{
@@ -1789,6 +1790,13 @@ void GameState::resolve_negotiation()
 	}
 }
 
+void GameState::broadcast_encounter_scores() const
+{
+	std::stringstream announce;
+	announce << "[score_update] Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
+}
+
 void GameState::setup_compensation()
 {
 	//The player with the negotiate loses, but collects compensation later
@@ -1796,16 +1804,23 @@ void GameState::setup_compensation()
 	{
 		assignments.player_receiving_compensation = assignments.get_offense();
 		assignments.player_giving_compensation = assignments.get_defense();
+		assignments.defense_attack_value = static_cast<unsigned>(assignments.defensive_encounter_card); //Defense played an attack card
 	}
 	else
 	{
 		assignments.player_receiving_compensation = assignments.get_defense();
 		assignments.player_giving_compensation = assignments.get_offense();
+		assignments.offense_attack_value = static_cast<unsigned>(assignments.offensive_encounter_card); //Offense played an attack card
 	}
+
+	//Update scores just in case that matters for some odd edge case
+	add_score_from_ships();
+	broadcast_encounter_scores();
 
 	std::stringstream announce;
 	announce << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encountner, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
 	server.broadcast_message(announce.str());
+
 }
 
 void GameState::resolve_compensation()
@@ -1857,6 +1872,35 @@ void GameState::resolve_compensation()
 	}
 }
 
+void GameState::add_score_from_ships()
+{
+	std::stringstream announce;
+	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end(); i!=e; ++i)
+	{
+		if(*i == assignments.get_offense() || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
+		{
+			announce << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
+			assignments.offense_attack_value++;
+		}
+	}
+
+	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
+	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
+	{
+		if(*i == assignments.get_defense())
+		{
+			announce << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
+			assignments.defense_attack_value++;
+		}
+	}
+	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+	{
+		announce << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
+		assignments.defense_attack_value += i->second;
+	}
+	server.broadcast_message(announce.str());
+}
+
 void GameState::setup_attack()
 {
 	//Base values from encounter cards
@@ -1886,36 +1930,8 @@ void GameState::setup_attack()
 	announce << "Initial scores from encounter cards: Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
 	server.broadcast_message(announce.str());
 
-	//Add score from ships
-	announce.str("");
-	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end(); i!=e; ++i)
-	{
-		if(*i == assignments.get_offense() || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
-		{
-			announce << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
-			assignments.offense_attack_value++;
-		}
-	}
-
-	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
-	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
-	{
-		if(*i == assignments.get_defense())
-		{
-			announce << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
-			assignments.defense_attack_value++;
-		}
-	}
-	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
-	{
-		announce << "Adding " << i->second << " ship(s) from the " << to_string(i->first) << " defensive ally.\n";
-		assignments.defense_attack_value += i->second;
-	}
-	server.broadcast_message(announce.str());
-
-	announce.str("");
-	announce << "[score_update] Total score after adding ships (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
-	server.broadcast_message(announce.str());
+	add_score_from_ships();
+	broadcast_encounter_scores();
 }
 
 void GameState::offense_win_resolution()
@@ -2475,11 +2491,13 @@ void GameState::execute_turn()
 	cards_to_be_discarded.clear();
 
 	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
-	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	bool negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	bool compensating = (!negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	if(negotiating)
 	{
 		setup_negotiation();
 	}
-	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	else if(compensating)
 	{
 		setup_compensation();
 	}
@@ -2500,11 +2518,11 @@ void GameState::execute_turn()
 	{
 		resolve_human_encounter_win();
 	}
-	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	else if(negotiating)
 	{
 		resolve_negotiation();
 	}
-	else if(assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate)
+	else if(compensating)
 	{
 		resolve_compensation();
 	}
