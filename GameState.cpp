@@ -922,6 +922,11 @@ void GameState::draw_from_destiny_deck()
 			std::map< std::pair<PlayerColors,unsigned>, unsigned > valid_home_system_encounters; //Map <opponent,planet number> -> number of opponent ships on that planet
 			for(unsigned i=0; i<offense.planets.size(); i++)
 			{
+				//One of the offense's planets has no ships on it and can immediately be taken over
+				if(offense.planets.planet_size(i) == 0)
+				{
+					valid_home_system_encounters[std::make_pair(assignments.get_offense(),i)] = 0;
+				}
 				for(auto ii=offense.planets.planet_begin(i),ee=offense.planets.planet_end(i); ii!=ee; ++ii)
 				{
 					if(*ii != off)
@@ -938,7 +943,9 @@ void GameState::draw_from_destiny_deck()
 				}
 			}
 
-			//What if the offense wants to reclaim one on their planets and that planet happens to be empty? The destiny card explicitly says "an encounter with any other player in your home system", so I guess you can't. Weird...
+			//Allow the offense to instantly retake one of their empty planets
+			//What if the offense wants to reclaim one on their planets and that planet happens to be empty? From the rules:
+			//"When drawing his or her own color, if a player has a home planet with no ships on it at all (enemy or otherwise), then he or she may aim the hyperspace gate at that planet to automatically re-establish a colony there with up to four ships from other colonies. Doing so counts as a successful encounter."
 			if(valid_home_system_encounters.empty())
 			{
 				announce << "Since there are no opponents in the offense's home system the offense must draw another destiny card\n";
@@ -956,7 +963,14 @@ void GameState::draw_from_destiny_deck()
 				for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
 				{
 					std::stringstream opt;
-					opt << "Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)";
+					if(i->first.first == assignments.get_offense())
+					{
+						opt << "Immediately reestablish a colony on " << to_string(off) << " Planet " << i->first.second << " using ships from your existing colonies";
+					}
+					else
+					{
+						opt << "Have an encounter with the " << to_string(i->first.first) << " player on " << to_string(off) << " Planet " << i->first.second << " (the " << to_string(i->first.first) << " player has " << i->second << " ships on this planet.)";
+					}
 					options.push_back(opt.str());
 				}
 				options.push_back("Draw another destiny card");
@@ -973,19 +987,37 @@ void GameState::draw_from_destiny_deck()
 					//The offense has chosen to have an encounter against another player in their home system
 					std::pair<PlayerColors,unsigned> home_system_encounter;
 					option = 0;
+					bool reestablishing = false;
 					for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
 					{
 						if(option == chosen_option)
 						{
 							home_system_encounter = i->first;
+							if(i->first.first == assignments.get_offense())
+							{
+								reestablishing = true;
+							}
+							break;
 						}
 						option++;
 					}
-					assignments.set_defense(home_system_encounter.first);
 					assignments.planet_location = off;
 					assignments.planet_id = home_system_encounter.second;
-					PlayerInfo &def = get_player(assignments.get_defense());
-					def.current_role = EncounterRole::Defense;
+
+					if(reestablishing)
+					{
+						//Get valid colonies and send in ships
+						//Then skip the rest of the turn and mark this as a successful encounter
+						send_in_ships(assignments.get_offense(),true,home_system_encounter);
+						assignments.successful_encounter = true;
+						assignments.reestablished_colony = true;
+					}
+					else
+					{
+						assignments.set_defense(home_system_encounter.first);
+						PlayerInfo &def = get_player(assignments.get_defense());
+						def.current_role = EncounterRole::Defense;
+					}
 				}
 			}
 		}
@@ -1189,8 +1221,14 @@ void GameState::choose_opponent_planet()
 	server.broadcast_message(announce.str());
 }
 
-void GameState::send_in_ships(const PlayerColors player)
+//The latter two arguments here are only used for when the offense can immediately reestablish a colony on one of their own planets
+void GameState::send_in_ships(const PlayerColors player, bool custom_destination, const std::pair<PlayerColors,unsigned> dest_planet)
 {
+	if(custom_destination)
+	{
+		assert(player == assignments.get_offense() && "send_in_ships with custom_destination only expected to be used for the offense!");
+		assert(dest_planet.first == player && "The offense can only reestablish a colony on one of its own planets");
+	}
 	//List the player's valid colonies and have them choose a colony or none until they've chosen none or they've chosen four
 	unsigned launched_ships = 0;
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies;
@@ -1212,7 +1250,16 @@ void GameState::send_in_ships(const PlayerColors player)
 				{
 					assignments.offensive_allies[player]++; //Keep track of the number of ships sent in by each ally
 				}
-				hyperspace_gate.push_back(player); //Add the ship to the hyperspace gate
+				if(custom_destination)
+				{
+					PlayerInfo &off = get_player(dest_planet.first);
+					const unsigned planet_id = dest_planet.second;
+					off.planets.planet_push_back(planet_id,dest_planet.first);
+				}
+				else
+				{
+					hyperspace_gate.push_back(player); //Add the ship to the hyperspace gate
+				}
 			}
 			//Remove the ship from the chosen colony
 			PlayerInfo &host = get_player(chosen_colony.first);
@@ -2360,6 +2407,13 @@ void GameState::execute_turn()
 
 	check_for_game_events();
 
+	//The offense reestablished a colony so there's nothing else to do for this encounter
+	if(assignments.reestablished_colony)
+	{
+		end_of_turn_clean_up();
+		return;
+	}
+
 	//Launch Phase
 	update_turn_phase(TurnPhase::Launch);
 
@@ -2536,6 +2590,11 @@ void GameState::execute_turn()
 		resolve_attack();
 	}
 
+	end_of_turn_clean_up();
+}
+
+void GameState::end_of_turn_clean_up()
+{
 	//Clean ups
 	update_player_scores();
 

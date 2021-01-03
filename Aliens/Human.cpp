@@ -16,7 +16,7 @@ Human::Human()
 
 std::function<void()> Human::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
-	std::function<void()> ret = [g,player,&this_event] () { g->add_reinforcements(this_event,4,false); };
+	std::function<void()> ret = [g,player,this_event] () { g->add_reinforcements(this_event,4,false); };
 	return ret;
 }
 

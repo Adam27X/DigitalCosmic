@@ -40,6 +40,7 @@ public:
 	bool human_wins_encounter;
 	bool stop_compensation_and_rewards;
 	bool successful_encounter;
+	bool reestablished_colony;
 
 	void set_offense(const PlayerColors c)
 	{
@@ -72,6 +73,7 @@ public:
 		human_wins_encounter = false;
 		stop_compensation_and_rewards = false;
 		successful_encounter = false;
+		reestablished_colony = false;
 	}
 
 private:
@@ -172,7 +174,7 @@ private:
 	void stop_allies();
 	const std::pair<PlayerColors,unsigned> prompt_valid_colonies(const PlayerColors color, const std::vector< std::pair<PlayerColors,unsigned> > &valid_colonies, bool allow_none = false);
 	void choose_opponent_planet();
-	void send_in_ships(const PlayerColors player);
+	void send_in_ships(const PlayerColors player, bool custom_destination = false, const std::pair<PlayerColors,unsigned> dest_planet = std::make_pair(PlayerColors::Invalid,0));
 	std::set<PlayerColors> invite_allies(const std::set<PlayerColors> &potential_allies, bool offense);
 	void form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense);
 	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
@@ -199,6 +201,7 @@ private:
 	void update_destiny_discard() const;
 	void add_score_from_ships();
 	void broadcast_encounter_scores() const;
+	void end_of_turn_clean_up();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
