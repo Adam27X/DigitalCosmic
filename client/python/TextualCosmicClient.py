@@ -854,6 +854,7 @@ class GuiPart(object):
                         self.cosmic_discard_cards.append(card)
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.cosmic_discard_cards_wrapper.set(self.cosmic_discard_cards)
+                    self.cosmic_discard_disp.see('end')
                 if msg.find('[destiny_discard_update]') != -1: #Cards have been removed or added to the destiny discard pile
                     tag_found = True
                     lbrace = msg.find('{')
@@ -864,6 +865,7 @@ class GuiPart(object):
                         self.destiny_discard_cards.append(card)
                     #Anytime we change the list, we need to update the StringVar wrapper
                     self.destiny_discard_cards_wrapper.set(self.destiny_discard_cards)
+                    self.destiny_discard_disp.see('end')
                 if msg.find('[player_hand_size]') != -1: #Update the number of cards in the given player's hand
                     tag_found = True
                     player_hand_match = re.search('\[player_hand_size\] (.*): (.*)',msg)
