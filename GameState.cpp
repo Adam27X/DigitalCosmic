@@ -958,8 +958,8 @@ void GameState::draw_from_destiny_deck()
 				std::string prompt("The offense may either have an encounter with a player in his or her own system or draw another destiny card\n");
 				std::vector<std::string> options;
 				unsigned option = 0;
-				//TODO: It's probably better to let the offense choose between some sort of home system encounter and redrawing now and then letting them choose the specific home system encounter during launch should they go that route
-				//	In practice I'm not sure that this timing will ever matter
+				//FIXME: Reorganize this logic so that if the offense chooses to have a home system encounter they choose which one during the Launch phase
+				//	 Note that reestablishing a colony on an empty planet as the offense (if possible and chosen) should occur during destiny so there's no change needed there
 				for(auto i=valid_home_system_encounters.begin(),e=valid_home_system_encounters.end();i!=e;++i)
 				{
 					std::stringstream opt;

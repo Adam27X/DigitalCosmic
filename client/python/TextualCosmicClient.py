@@ -298,6 +298,12 @@ class GuiPart(object):
         self.send_message_to_server(msg)
         self.deal_acceptance_window.withdraw()
         self.deal_window.withdraw() #Remove the proposal window too now that a deal has been made
+        for option in self.offense_to_defense_colonies:
+            option.grid_forget()
+        self.offense_to_defense_colonies = []
+        for option in self.defense_to_offense_colonies:
+            option.grid_forget()
+        self.defense_to_offense_colonies = []
 
     def reject_deal(self):
         msg = '[needs_response]\n'
@@ -619,6 +625,13 @@ class GuiPart(object):
                         #Our deal has been accepted, send an ack to the server since it's still looping on a response from us
                         self.send_message_to_server('[ack]')
                         self.deal_acceptance_window.withdraw() #If we were deciding on a different offer we can get rid of that window now; the deal_window should already be removed from the deal we proposed that has now been accepted
+                        #Now that our deal has been accepted, we can reset the original window
+                        for option in self.offense_to_defense_colonies:
+                            option.grid_forget()
+                        self.offense_to_defense_colonies = []
+                        for option in self.defense_to_offense_colonies:
+                            option.grid_forget()
+                        self.defense_to_offense_colonies = []
                     else:
                         option_num = None
                         prompt = ''
@@ -822,6 +835,7 @@ class GuiPart(object):
                     self.player_aliens[player].append(alien_desc)
                     self.player_aliens[player][1].bind('<Enter>', lambda e: self.update_revealed_alien_info(self.player_aliens[player][2]))
                 if msg.find('[alien_aux_update]') != -1: #Some other alien information was received from the server
+                    tag_found = True
                     tick_tock_aux_match = re.search('\[alien_aux_update\]\n(.*) tokens remaining: (.*)',msg)
                     assert tick_tock_aux_match, "Failed to parse alien aux update!"
                     for alien, alien_info in self.player_aliens.items():
