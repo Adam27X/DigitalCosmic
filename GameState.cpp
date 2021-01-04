@@ -2573,6 +2573,10 @@ void GameState::execute_turn()
 	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
 	check_for_game_events();
 
+	//Need to recompute these because if someone plays Emotion Control then the encounter cards are overwritten
+	//FIXME: Instead we should have a negotiating variable within assignments
+	negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	compensating = (!negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
 	if(assignments.human_wins_encounter)
 	{
 		resolve_human_encounter_win();
