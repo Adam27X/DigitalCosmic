@@ -1376,6 +1376,7 @@ void GameState::force_negotiation()
 {
 	assignments.offensive_encounter_card = CosmicCardType::Negotiate;
 	assignments.defensive_encounter_card = CosmicCardType::Negotiate;
+	assignments.negotiating = true;
 
 	//If the human is zapped and then someone tries to play emotion control then there shouldn't actually be a deal
 	if(!assignments.human_wins_encounter)
@@ -2550,9 +2551,9 @@ void GameState::execute_turn()
 	cards_to_be_discarded.clear();
 
 	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
-	bool negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
-	bool compensating = (!negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
-	if(negotiating)
+	assignments.negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	bool compensating = (!assignments.negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	if(assignments.negotiating)
 	{
 		setup_negotiation();
 	}
@@ -2573,15 +2574,11 @@ void GameState::execute_turn()
 	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
 	check_for_game_events();
 
-	//Need to recompute these because if someone plays Emotion Control then the encounter cards are overwritten
-	//FIXME: Instead we should have a negotiating variable within assignments
-	negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
-	compensating = (!negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
 	if(assignments.human_wins_encounter)
 	{
 		resolve_human_encounter_win();
 	}
-	else if(negotiating)
+	else if(assignments.negotiating)
 	{
 		resolve_negotiation();
 	}

@@ -41,6 +41,7 @@ public:
 	bool stop_compensation_and_rewards;
 	bool successful_encounter;
 	bool reestablished_colony;
+	bool negotiating;
 
 	void set_offense(const PlayerColors c)
 	{
@@ -74,6 +75,7 @@ public:
 		stop_compensation_and_rewards = false;
 		successful_encounter = false;
 		reestablished_colony = false;
+		negotiating = false;
 	}
 
 private:
