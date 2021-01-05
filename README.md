@@ -1,5 +1,5 @@
 # TextualCosmic
-A text-based version of the game Cosmic Encounter.
+A digitial version of the game Cosmic Encounter.
 
 ## Philosophy
 
@@ -9,41 +9,13 @@ Secondly, I should note that I am aware that Cosmic Encounter exists on Tabletop
 
 Another distinction is that decisions in TextualCosmic are *binding*; the game will give you every opportunity to card zap your own card and if you perform that action despite not intending to, you can't "take it back." One could say this design philosophy promotes fairness at the expense of more explicit gameplay. For those of you who have played on Magic: The Gathering Arena, TextualCosmic aspires to provide a similar experience (i.e. MTG the trading card game is to MTG Arena as Cosmic Encounter is to TextualCosmic).
 
-I call this version of the game "TextualCosmic" because, at the moment, the game is entirely text based and doesn't provide any sort of special GUI. That could change in the future, but I consider supporting additional game features to be a higher priority.
+This game is called "TextualCosmic" at the moment because it initially was entirely text based and didn't provide any sort of GUI. That turned out to be a bad idea since players routinely need to reference parts of the game state (how many ships are on a given planet, what does the warp look like, which player has which alien, etc.). The game now has a GUI that certainly isn't pretty, but is good enough to contain this information. At the moment completing the game logic and supporting additional aliens and game variants are considered a higher priority to making the game look prettier. That said, if you do come across a problem with the GUI I would certainly like to be made aware of it!
 
 ## Building the project from source
 
-TextualCosmic uses CMake, so building from source should follow a similar process regardless of OS. CMake projects are at their cleanest with an out of tree build, so that's how the following instructions will proceed. Assume the current working directory is the root directory of the repository.
+Textual Cosmic consists of a server program that hosts the game and contains important game information and a client program that is used by all of the players in the game. Running the client is easy; just run client/python/TextualCosmicClient.py! I've used Python 3.8.6 for my testing but any recent version of Python should suffice.
 
-So far CMake is the only significant dependency of this project. The allure of a proper GUI may change the project dependencies in the future.
-
-### Windows (via Powershell)
-
-Only the client build is currently supported natively on windows. Both the client and server can be built on Windows using Cygwin, however. In that case you can simply follow the Unix instructions below.
-
-On Windows there are two build options: MinGW and Visual Studio.
-
-### 1. MinGW
-
-Be sure to add CMake and MinGW to your path in PowerShell:
-
-`$ $env:Path += ";C:\Program Files\CMake\bin"`
-
-`$ $env:Path += ";C:\MinGW\bin"`
-
-`$ mkdir build && cd build`
-
-`$ cmake .. -G "MinGW Makefiles"`
-
-`$ mingw32-make client`
-
-### 2. Visual Studio
-
-This approach is very lightly tested so it's recommended users either use the MinGW approach above or obtain the client executable directly if possible. Still, the following steps should work:
-
-Open the CMake GUI on Windows. Fill in the "Where is the source code:" text box with a path to the root of a checkout of the repository. Create a directory called 'build' under that directory and fill in the "Where to build the binaries:" with a path to this newly created directory.
-
-Click configure, then assuming that succeeds click generate. Assuming the generation succeeds you can open the project in Visual Studio and then find 'client' in the Solution Explorer. Right-click client and choose Build to actually compile the code. Be sure to build it in "Release" mode so that the binary can be shared.
+TextualCosmic uses CMake to build the server program that hosts games, so building from source should follow a similar process regardless of your Operating System. CMake projects are at their cleanest with an out of tree build, so that's how the following instructions will proceed. Assume the current working directory is the root directory of the repository. The instructions below are for a Unix system but other OS's will follow a similar pattern.
 
 ### Unix
 
@@ -53,6 +25,3 @@ Click configure, then assuming that succeeds click generate. Assuming the genera
 
 `$ make`
 
-## Running the project
-
-To host a game server you can use `./textualcosmic` or to join an existing server you can use `./client/client`. For Visual Studio source builds you should be able to do this step from a PowerShell. Eventually I'll add support for installers for platforms of interest.
