@@ -197,7 +197,8 @@ class GuiPart(object):
         self.defensive_ally_canvas.grid(column=2,row=1)
 
         self.player_aliens = {} #Dict that maps player color to a tuple of alien information (stringvar,label,desc)
-        self.player_hand_size_labels = {} #Dict that maps player to color to labels displaying that player's hand size
+        self.player_hand_size_labels = {} #Dict that maps player color to labels displaying that player's hand size
+        self.player_score_labels = {} #Dict that maps player color to labels displaying the number of foreign colonies that player has
 
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
@@ -730,7 +731,8 @@ class GuiPart(object):
                         for i in range(len(players)):
                             for j in range(num_planets): #Create a row for each planet
                                 self.planet_canvases.append(Canvas(self.game_board_frame, width=self.warp_width, height=self.warp_height, background="black")) #TODO: What background to use here? Perhaps an image of stars like space? #TODO: Adjust the width of the canvas to the number of colonies on each planet? Hmm
-                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=4+(2*j)+1)
+                                self.planet_canvases[(num_planets*i)+j].grid(column=i,row=6+(2*j)+1)
+                        ttk.Separator(self.game_board_frame, orient='horizontal').grid(column=0, columnspan=self.num_players, row=5, sticky='ew', pady=(0,10)) #Pad only the bottom
                     else: #Reset the canvas
                         #Reset the canvases
                         for i in range(len(players)):
@@ -746,7 +748,7 @@ class GuiPart(object):
                                 player = players[i].split(' ')[0]
                                 labeltext = player + ' Planet ' + str(j) + ':'
                                 self.planet_labels.append(Label(self.game_board_frame,text=labeltext))
-                                self.planet_labels[-1].grid(column=i,row=4+2*j)
+                                self.planet_labels[-1].grid(column=i,row=6+2*j)
                                 #Add a label for the player's Alien
                                 if j == 0:
                                     self.player_aliens[player] = []
@@ -874,7 +876,7 @@ class GuiPart(object):
                     if player not in self.player_hand_size_labels:
                         self.player_hand_size_labels[player] = Label(self.game_board_frame, text='Hand size: ' + player_hand_match.group(2))
                         #NOTE: This column choice is exploiting how the player hands are dealt in order; ideally we should probably have a map from color to indices for better organization
-                        self.player_hand_size_labels[player].grid(column=len(self.player_hand_size_labels)-1,row=3)
+                        self.player_hand_size_labels[player].grid(column=len(self.player_hand_size_labels)-1,row=4)
                     else:
                         self.player_hand_size_labels[player].configure(text='Hand size: ' + player_hand_match.group(2))
                 if msg.find('[targeted_planet]') != -1:
@@ -901,6 +903,20 @@ class GuiPart(object):
                     self.current_offense_score_label.grid(column=0, row=4)
                     self.current_defense_score.set('Current defense score: ' + defense_score)
                     self.current_defense_score_label.grid(column=0, row=5)
+                if msg.find('[player_score_update]') != -1:
+                    tag_found = True
+                    for line in msg.splitlines():
+                        if line.find('[player_score_update]') != -1:
+                            continue
+                        player_score_match = re.search('(.*): (.*)',line)
+                        assert player_score_match, "Failed to parse player score update message! Offending line: " + line
+                        player = player_score_match.group(1)
+                        if player not in self.player_score_labels:
+                            self.player_score_labels[player] = Label(self.game_board_frame, text='Number of foreign colonies: ' + player_score_match.group(2))
+                            #NOTE: This column choice is exploiting how the player hands are dealt in order; ideally we should probably have a map from color to indices for better organization
+                            self.player_score_labels[player].grid(column=len(self.player_score_labels)-1,row=3)
+                        else:
+                            self.player_score_labels[player].configure(text='Number of foreign colonies: ' + player_score_match.group(2))
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

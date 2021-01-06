@@ -832,6 +832,14 @@ void GameState::update_player_scores()
 		}
 	}
 
+        std::stringstream msg;
+        msg << "[player_score_update]\n";
+        for(auto i=players.begin(),e=players.end();i!=e;++i)
+        {
+                msg << to_string(i->color) << ": " << i->score << "\n";
+        }
+	server.broadcast_message(msg.str());
+
 	//Check to see if anyone has won the game
 	bool game_over = false;
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
