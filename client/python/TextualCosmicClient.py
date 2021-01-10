@@ -91,13 +91,15 @@ class GuiPart(object):
         self.alien_label = Label(self.player_info_frame, textvariable=self.alien_name)
         self.alien_label.bind('<Enter>', lambda e: self.update_alien_info())
         #TODO: Could add offensive/defensive allies here, but we already have the hyperspace gate and defensive ally displays, hmm
-        self.offense_color = StringVar()
-        self.offense_color_label = Label(self.player_info_frame, textvariable=self.offense_color)
+        self.offense_color = '' #To be used elsewhere if needed
+        self.offense_color_var = StringVar()
+        self.offense_color_label = Label(self.player_info_frame, textvariable=self.offense_color_var)
         self.offense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         self.offense_color_label.grid(column=0,row=2)
         self.offense_color_canvas.grid(column=1,row=2)
-        self.defense_color = StringVar()
-        self.defense_color_label = Label(self.player_info_frame, textvariable=self.defense_color)
+        self.defense_color = '' #To be used elsewhere if needed
+        self.defense_color_var = StringVar()
+        self.defense_color_label = Label(self.player_info_frame, textvariable=self.defense_color_var)
         self.defense_color_canvas = Canvas(self.player_info_frame, width=20, height=20)
         self.defense_color_label.grid(column=0,row=3)
         self.defense_color_canvas.grid(column=1,row=3)
@@ -199,6 +201,7 @@ class GuiPart(object):
         self.player_aliens = {} #Dict that maps player color to a tuple of alien information (stringvar,label,desc)
         self.player_hand_size_labels = {} #Dict that maps player color to labels displaying that player's hand size
         self.player_score_labels = {} #Dict that maps player color to labels displaying the number of foreign colonies that player has
+        self.player_hand_sizes = {} #Dict that maps player color to the number of cards in that player's hand
 
         #Treat player planets and the warp as a similar entity (both are essentially containers for ships)
         self.planet_canvases = []
@@ -256,8 +259,33 @@ class GuiPart(object):
         self.defense_to_offense_colonies = [] #List of colony options
         self.defense_to_offense_frame.grid(row=0, column=1)
 
+        #TODO: Deals involving cards: Support cards chosen by the giving player, then support requesting specific cards?
+        self.offense_to_defense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
+        self.offense_cards_label = ttk.Label(self.offense_to_defense_cards_frame, text='Number of cards for the offense to give to the defense (at random): ')
+        self.offense_cards_label.grid(row=0, column=0)
+        self.offense_to_defense_num_random_cards = StringVar()
+        self.offense_to_defense_num_random_cards.set('0')
+        def check_num_off_cards(newval):
+            return self.check_num_cards(True,newval)
+        check_num_off_cards_wrapper = (self.deal_window.register(check_num_off_cards), '%P')
+        self.offense_cards_entry = ttk.Entry(self.offense_to_defense_cards_frame, textvariable=self.offense_to_defense_num_random_cards, validate='key', validatecommand=check_num_off_cards_wrapper)
+        self.offense_cards_entry.grid(row=0,column=1)
+        self.offense_to_defense_cards_frame.grid(row=1, column=0)
+
+        self.defense_to_offense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
+        self.defense_cards_label = ttk.Label(self.defense_to_offense_cards_frame, text='Number of cards for the defense to give to the offense (at random): ')
+        self.defense_cards_label.grid(row=0, column=0)
+        self.defense_to_offense_num_random_cards = StringVar()
+        self.defense_to_offense_num_random_cards.set('0')
+        def check_num_def_cards(newval):
+            return self.check_num_cards(False,newval)
+        check_num_def_cards_wrapper = (self.deal_window.register(check_num_def_cards), '%P')
+        self.defense_cards_entry = ttk.Entry(self.defense_to_offense_cards_frame, textvariable=self.defense_to_offense_num_random_cards, validate='key', validatecommand=check_num_def_cards_wrapper)
+        self.defense_cards_entry.grid(row=0,column=1)
+        self.defense_to_offense_cards_frame.grid(row=1, column=1)
+
         self.deal_confirmation_button = ttk.Button(self.deal_window, text="Propose deal", command=self.propose_deal)
-        self.deal_confirmation_button.grid(row=1,column=0,columnspan=2)
+        self.deal_confirmation_button.grid(row=2,column=0,columnspan=2)
 
         #Another window for accepting another player's proposed deal
         self.deal_acceptance_window = Toplevel(self.master)
@@ -280,15 +308,33 @@ class GuiPart(object):
         self.master.state('normal')
         self.master.title("Textual Cosmic")
 
+    def check_num_cards(self, offense_to_defense, new_value):
+        #Ensure the new value is a number
+        if len(new_value) == 0: #Allow the user to clear the field; the button press will deny the data in this case
+            return True
+        num_match = re.match('^[0-9]*$',new_value)
+        if not num_match:
+            return False
+        num = int(new_value)
+        if offense_to_defense:
+            max_cards = self.player_hand_sizes[self.offense_color]
+        else:
+            max_cards = self.player_hand_sizes[self.defense_color]
+        if num > max_cards:
+            return False
+        return True
+
     def propose_deal(self):
-        if len(self.offense_to_defense_colony.get()) == 0  or len(self.defense_to_offense_colony.get()) == 0: #The user hasn't chosen an option on both sides yet
+        if len(self.offense_to_defense_colony.get()) == 0  or len(self.defense_to_offense_colony.get()) == 0 or len(self.offense_to_defense_num_random_cards.get()) == 0 or len(self.defense_to_offense_num_random_cards.get()) == 0: #The user hasn't chosen an option everywhere yet
             return
-        if self.defense_to_offense_colony.get() == 'None' and self.offense_to_defense_colony.get() == 'None': #The deal must have some sort of exchange
+        if self.defense_to_offense_colony.get() == 'None' and self.offense_to_defense_colony.get() == 'None' and self.offense_to_defense_num_random_cards.get() == '0' and self.defense_to_offense_num_random_cards.get() == '0': #The deal must have some sort of exchange
             return
         msg = '[needs_response]\n'
         msg += '[propose_deal]\n'
         msg += 'Offense receives colony: ' + self.defense_to_offense_colony.get() + '\n'
         msg += 'Defense receives colony: ' + self.offense_to_defense_colony.get() + '\n'
+        msg += 'Number of cards for the offense to receive at random from the defense: ' + self.defense_to_offense_num_random_cards.get() + '\n'
+        msg += 'Number of cards for the defense to receive at random from the offense: ' + self.offense_to_defense_num_random_cards.get() + '\n'
         self.send_message_to_server(msg)
         self.deal_window.withdraw()
 
@@ -305,6 +351,8 @@ class GuiPart(object):
         for option in self.defense_to_offense_colonies:
             option.grid_forget()
         self.defense_to_offense_colonies = []
+        self.offense_to_defense_num_random_cards.set('0')
+        self.defense_to_offense_num_random_cards.set('0')
 
     def reject_deal(self):
         msg = '[needs_response]\n'
@@ -610,13 +658,21 @@ class GuiPart(object):
                     elif msg.find('[propose_deal]') != -1:
                         offense_receives_match = re.search('Offense receives colony: (.*)\n', msg)
                         defense_receives_match = re.search('Defense receives colony: (.*)\n', msg)
+                        offense_receives_cards_match = re.search('Number of cards for the offense to receive at random from the defense: (.*)\n', msg)
+                        defense_receives_cards_match = re.search('Number of cards for the defense to receive at random from the offense: (.*)\n', msg)
                         assert offense_receives_match, "Error parsing propsed deal"
                         assert defense_receives_match, "Error parsing propsed deal"
+                        assert offense_receives_cards_match, "Error parsing proposed deal"
+                        assert defense_receives_cards_match, "Error parsing proposed deal"
                         terms = ''
                         if offense_receives_match.group(1) != 'None':
                             terms += 'The offense will establish a colony on ' + offense_receives_match.group(1) + '.\n'
                         if defense_receives_match.group(1) != 'None':
                             terms += 'The defense will establish a colony on ' + defense_receives_match.group(1) + '.\n'
+                        if offense_receives_cards_match.group(1) != '0':
+                            terms += 'The offense will receive ' + offense_receives_cards_match.group(1) + ' card(s) from the defense at random.\n'
+                        if defense_receives_cards_match.group(1) != '0':
+                            terms += 'The defense will receive ' + defense_receives_cards_match.group(1) + ' card(s) from the offense at random.\n'
                         self.deal_terms.set(terms)
                         self.deal_acceptance_window.state('normal') #Display the window
                     elif msg.find('[reject_deal]') != -1:
@@ -633,6 +689,8 @@ class GuiPart(object):
                         for option in self.defense_to_offense_colonies:
                             option.grid_forget()
                         self.defense_to_offense_colonies = []
+                        self.offense_to_defense_num_random_cards.set('0')
+                        self.defense_to_offense_num_random_cards.set('0')
                     else:
                         option_num = None
                         prompt = ''
@@ -804,7 +862,8 @@ class GuiPart(object):
                     tag_found = True
                     offense_color_match = re.search('\[offense_update\] (.*)',msg)
                     if offense_color_match:
-                        self.offense_color.set("The " + offense_color_match.group(1) + " player is on the offense")
+                        self.offense_color = offense_color_match.group(1)
+                        self.offense_color_var.set("The " + offense_color_match.group(1) + " player is on the offense")
                         self.offense_color_canvas.configure(bg=offense_color_match.group(1))
                     else:
                         raise Exception("Failed to match offense update regex")
@@ -812,7 +871,8 @@ class GuiPart(object):
                     tag_found = True
                     defense_color_match = re.search('\[defense_update\] (.*)',msg)
                     if defense_color_match:
-                        self.defense_color.set("The " + defense_color_match.group(1) + " player is on the defense")
+                        self.defense_color = defense_color_match.group(1)
+                        self.defense_color_var.set("The " + defense_color_match.group(1) + " player is on the defense")
                         self.defense_color_canvas.configure(bg=defense_color_match.group(1))
                     else:
                         raise Exception("Failed to match defense update regex")
@@ -879,6 +939,7 @@ class GuiPart(object):
                         self.player_hand_size_labels[player].grid(column=len(self.player_hand_size_labels)-1,row=4)
                     else:
                         self.player_hand_size_labels[player].configure(text='Hand size: ' + player_hand_match.group(2))
+                    self.player_hand_sizes[player] = int(player_hand_match.group(2))
                 if msg.find('[targeted_planet]') != -1:
                     tag_found = True
                     target_planet_match = re.search('player on (.*) Planet (.*)',msg)

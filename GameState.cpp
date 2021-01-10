@@ -1476,8 +1476,14 @@ void GameState::setup_negotiation()
 
 	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_offense;
 	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_defense;
+	unsigned offense_proposed_cards_to_offense = 0;
+	unsigned offense_proposed_cards_to_defense = 0;
+
 	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_offense;
 	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_defense;
+	unsigned defense_proposed_cards_to_offense = 0;
+	unsigned defense_proposed_cards_to_defense = 0;
+
 	while(1)
 	{
 		if(!offense_done && offense_proposal.wait_for(span) == std::future_status::ready)
@@ -1526,6 +1532,22 @@ void GameState::setup_negotiation()
 					offense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
 				}
 
+				const std::string cards_to_offense("Number of cards for the offense to receive at random from the defense: ");
+				auto cards_to_offense_loc = offense_msg.find(cards_to_offense);
+				assert(cards_to_offense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				auto cards_to_offense_endline = offense_msg.find("\n", cards_to_offense_loc);
+				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
+				const std::string cards_to_offense_num(offense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),offense_msg.begin()+cards_to_offense_endline);
+				offense_proposed_cards_to_offense = std::stoi(cards_to_offense_num);
+
+				const std::string cards_to_defense("Number of cards for the defense to receive at random from the offense: ");
+				auto cards_to_defense_loc = offense_msg.find(cards_to_defense);
+				assert(cards_to_defense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				auto cards_to_defense_endline = offense_msg.find("\n", cards_to_defense_loc);
+				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
+				const std::string cards_to_defense_num(offense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),offense_msg.begin()+cards_to_defense_endline);
+				offense_proposed_cards_to_defense = std::stoi(cards_to_defense_num);
+
 				server.send_message_to_client(assignments.get_defense(),offense_msg);
 				offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense()); //Wait for the next message
 			}
@@ -1539,10 +1561,10 @@ void GameState::setup_negotiation()
 			{
 				std::cout << "The offense has accepted a deal from the defense\n";
 				deal_params.successful = true;
-				deal_params.num_cards_to_offense = 0;
-				deal_params.cards_to_offense_chosen_randomly = false;
-				deal_params.num_cards_to_defense = 0;
-				deal_params.cards_to_defense_chosen_randomly = false;
+				deal_params.num_cards_to_offense = defense_proposed_cards_to_offense;
+				deal_params.cards_to_offense_chosen_randomly = true;
+				deal_params.num_cards_to_defense = defense_proposed_cards_to_defense;
+				deal_params.cards_to_defense_chosen_randomly = true;
 
 				if(offense_msg.find("offense will establish a colony") != std::string::npos)
 				{
@@ -1625,6 +1647,22 @@ void GameState::setup_negotiation()
 					defense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
 				}
 
+				const std::string cards_to_offense("Number of cards for the offense to receive at random from the defense: ");
+				auto cards_to_offense_loc = defense_msg.find(cards_to_offense);
+				assert(cards_to_offense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				auto cards_to_offense_endline = defense_msg.find("\n", cards_to_offense_loc);
+				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
+				const std::string cards_to_offense_num(defense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),defense_msg.begin()+cards_to_offense_endline);
+				defense_proposed_cards_to_offense = std::stoi(cards_to_offense_num);
+
+				const std::string cards_to_defense("Number of cards for the defense to receive at random from the offense: ");
+				auto cards_to_defense_loc = defense_msg.find(cards_to_defense);
+				assert(cards_to_defense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				auto cards_to_defense_endline = defense_msg.find("\n", cards_to_defense_loc);
+				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
+				const std::string cards_to_defense_num(defense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),defense_msg.begin()+cards_to_defense_endline);
+				defense_proposed_cards_to_defense = std::stoi(cards_to_defense_num);
+
 				server.send_message_to_client(assignments.get_offense(),defense_msg);
 				defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense()); //Wait for the next message
 			}
@@ -1638,10 +1676,10 @@ void GameState::setup_negotiation()
 			{
 				std::cout << "The defense has accepted a deal from the offense\n";
 				deal_params.successful = true;
-				deal_params.num_cards_to_offense = 0;
-				deal_params.cards_to_offense_chosen_randomly = false;
-				deal_params.num_cards_to_defense = 0;
-				deal_params.cards_to_defense_chosen_randomly = false;
+				deal_params.num_cards_to_offense = offense_proposed_cards_to_offense;
+				deal_params.cards_to_offense_chosen_randomly = true;
+				deal_params.num_cards_to_defense = offense_proposed_cards_to_defense;
+				deal_params.cards_to_defense_chosen_randomly = true;
 
 				if(defense_msg.find("offense will establish a colony") != std::string::npos)
 				{
