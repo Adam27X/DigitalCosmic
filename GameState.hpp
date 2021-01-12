@@ -170,7 +170,7 @@ private:
 	void check_for_game_events();
 	void check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase);
 	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color) const;
-	void cast_plague(const PlayerColors casting_player);
+	void cast_plague(GameEvent &g);
 	void cast_force_field(const PlayerColors casting_player);
 	void plague_player();
 	void stop_allies();

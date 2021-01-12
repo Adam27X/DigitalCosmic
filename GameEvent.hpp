@@ -39,6 +39,7 @@ public:
 	std::function<void()> callback_if_resolved; //Action to perform once the event resolves
 	std::function<void()> callback_if_action_taken; //Happens regardless if the event resolves
 	std::function<void()> callback_if_countered; //Rarely needed, but one case is for the Human; if the Human is zapped then their side wins the encounter
+	std::string aux; //Any auxiliary information that goes with this event; Example: the player targeted by a plague
 
 	//Fields relevant to specific events
 	bool reinforcements_to_offense; //For reinforcement cards, will the reinforcements be added to the offense or defense?

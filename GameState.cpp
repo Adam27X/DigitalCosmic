@@ -415,8 +415,9 @@ void GameState::free_all_ships_from_warp()
 	}
 }
 
-void GameState::cast_plague(const PlayerColors casting_player)
+void GameState::cast_plague(GameEvent &g)
 {
+	const PlayerColors &casting_player = g.player;
 	std::vector<std::string> options;
 	for(unsigned i=0; i<players.size(); i++)
 	{
@@ -428,6 +429,10 @@ void GameState::cast_plague(const PlayerColors casting_player)
 
 	assert(player_to_be_plagued == max_player_sentinel);
 	player_to_be_plagued = chosen_option;
+
+	std::stringstream aux_msg;
+	aux_msg << "(Targeting the " << to_string(players[player_to_be_plagued].color) << " player)";
+	g.aux = aux_msg.str();
 }
 
 void GameState::cast_force_field(const PlayerColors casting_player)
@@ -869,7 +874,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 
 		case CosmicCardType::Plague:
 			//Choose which player to plague
-			g.callback_if_action_taken = [this,g] () { this->cast_plague(g.player); };
+			g.callback_if_action_taken = [this,&g] () { this->cast_plague(g); };
 			//Plague them
 			g.callback_if_resolved = [this] () { this->plague_player(); };
 		break;
@@ -3046,7 +3051,12 @@ void GameState::dump_current_stack() const
 	{
 		GameEvent g = copy_stack.top();
 		unsigned depth = copy_stack.size()-1;
-		announce << "{" << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type) << "}\n";
+		announce << "{" << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type);
+		if(!g.aux.empty())
+		{
+			announce << " " << g.aux;
+		}
+		announce << "}\n";
 		copy_stack.pop();
 	}
 	server.broadcast_message(announce.str());
