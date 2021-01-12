@@ -261,7 +261,7 @@ class GuiPart(object):
 
         #TODO: Deals involving cards: Support cards chosen by the giving player, then support requesting specific cards?
         self.offense_to_defense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
-        self.offense_cards_label = ttk.Label(self.offense_to_defense_cards_frame, text='Number of cards for the offense to give to the defense (at random): ')
+        self.offense_cards_label = ttk.Label(self.offense_to_defense_cards_frame, text='Number of cards for the offense to give to the defense: ')
         self.offense_cards_label.grid(row=0, column=0)
         self.offense_to_defense_num_random_cards = StringVar()
         self.offense_to_defense_num_random_cards.set('0')
@@ -270,10 +270,14 @@ class GuiPart(object):
         check_num_off_cards_wrapper = (self.deal_window.register(check_num_off_cards), '%P')
         self.offense_cards_entry = ttk.Entry(self.offense_to_defense_cards_frame, textvariable=self.offense_to_defense_num_random_cards, validate='key', validatecommand=check_num_off_cards_wrapper)
         self.offense_cards_entry.grid(row=0,column=1)
+        self.offense_cards_random = StringVar()
+        self.offense_cards_random.set('False')
+        self.offense_cards_random_checkbutton = ttk.Checkbutton(self.offense_to_defense_cards_frame, text='Give cards at random (otherwise the offense will choose)', variable=self.offense_cards_random, onvalue='True', offvalue='False')
+        self.offense_cards_random_checkbutton.grid(row=1, column=0)
         self.offense_to_defense_cards_frame.grid(row=1, column=0)
 
         self.defense_to_offense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
-        self.defense_cards_label = ttk.Label(self.defense_to_offense_cards_frame, text='Number of cards for the defense to give to the offense (at random): ')
+        self.defense_cards_label = ttk.Label(self.defense_to_offense_cards_frame, text='Number of cards for the defense to give to the offense: ')
         self.defense_cards_label.grid(row=0, column=0)
         self.defense_to_offense_num_random_cards = StringVar()
         self.defense_to_offense_num_random_cards.set('0')
@@ -282,6 +286,10 @@ class GuiPart(object):
         check_num_def_cards_wrapper = (self.deal_window.register(check_num_def_cards), '%P')
         self.defense_cards_entry = ttk.Entry(self.defense_to_offense_cards_frame, textvariable=self.defense_to_offense_num_random_cards, validate='key', validatecommand=check_num_def_cards_wrapper)
         self.defense_cards_entry.grid(row=0,column=1)
+        self.defense_cards_random = StringVar()
+        self.defense_cards_random.set('False')
+        self.defense_cards_random_checkbutton = ttk.Checkbutton(self.defense_to_offense_cards_frame, text='Give cards at random (otherwise the defense will choose)', variable=self.defense_cards_random, onvalue='True', offvalue='False')
+        self.defense_cards_random_checkbutton.grid(row=1, column=0)
         self.defense_to_offense_cards_frame.grid(row=1, column=1)
 
         self.deal_confirmation_button = ttk.Button(self.deal_window, text="Propose deal", command=self.propose_deal)
@@ -325,7 +333,8 @@ class GuiPart(object):
         return True
 
     def propose_deal(self):
-        if len(self.offense_to_defense_colony.get()) == 0  or len(self.defense_to_offense_colony.get()) == 0 or len(self.offense_to_defense_num_random_cards.get()) == 0 or len(self.defense_to_offense_num_random_cards.get()) == 0: #The user hasn't chosen an option everywhere yet
+        #The user hasn't chosen an option everywhere yet
+        if len(self.offense_to_defense_colony.get()) == 0  or len(self.defense_to_offense_colony.get()) == 0 or len(self.offense_to_defense_num_random_cards.get()) == 0 or len(self.defense_to_offense_num_random_cards.get()) == 0 or len(self.offense_cards_random.get()) == 0 or len(self.defense_cards_random.get()) == 0:
             return
         if self.defense_to_offense_colony.get() == 'None' and self.offense_to_defense_colony.get() == 'None' and self.offense_to_defense_num_random_cards.get() == '0' and self.defense_to_offense_num_random_cards.get() == '0': #The deal must have some sort of exchange
             return
@@ -333,8 +342,16 @@ class GuiPart(object):
         msg += '[propose_deal]\n'
         msg += 'Offense receives colony: ' + self.defense_to_offense_colony.get() + '\n'
         msg += 'Defense receives colony: ' + self.offense_to_defense_colony.get() + '\n'
-        msg += 'Number of cards for the offense to receive at random from the defense: ' + self.defense_to_offense_num_random_cards.get() + '\n'
-        msg += 'Number of cards for the defense to receive at random from the offense: ' + self.offense_to_defense_num_random_cards.get() + '\n'
+        msg += 'Number of cards for the offense to receive from the defense: ' + self.defense_to_offense_num_random_cards.get()
+        if self.defense_cards_random.get() == 'True':
+            msg += ' (at random)\n'
+        else:
+            msg += ' (by choice)\n'
+        msg += 'Number of cards for the defense to receive from the offense: ' + self.offense_to_defense_num_random_cards.get()
+        if self.offense_cards_random.get() == 'True':
+            msg += ' (at random)\n'
+        else:
+            msg += ' (by choice)\n'
         self.send_message_to_server(msg)
         self.deal_window.withdraw()
 
@@ -658,8 +675,8 @@ class GuiPart(object):
                     elif msg.find('[propose_deal]') != -1:
                         offense_receives_match = re.search('Offense receives colony: (.*)\n', msg)
                         defense_receives_match = re.search('Defense receives colony: (.*)\n', msg)
-                        offense_receives_cards_match = re.search('Number of cards for the offense to receive at random from the defense: (.*)\n', msg)
-                        defense_receives_cards_match = re.search('Number of cards for the defense to receive at random from the offense: (.*)\n', msg)
+                        offense_receives_cards_match = re.search('Number of cards for the offense to receive from the defense: (.*) \((.*)\)\n', msg)
+                        defense_receives_cards_match = re.search('Number of cards for the defense to receive from the offense: (.*) \((.*)\)\n', msg)
                         assert offense_receives_match, "Error parsing propsed deal"
                         assert defense_receives_match, "Error parsing propsed deal"
                         assert offense_receives_cards_match, "Error parsing proposed deal"
@@ -670,9 +687,9 @@ class GuiPart(object):
                         if defense_receives_match.group(1) != 'None':
                             terms += 'The defense will establish a colony on ' + defense_receives_match.group(1) + '.\n'
                         if offense_receives_cards_match.group(1) != '0':
-                            terms += 'The offense will receive ' + offense_receives_cards_match.group(1) + ' card(s) from the defense at random.\n'
+                            terms += 'The offense will receive ' + offense_receives_cards_match.group(1) + ' card(s) from the defense (' + offense_receives_cards_match.group(2) + ').\n'
                         if defense_receives_cards_match.group(1) != '0':
-                            terms += 'The defense will receive ' + defense_receives_cards_match.group(1) + ' card(s) from the offense at random.\n'
+                            terms += 'The defense will receive ' + defense_receives_cards_match.group(1) + ' card(s) from the offense (' + defense_receives_cards_match.group(2) + ').\n'
                         self.deal_terms.set(terms)
                         self.deal_acceptance_window.state('normal') #Display the window
                     elif msg.find('[reject_deal]') != -1:

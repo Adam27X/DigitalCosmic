@@ -1477,12 +1477,16 @@ void GameState::setup_negotiation()
 	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_offense;
 	std::pair<PlayerColors,unsigned> offense_proposed_colony_to_defense;
 	unsigned offense_proposed_cards_to_offense = 0;
+	bool offense_proposed_cards_to_offense_random = false;
 	unsigned offense_proposed_cards_to_defense = 0;
+	bool offense_proposed_cards_to_defense_random = false;
 
 	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_offense;
 	std::pair<PlayerColors,unsigned> defense_proposed_colony_to_defense;
 	unsigned defense_proposed_cards_to_offense = 0;
+	bool defense_proposed_cards_to_offense_random = false;
 	unsigned defense_proposed_cards_to_defense = 0;
+	bool defense_proposed_cards_to_defense_random = false;
 
 	while(1)
 	{
@@ -1532,21 +1536,53 @@ void GameState::setup_negotiation()
 					offense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
 				}
 
-				const std::string cards_to_offense("Number of cards for the offense to receive at random from the defense: ");
+				const std::string cards_to_offense("Number of cards for the offense to receive from the defense: ");
 				auto cards_to_offense_loc = offense_msg.find(cards_to_offense);
 				assert(cards_to_offense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
-				auto cards_to_offense_endline = offense_msg.find("\n", cards_to_offense_loc);
-				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
-				const std::string cards_to_offense_num(offense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),offense_msg.begin()+cards_to_offense_endline);
+				auto cards_to_offense_type_loc = offense_msg.find(" (", cards_to_offense_loc);
+				assert(cards_to_offense_type_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				const std::string cards_to_offense_num(offense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),offense_msg.begin()+cards_to_offense_type_loc);
 				offense_proposed_cards_to_offense = std::stoi(cards_to_offense_num);
+				auto cards_to_offense_endline = offense_msg.find(")\n", cards_to_offense_loc);
+				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				const std::string cards_to_offense_type(offense_msg.begin()+cards_to_offense_type_loc+2,offense_msg.begin()+cards_to_offense_endline);
+				if(cards_to_offense_type.compare("at random") == 0)
+				{
+					offense_proposed_cards_to_offense_random = true;
+				}
+				else if(cards_to_offense_type.compare("by choice") == 0)
+				{
+					offense_proposed_cards_to_offense_random = false;
+				}
+				else
+				{
+					std::cerr << "cards_to_offense_type: " << cards_to_offense_type << "\n";
+					assert(0 && "Invalid value of cards_to_offense_type");
+				}
 
-				const std::string cards_to_defense("Number of cards for the defense to receive at random from the offense: ");
+				const std::string cards_to_defense("Number of cards for the defense to receive from the offense: ");
 				auto cards_to_defense_loc = offense_msg.find(cards_to_defense);
 				assert(cards_to_defense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
-				auto cards_to_defense_endline = offense_msg.find("\n", cards_to_defense_loc);
-				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
-				const std::string cards_to_defense_num(offense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),offense_msg.begin()+cards_to_defense_endline);
+				auto cards_to_defense_type_loc = offense_msg.find(" (", cards_to_defense_loc);
+				assert(cards_to_defense_type_loc != std::string::npos && "Failed to parse cards from offensive deal proposal");
+				const std::string cards_to_defense_num(offense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),offense_msg.begin()+cards_to_defense_type_loc);
 				offense_proposed_cards_to_defense = std::stoi(cards_to_defense_num);
+				auto cards_to_defense_endline = offense_msg.find(")\n", cards_to_defense_loc);
+				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from offensive deal proposal!");
+				const std::string cards_to_defense_type(offense_msg.begin()+cards_to_defense_type_loc+2,offense_msg.begin()+cards_to_defense_endline);
+				if(cards_to_defense_type.compare("at random") == 0)
+				{
+					offense_proposed_cards_to_defense_random = true;
+				}
+				else if(cards_to_defense_type.compare("by choice") == 0)
+				{
+					offense_proposed_cards_to_defense_random = false;
+				}
+				else
+				{
+					std::cerr << "cards_to_defense_type: " << cards_to_defense_type << "\n";
+					assert(0 && "Invalid value of cards_to_defense_type");
+				}
 
 				server.send_message_to_client(assignments.get_defense(),offense_msg);
 				offense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_offense()); //Wait for the next message
@@ -1562,9 +1598,9 @@ void GameState::setup_negotiation()
 				std::cout << "The offense has accepted a deal from the defense\n";
 				deal_params.successful = true;
 				deal_params.num_cards_to_offense = defense_proposed_cards_to_offense;
-				deal_params.cards_to_offense_chosen_randomly = true;
+				deal_params.cards_to_offense_chosen_randomly = defense_proposed_cards_to_offense_random;
 				deal_params.num_cards_to_defense = defense_proposed_cards_to_defense;
-				deal_params.cards_to_defense_chosen_randomly = true;
+				deal_params.cards_to_defense_chosen_randomly = defense_proposed_cards_to_defense_random;
 
 				if(offense_msg.find("offense will establish a colony") != std::string::npos)
 				{
@@ -1647,21 +1683,53 @@ void GameState::setup_negotiation()
 					defense_proposed_colony_to_defense = std::make_pair(to_color(colony_to_defense_planet_color),std::stoi(colony_to_defense_planet_num_str));
 				}
 
-				const std::string cards_to_offense("Number of cards for the offense to receive at random from the defense: ");
+				const std::string cards_to_offense("Number of cards for the offense to receive from the defense: ");
 				auto cards_to_offense_loc = defense_msg.find(cards_to_offense);
-				assert(cards_to_offense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
-				auto cards_to_offense_endline = defense_msg.find("\n", cards_to_offense_loc);
-				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
-				const std::string cards_to_offense_num(defense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),defense_msg.begin()+cards_to_offense_endline);
+				assert(cards_to_offense_loc != std::string::npos && "Failed to parse cards from defensive deal proposal!");
+				auto cards_to_offense_type_loc = defense_msg.find(" (", cards_to_offense_loc);
+				assert(cards_to_offense_type_loc != std::string::npos && "Failed to parse cards from defensive deal proposal!");
+				const std::string cards_to_offense_num(defense_msg.begin()+cards_to_offense_loc+cards_to_offense.size(),defense_msg.begin()+cards_to_offense_type_loc);
 				defense_proposed_cards_to_offense = std::stoi(cards_to_offense_num);
+				auto cards_to_offense_endline = defense_msg.find(")\n", cards_to_offense_loc);
+				assert(cards_to_offense_endline != std::string::npos && "Failed to parse cards from defensive deal proposal!");
+				const std::string cards_to_offense_type(defense_msg.begin()+cards_to_offense_type_loc+2,defense_msg.begin()+cards_to_offense_endline);
+				if(cards_to_offense_type.compare("at random") == 0)
+				{
+					defense_proposed_cards_to_offense_random = true;
+				}
+				else if(cards_to_offense_type.compare("by choice") == 0)
+				{
+					defense_proposed_cards_to_offense_random = false;
+				}
+				else
+				{
+					std::cerr << "cards_to_offense_type: " << cards_to_offense_type << "\n";
+					assert(0 && "Invalid value of cards_to_offense_type");
+				}
 
-				const std::string cards_to_defense("Number of cards for the defense to receive at random from the offense: ");
+				const std::string cards_to_defense("Number of cards for the defense to receive from the offense: ");
 				auto cards_to_defense_loc = defense_msg.find(cards_to_defense);
-				assert(cards_to_defense_loc != std::string::npos && "Failed to parse cards from offensive deal proposal!");
-				auto cards_to_defense_endline = defense_msg.find("\n", cards_to_defense_loc);
-				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from offenseive deal proposal!");
-				const std::string cards_to_defense_num(defense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),defense_msg.begin()+cards_to_defense_endline);
+				assert(cards_to_defense_loc != std::string::npos && "Failed to parse cards from defensive deal proposal!");
+				auto cards_to_defense_type_loc = defense_msg.find(" (", cards_to_defense_loc);
+				assert(cards_to_defense_type_loc != std::string::npos && "Failed to parse cards from defensive deal proposal");
+				const std::string cards_to_defense_num(defense_msg.begin()+cards_to_defense_loc+cards_to_defense.size(),defense_msg.begin()+cards_to_defense_type_loc);
 				defense_proposed_cards_to_defense = std::stoi(cards_to_defense_num);
+				auto cards_to_defense_endline = defense_msg.find(")\n", cards_to_defense_loc);
+				assert(cards_to_defense_endline != std::string::npos && "Failed to parse cards from defensive deal proposal!");
+				const std::string cards_to_defense_type(defense_msg.begin()+cards_to_defense_type_loc+2,defense_msg.begin()+cards_to_defense_endline);
+				if(cards_to_defense_type.compare("at random") == 0)
+				{
+					defense_proposed_cards_to_defense_random = true;
+				}
+				else if(cards_to_defense_type.compare("by choice") == 0)
+				{
+					defense_proposed_cards_to_defense_random = false;
+				}
+				else
+				{
+					std::cerr << "cards_to_defense_type: " << cards_to_defense_type << "\n";
+					assert(0 && "Invalid value of cards_to_defense_type");
+				}
 
 				server.send_message_to_client(assignments.get_offense(),defense_msg);
 				defense_proposal = std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,assignments.get_defense()); //Wait for the next message
@@ -1677,9 +1745,9 @@ void GameState::setup_negotiation()
 				std::cout << "The defense has accepted a deal from the offense\n";
 				deal_params.successful = true;
 				deal_params.num_cards_to_offense = offense_proposed_cards_to_offense;
-				deal_params.cards_to_offense_chosen_randomly = true;
+				deal_params.cards_to_offense_chosen_randomly = offense_proposed_cards_to_offense_random;
 				deal_params.num_cards_to_defense = offense_proposed_cards_to_defense;
-				deal_params.cards_to_defense_chosen_randomly = true;
+				deal_params.cards_to_defense_chosen_randomly = offense_proposed_cards_to_defense_random;
 
 				if(defense_msg.find("offense will establish a colony") != std::string::npos)
 				{
@@ -1772,7 +1840,7 @@ void GameState::resolve_negotiation()
 		{
 			//TODO: Is there any logic from the deal making process to enforce these assertions?
 			assert(!offense_valid_colonies.empty());
-			assert(!offense_valid_colonies.empty());
+			assert(!defense_valid_colonies.empty());
 
 			//The defense must choose one of their existing colonies to take a ship from! We already have defense_valid_colonies for this purpose
 			std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
@@ -1818,7 +1886,7 @@ void GameState::resolve_negotiation()
 			else
 			{
 				std::stringstream prompt;
-				prompt << "The " << to_string(assignments.get_defense()) << " player has the following cards. Choose one to give to the offense.\n";
+				prompt << "Choose one of your cards to give to the offense.\n";
 				for(unsigned i=0; i<deal_params.num_cards_to_offense; i++)
 				{
 					std::vector<std::string> options;
@@ -1850,7 +1918,7 @@ void GameState::resolve_negotiation()
 			else
 			{
 				std::stringstream prompt;
-				prompt << "The " << to_string(assignments.get_offense()) << " player has the following cards. Choose one to give to the defense.\n";
+				prompt << "Choose one of your cards to give to the defense.\n";
 				for(unsigned i=0; i<deal_params.num_cards_to_defense; i++)
 				{
 					std::vector<std::string> options;
