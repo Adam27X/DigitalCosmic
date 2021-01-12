@@ -704,7 +704,6 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		while(valid_plays.size())
 		{
 			std::stringstream prompt;
-			prompt << "[stack_response]\n";
 			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
 			std::vector<std::string> options;
 			for(unsigned i=0; i<valid_plays.size(); i++)
@@ -3154,7 +3153,6 @@ void GameState::resolve_game_event(const GameEvent g)
 			else //If we haven't already forced the alien power play
 			{
 				std::stringstream prompt;
-				prompt << "[stack_response]\n";
 				prompt << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
 				std::vector<std::string> options;
 				for(unsigned i=0; i<valid_plays.size(); i++)
