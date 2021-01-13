@@ -311,7 +311,39 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::DefensiveEncounterWin) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
+	else if(g.event_type == GameEventType::CosmicDeckShuffle)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::Flare_TickTock && (alien->get_name().compare("Tick-Tock") != 0 || !alien_enabled())) //Wild part of the flare: Can be used by aliens that aren't Tick-Tock or by Tick-Tock when he is zapped or has lost his alien power
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_TickTock_Wild);
+				ret.callback_if_resolved = [this] () { this->game->establish_colony_on_opponent_planet(this->color); };
+				const CosmicCardType c = *i; //Flares are only discarded when zapped
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				vret.push_back(ret);
+			}
+		}
+	}
+	else if(g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::EncounterWin) //For now these two events can only be responded to by the Tick-Tock flare; if that changes we'll need to handle them separately
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled()) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
+			{
+				if((g.event_type == GameEventType::SuccessfulDeal && (game->get_offense() == color || game->get_defense() == color)) || (g.event_type == GameEventType::EncounterWin && g.player == color))
+				{
+					GameEvent ret = GameEvent(color,GameEventType::Flare_TickTock_Super);
+					ret.callback_if_resolved = [this] () { this->game->trade_ship_for_tick_tock_token(this->color); };
+					const CosmicCardType c = *i; //Flares are only discarded when zapped
+					ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+					ret.callback_if_action_taken = [this] () { if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+					vret.push_back(ret);
+				}
+			}
+		}
+	}
+	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::DefensiveEncounterWin) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
 	{
 		//Nothing to do here, these events can only be responded to by Alien powers and that's already been taken care of
 	}

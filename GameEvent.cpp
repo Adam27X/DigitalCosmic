@@ -74,6 +74,22 @@ std::string to_string(const GameEventType &g)
 			ret = "Defense won the encounter";
 		break;
 
+		case GameEventType::CosmicDeckShuffle:
+			ret = "Shuffling of the Cosmic Deck";
+		break;
+
+		case GameEventType::Flare_TickTock_Wild:
+			ret = "Flare: Tick-Tick (Wild)";
+		break;
+
+		case GameEventType::Flare_TickTock_Super:
+			ret = "Flare: Tick-Tock (Super)";
+		break;
+
+		case GameEventType::EncounterWin:
+			ret = "A player won an encounter";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

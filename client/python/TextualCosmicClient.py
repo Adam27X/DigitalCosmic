@@ -438,6 +438,8 @@ class GuiPart(object):
             msg += '[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]'
         elif re.match('Ionic Gas',card):
             msg += '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
+        elif re.match('Flare: Tick-Tock',card):
+            msg += '[Flare card]\nWild (if you are not Tick-Tock): Each time the discard pile is shuffled to create a new deck, you may immediately establish a colony on any one of your opponents\' home planets with up to four of your ships. [As any player] [During any turn phase]\nSuper (if you are Tick-Tock): Each time you win an encounter or make a deal, you may send one of your ships to the warp to discard a token from your alien sheet. This is in addition to any tokens you may discard through normal use of your power. [Main player only] [Play during the resolution phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):

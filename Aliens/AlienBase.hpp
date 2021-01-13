@@ -40,6 +40,8 @@ public:
 	const std::string& get_name() const { return name; }
 	std::function<void()> get_callback_if_action_taken(GameState *g, const PlayerColors player);
 	bool get_revealed() const { return revealed; }
+	void set_revealed() { revealed = true; }
+	std::string get_reveal_msg(const PlayerColors player) const;
 
 private:
 	std::string name;

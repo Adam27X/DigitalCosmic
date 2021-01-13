@@ -156,6 +156,10 @@ public:
 	void update_planets() const;
 	void update_tick_tock_tokens(unsigned tokens) const;
 	void free_all_ships_from_warp();
+	void establish_colony_on_opponent_planet(const PlayerColors c); //Player 'c' gets a new colony on an opponent planet
+	PlayerColors get_offense() const { return assignments.get_offense(); }
+	PlayerColors get_defense() const { return assignments.get_defense(); }
+	void trade_ship_for_tick_tock_token(const PlayerColors c);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

@@ -24,6 +24,10 @@ enum class GameEventType
 	SuccessfulNegotiation, //Negotiation has not yet resolved and can still be quashed
 	SuccessfulDeal, //Negotiation actually resolved
 	DefensiveEncounterWin,
+	CosmicDeckShuffle,
+	EncounterWin,
+	Flare_TickTock_Wild,
+	Flare_TickTock_Super,
 	None
 };
 

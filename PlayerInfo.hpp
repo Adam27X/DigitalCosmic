@@ -51,6 +51,8 @@ private:
 	std::function<void()> planet_update_function;
 };
 
+//FIXME: Need a bool for when the player has used a flare during the turn (use here means whether or not the flare resolves)
+//	 Even if another player obtains the flare somehow they wouldn't be able to use it until the next turn, so we also need a list of used flares that's refreshed per turn
 class PlayerInfo
 {
 public:

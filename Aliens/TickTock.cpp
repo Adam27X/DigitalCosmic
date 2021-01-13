@@ -20,6 +20,11 @@ void TickTock::discard_token()
 	num_tokens--;
 }
 
+unsigned TickTock::get_tokens() const
+{
+	return num_tokens;
+}
+
 bool TickTock::can_respond(EncounterRole e, TurnPhase t, GameEvent g, PlayerColors mycolor) const
 {
 	if(!check_role_and_phase(e,t))

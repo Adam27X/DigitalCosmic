@@ -135,6 +135,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Quash";
 		break;
 
+		case CosmicCardType::Flare_TickTock:
+			ret = "Flare: Tick-Tock";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -143,7 +147,8 @@ std::string to_string(const CosmicCardType &c)
 	return ret;
 }
 
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role)
+//TODO: alien_name is unused for now, but will eventually be needed for flares
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name)
 {
 	switch(c)
 	{
@@ -441,6 +446,9 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::IonicGas);
 	deck.insert(deck.end(),1,CosmicCardType::Plague);
 	deck.insert(deck.end(),1,CosmicCardType::Quash);
+
+	//Flares: TODO: Add in specific flares for each alien option provided to players (once we actually let players choose aliens)
+	deck.insert(deck.end(),1,CosmicCardType::Flare_TickTock);
 
 	shuffle();
 }

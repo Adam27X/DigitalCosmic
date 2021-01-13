@@ -8,6 +8,7 @@
 #include <future>
 
 #include "GameState.hpp"
+#include "Aliens/TickTock.hpp" //Alternatively, "Aliens/Aliens.hpp" for all of them
 
 bool is_only_digits(const std::string &s)
 {
@@ -250,6 +251,8 @@ void GameState::dump_cosmic_deck() const
 void GameState::shuffle_cosmic_deck()
 {
 	cosmic_deck.shuffle();
+	GameEvent g(PlayerColors::Invalid,GameEventType::CosmicDeckShuffle);
+	resolve_game_event(g);
 }
 
 void GameState::deal_starting_hands()
@@ -687,7 +690,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		std::vector<GameEvent> valid_plays;
 		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name()))
 			{
 				GameEvent g(current_player.color,to_game_event_type(*i));
 				valid_plays.push_back(g);
@@ -761,7 +764,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				valid_plays.clear();
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role))
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name()))
 					{
 						GameEvent g(current_player.color,to_game_event_type(*i));
 						valid_plays.push_back(g);
@@ -2135,6 +2138,15 @@ void GameState::offense_win_resolution()
 	}
 
 	assignments.successful_encounter = true;
+
+	//One trigger for each winning playter
+	GameEvent g(assignments.get_offense(),GameEventType::EncounterWin);
+	resolve_game_event(g);
+	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
+	{
+		GameEvent g(i->first,GameEventType::EncounterWin);
+		resolve_game_event(g);
+	}
 }
 
 void GameState::defense_win_resolution()
@@ -2198,6 +2210,14 @@ void GameState::defense_win_resolution()
 
 	GameEvent g(assignments.get_defense(),GameEventType::DefensiveEncounterWin);
 	resolve_game_event(g);
+
+	GameEvent g2(assignments.get_defense(),GameEventType::EncounterWin);
+	resolve_game_event(g2);
+	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
+	{
+		GameEvent g(i->first,GameEventType::EncounterWin);
+		resolve_game_event(g);
+	}
 }
 
 void GameState::resolve_attack()
@@ -2741,6 +2761,8 @@ void GameState::swap_main_player_hands()
 	defense.set_hand_data(tmp);
 }
 
+
+//FIXME: Don't ships on the hyperspace gate, defensive allies, etc. count for most (or all) use cases here too?
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color) const
 {
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
@@ -3007,6 +3029,118 @@ const std::string GameState::get_cosmic_discard() const
 const std::string GameState::get_destiny_discard() const
 {
 	return destiny_deck.get_discard();
+}
+
+void GameState::establish_colony_on_opponent_planet(const PlayerColors c)
+{
+	//Form a list of opponent planets where the player establishing the colony does not already have a colony
+	std::vector<std::string> options;
+	std::vector< std::pair<PlayerColors,unsigned> > option_values;
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		if(players[i].color == c)
+		{
+			continue;
+		}
+		for(unsigned planet=0; planet<players[i].planets.size(); planet++)
+		{
+			bool establishing_player_has_ship = false;
+			for(unsigned ship=0; ship<players[i].planets.planet_size(planet); ship++)
+			{
+				if(players[i].planets.get_ship(planet,ship) == c)
+				{
+					establishing_player_has_ship = true;
+					break;
+				}
+			}
+
+			if(!establishing_player_has_ship)
+			{
+				std::stringstream opt;
+				opt << to_string(players[i].color) << " Planet " << planet;
+				options.push_back(opt.str());
+				option_values.push_back(std::make_pair(players[i].color,planet));
+			}
+		}
+	}
+	options.push_back("None"); //Technically the player can choose not to establish a colony. Presumably they wouldn't play the flare then, but hey, it's a legal option
+
+	std::stringstream prompt;
+	prompt << "[planet_response]\n";
+	unsigned chosen_option = prompt_player(c,prompt.str(),options);
+
+	if(chosen_option == (options.size()-1))
+	{
+		//The player chose to do nothing
+		return;
+	}
+
+	const std::pair<PlayerColors,unsigned> new_colony = option_values[chosen_option];
+	for(unsigned ship=0; ship<4; ship++)
+	{
+		//Have the player choose up to 4 ships from their valid colonies to establish the new colony
+		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(c); //Update this each loop in case the player decides to take their last ship from a different colony
+		if(!valid_colonies.size())
+		{
+			return;
+		}
+
+		//Don't include the newly established colony as one of the valid colonies
+		for(auto i=valid_colonies.begin(),e=valid_colonies.end();i!=e;++i)
+		{
+			if(i->first == new_colony.first && i->second == new_colony.second)
+			{
+				valid_colonies.erase(i);
+				break;
+			}
+		}
+
+		bool allow_none = (ship!=0);
+		const std::pair<PlayerColors,unsigned> old_colony = prompt_valid_colonies(c,valid_colonies,allow_none);
+
+		if(allow_none && old_colony.first == PlayerColors::Invalid) //The player chose none
+		{
+			break;
+		}
+
+		//Move the ship from the old colony to the new one
+		get_player(new_colony.first).planets.planet_push_back(new_colony.second,c);
+		PlayerInfo &old_host = get_player(old_colony.first);
+		for(auto i=old_host.planets.planet_begin(old_colony.second),e=old_host.planets.planet_end(old_colony.second);i!=e;++i)
+		{
+			if(*i == c)
+			{
+				old_host.planets.planet_erase(old_colony.second,i);
+				break;
+			}
+		}
+	}
+}
+
+void GameState::trade_ship_for_tick_tock_token(const PlayerColors c)
+{
+	assert(get_player(c).alien->get_name().compare("Tick-Tock") == 0 && "An alien other than Tick-Tock used the Tick-Tock super flare!");
+
+	std::stringstream prompt;
+	prompt << "Send one of your ships to the warp to discard a Tick-Tock token?";
+	std::vector<std::string> options;
+	options.push_back("Y");
+	options.push_back("N");
+
+	unsigned choice = prompt_player(c,prompt.str(),options);
+
+	if(choice == 1)
+	{
+		return;
+	}
+
+	//TODO: Have this function return a bool to tell us if a ship was successfully lost? From my interpretation of the Tick-Tock super, if the player doesn't have any ships to send to the warp then they shouldn't be able to discard a token
+	lose_ships_to_warp(c,1);
+
+	TickTock *t = dynamic_cast<TickTock*>(get_player(c).alien.get());
+	t->discard_token();
+	unsigned num_remaining = t->get_tokens();
+	update_tick_tock_tokens(num_remaining);
 }
 
 unsigned GameState::prompt_player(const PlayerColors player, const std::string &prompt, const std::vector<std::string> &options) const
