@@ -42,6 +42,7 @@ public:
 	bool successful_encounter;
 	bool reestablished_colony;
 	bool negotiating;
+	std::set<CosmicCardType> flares_used_this_turn; //A given flare may only be used once per encounter by *any* player
 
 	void set_offense(const PlayerColors c)
 	{
@@ -76,6 +77,7 @@ public:
 		successful_encounter = false;
 		reestablished_colony = false;
 		negotiating = false;
+		flares_used_this_turn.clear();
 	}
 
 private:
@@ -160,6 +162,8 @@ public:
 	PlayerColors get_offense() const { return assignments.get_offense(); }
 	PlayerColors get_defense() const { return assignments.get_defense(); }
 	void trade_ship_for_tick_tock_token(const PlayerColors c);
+	bool check_for_used_flare(const CosmicCardType c) const { return assignments.flares_used_this_turn.find(c) != assignments.flares_used_this_turn.end(); } //Returns true if the given flare was already used this turn
+	void insert_flare_used_this_turn(const CosmicCardType c) { assignments.flares_used_this_turn.insert(c); }
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

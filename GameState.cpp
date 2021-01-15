@@ -2741,7 +2741,10 @@ void GameState::end_of_turn_clean_up()
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		players[i].alien_zapped = false;
+		players[i].used_flare_this_turn = false;
 	}
+
+	assignments.flares_used_this_turn.clear();
 }
 
 void GameState::swap_encounter_cards()

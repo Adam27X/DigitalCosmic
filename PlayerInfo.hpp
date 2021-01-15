@@ -51,8 +51,6 @@ private:
 	std::function<void()> planet_update_function;
 };
 
-//FIXME: Need a bool for when the player has used a flare during the turn (use here means whether or not the flare resolves)
-//	 Even if another player obtains the flare somehow they wouldn't be able to use it until the next turn, so we also need a list of used flares that's refreshed per turn
 class PlayerInfo
 {
 public:
@@ -62,6 +60,7 @@ public:
 	std::unique_ptr<AlienBase> alien;
 	EncounterRole current_role;
 	bool alien_zapped;
+	bool used_flare_this_turn; //Each player can only use one flare per encounter
 
 	void make_default_player(const PlayerColors c);
 	void dump_hand() const;

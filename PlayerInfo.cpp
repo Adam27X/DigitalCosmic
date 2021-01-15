@@ -24,6 +24,7 @@ void PlayerInfo::make_default_player(const PlayerColors c)
 		}
 	}
 	alien_zapped = false;
+	used_flare_this_turn = false;
 }
 
 void PlayerInfo::dump_hand() const
@@ -315,12 +316,13 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_TickTock && (alien->get_name().compare("Tick-Tock") != 0 || !alien_enabled())) //Wild part of the flare: Can be used by aliens that aren't Tick-Tock or by Tick-Tock when he is zapped or has lost his alien power
+			if(*i == CosmicCardType::Flare_TickTock && (alien->get_name().compare("Tick-Tock") != 0 || !alien_enabled()) && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Wild part of the flare: Can be used by aliens that aren't Tick-Tock or by Tick-Tock when he is zapped or has lost his alien power
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Flare_TickTock_Wild);
 				ret.callback_if_resolved = [this] () { this->game->establish_colony_on_opponent_planet(this->color); };
 				const CosmicCardType c = *i; //Flares are only discarded when zapped
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); };
 				vret.push_back(ret);
 			}
 		}
@@ -329,7 +331,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled()) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
+			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
 			{
 				if((g.event_type == GameEventType::SuccessfulDeal && (game->get_offense() == color || game->get_defense() == color)) || (g.event_type == GameEventType::EncounterWin && g.player == color))
 				{
@@ -337,7 +339,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 					ret.callback_if_resolved = [this] () { this->game->trade_ship_for_tick_tock_token(this->color); };
 					const CosmicCardType c = *i; //Flares are only discarded when zapped
 					ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-					ret.callback_if_action_taken = [this] () { if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+					ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
 					vret.push_back(ret);
 				}
 			}
