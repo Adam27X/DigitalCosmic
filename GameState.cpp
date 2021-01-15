@@ -629,7 +629,36 @@ void GameState::plague_player()
 			}
 		}
 	}
-	//TODO: Support Flares here when they're available
+	//Flares
+	std::vector<CosmicCardType> valid_flares;
+	for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
+	{
+		if((*i >= CosmicCardType::Flare_TickTock) && (*i <= CosmicCardType::None))
+		{
+			valid_flares.push_back(*i);
+		}
+	}
+	if(valid_flares.size())
+	{
+		std::stringstream prompt;
+		prompt << "The " << to_string(victim.color) << " player has the following flare cards. Choose one to discard.\n";
+		std::vector<std::string> options;
+		for(unsigned i=0; i<valid_reinforcements.size(); i++)
+		{
+			options.push_back(to_string(valid_reinforcements[i]));
+		}
+		chosen_option = prompt_player(victim.color,prompt.str(),options);
+		CosmicCardType choice = valid_reinforcements[chosen_option];
+		for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
+		{
+			if(*i == choice)
+			{
+				cosmic_discard.push_back(*i);
+				victim.hand_erase(i);
+				break;
+			}
+		}
+	}
 
 	player_to_be_plagued = max_player_sentinel;
 }
@@ -2139,7 +2168,7 @@ void GameState::offense_win_resolution()
 
 	assignments.successful_encounter = true;
 
-	//One trigger for each winning playter
+	//One trigger for each winning player though for now the trigger is only useful when a main player wins
 	GameEvent g(assignments.get_offense(),GameEventType::EncounterWin);
 	resolve_game_event(g);
 	for(auto i=assignments.offensive_allies.begin(),e=assignments.offensive_allies.end();i!=e;++i)
@@ -2211,6 +2240,7 @@ void GameState::defense_win_resolution()
 	GameEvent g(assignments.get_defense(),GameEventType::DefensiveEncounterWin);
 	resolve_game_event(g);
 
+	//One trigger for each winning player though for now the trigger is only useful when a main player wins
 	GameEvent g2(assignments.get_defense(),GameEventType::EncounterWin);
 	resolve_game_event(g2);
 	for(auto i=assignments.defensive_allies.begin(),e=assignments.defensive_allies.end();i!=e;++i)
@@ -3125,7 +3155,7 @@ void GameState::trade_ship_for_tick_tock_token(const PlayerColors c)
 	assert(get_player(c).alien->get_name().compare("Tick-Tock") == 0 && "An alien other than Tick-Tock used the Tick-Tock super flare!");
 
 	std::stringstream prompt;
-	prompt << "Send one of your ships to the warp to discard a Tick-Tock token?";
+	prompt << "Send one of your ships to the warp to discard a Tick-Tock token?\n";
 	std::vector<std::string> options;
 	options.push_back("Y");
 	options.push_back("N");
@@ -3261,6 +3291,7 @@ std::vector<PlayerColors> GameState::get_player_order()
 	return player_order;
 }
 
+//FIXME: Possible bug: stack is {Player A retrieves a warp ship, Remora uses alien power, cosmic zap}. The zap appears to stop Player A's retrieval as well?
 void GameState::resolve_game_event(const GameEvent g)
 {
 	stack.push(g);
@@ -3276,6 +3307,9 @@ void GameState::resolve_game_event(const GameEvent g)
 		//NOTE: As of right now there's never a need to actually respond to an event more than once (even with reinforcements you can cast one and then respond to that one)
 		//In general this property probably isn't true so this if stmt should eventually become a while stmt
 		//If we do make that change, be sure to recalculate valid_plays after taking an action
+		//FIXME: It looks like after a successful negotiation both the Tick-Tock alien power and Super flare can respond. In other words Tick-Tock will have two responses but due to the logic below can only play one.
+		//	 Need to be sure the alien power can't be used more than once in response to the same trigger
+		//	 For situations where there are two options, don't automatically use the mandatory alien power, let the player choose the order in which the triggers resolve
 		if(valid_plays.size()) //If there is a valid response...
 		{
 			bool take_action = false;

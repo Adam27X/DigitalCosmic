@@ -312,6 +312,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	//TODO: Test this
 	else if(g.event_type == GameEventType::CosmicDeckShuffle)
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -327,11 +328,12 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	//TODO: Test this via negotiation
 	else if(g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::EncounterWin) //For now these two events can only be responded to by the Tick-Tock flare; if that changes we'll need to handle them separately
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
+			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i) && (current_role == EncounterRole::Offense || current_role == EncounterRole::Defense)) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
 			{
 				if((g.event_type == GameEventType::SuccessfulDeal && (game->get_offense() == color || game->get_defense() == color)) || (g.event_type == GameEventType::EncounterWin && g.player == color))
 				{
@@ -342,6 +344,16 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 					ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
 					vret.push_back(ret);
 				}
+			}
+		}
+	}
+	else if((static_cast<unsigned>(g.event_type) >= static_cast<unsigned>(GameEventType::Flare_TickTock_Wild)) && g.event_type != GameEventType::None) //Catchall for any flare
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::CardZap)
+			{
+				add_card_zap_response(vret,*i);
 			}
 		}
 	}
