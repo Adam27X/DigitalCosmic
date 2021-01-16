@@ -3291,7 +3291,6 @@ std::vector<PlayerColors> GameState::get_player_order()
 	return player_order;
 }
 
-//FIXME: Possible bug: stack is {Player A retrieves a warp ship, Remora uses alien power, cosmic zap}. The zap appears to stop Player A's retrieval as well?
 void GameState::resolve_game_event(const GameEvent g)
 {
 	stack.push(g);
@@ -3304,53 +3303,51 @@ void GameState::resolve_game_event(const GameEvent g)
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		std::vector<GameEvent> valid_plays;
 		current_player.can_respond(state,g,valid_plays); //Fill up valid_plays with potential GameEvent responses
-		//NOTE: As of right now there's never a need to actually respond to an event more than once (even with reinforcements you can cast one and then respond to that one)
-		//In general this property probably isn't true so this if stmt should eventually become a while stmt
-		//If we do make that change, be sure to recalculate valid_plays after taking an action
-		//FIXME: It looks like after a successful negotiation both the Tick-Tock alien power and Super flare can respond. In other words Tick-Tock will have two responses but due to the logic below can only play one.
-		//	 Need to be sure the alien power can't be used more than once in response to the same trigger
-		//	 For situations where there are two options, don't automatically use the mandatory alien power, let the player choose the order in which the triggers resolve
-		if(valid_plays.size()) //If there is a valid response...
+		//We need to be sure the alien power can't be used more than once in response to the same trigger
+		bool take_action = true; //Needs to default to true otherwise we skip the while loop altogether
+		bool alien_power_available = false;
+		bool alien_power_mandatory = false;
+
+		for(unsigned i=0; i<valid_plays.size(); i++)
 		{
-			bool take_action = false;
+			if(valid_plays[i].event_type == GameEventType::AlienPower)
+			{
+				alien_power_available = true;
+				alien_power_mandatory = current_player.alien->get_mandatory();
+			}
+		}
+
+		while(valid_plays.size() && take_action) //If there are valid responses and we have yet to decline to choose one of them...
+		{
 			GameEvent can_respond(current_player.color,GameEventType::None); //Arbitrary initialization value
+
+			std::stringstream prompt;
+			prompt << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
+			std::vector<std::string> options;
 			for(unsigned i=0; i<valid_plays.size(); i++)
 			{
+				std::stringstream opt;
+				opt << to_string(valid_plays[i].event_type);
 				if(valid_plays[i].event_type == GameEventType::AlienPower && current_player.alien->get_mandatory())
 				{
-					//If an alien power is mandatory we'll automatically respond with it
-					can_respond = valid_plays[i];
-					take_action = true;
-					break;
+					opt << " (mandatory)";
 				}
-			}
-
-			if(take_action)
-			{
-				std::stringstream announce;
-				announce << "The " << to_string(current_player.color) << " player must respond to the " << to_string(g.event_type) << " action with their alien power\n";
-				server.broadcast_message(announce.str());
-			}
-			else //If we haven't already forced the alien power play
-			{
-				std::stringstream prompt;
-				prompt << "The " << to_string(current_player.color) << " player can respond to the " << to_string(g.event_type) << " action.\n";
-				std::vector<std::string> options;
-				for(unsigned i=0; i<valid_plays.size(); i++)
-				{
-					options.push_back(to_string(valid_plays[i].event_type));
-				}
-				std::stringstream opt;
-				opt << "None (Resolve " << to_string(g.event_type) << ")";
 				options.push_back(opt.str());
+			}
+			std::stringstream opt;
+			opt << "None (Resolve " << to_string(g.event_type) << ")";
+			options.push_back(opt.str());
 
-				unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
+			unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
 
-				if(chosen_option < valid_plays.size())
-				{
-					take_action = true;
-					can_respond = valid_plays[chosen_option];
-				}
+			if(chosen_option != valid_plays.size())
+			{
+				take_action = true;
+				can_respond = valid_plays[chosen_option];
+			}
+			else
+			{
+				take_action = false;
 			}
 
 			if(take_action)
@@ -3359,8 +3356,13 @@ void GameState::resolve_game_event(const GameEvent g)
 				{
 					can_respond.callback_if_action_taken();
 				}
+				if(can_respond.event_type == GameEventType::AlienPower)
+				{
+					alien_power_available = false;
+				}
 				resolve_game_event(can_respond);
 
+				//TODO: Is this bit still valid now that an event can have multiple responses?
 				//This action resolved and will counter the next item in the stack, which means there's nothing for the other players to actually respond to
 				//For example:
 				//
@@ -3376,6 +3378,25 @@ void GameState::resolve_game_event(const GameEvent g)
 				{
 					break;
 				}
+
+				//Recalculate valid_plays
+				valid_plays.clear();
+				current_player.can_respond(state,g,valid_plays); //Fill up valid_plays with potential GameEvent responses
+
+				//If the alien power was used, remove it from valid_plays
+				for(auto i=valid_plays.begin(),e=valid_plays.end();i!=e;++i)
+				{
+					if(i->event_type == GameEventType::AlienPower && !alien_power_available)
+					{
+						valid_plays.erase(i);
+						break;
+					}
+				}
+			}
+			else if(alien_power_available && alien_power_mandatory)
+			{
+				server.send_message_to_client(current_player.color,"Mandatory alien power not yet chosen, try again.\n");
+				take_action = true; //Force another loop so the player can use their alien power
 			}
 		}
 
