@@ -9,6 +9,7 @@ enum class PlayerColors
 	Purple,
 	Yellow,
 	Green,
+	All, //Placeholder for events that don't focus on a particular player but need a valid playercolor
 	Invalid
 };
 

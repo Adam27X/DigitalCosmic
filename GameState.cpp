@@ -251,8 +251,6 @@ void GameState::dump_cosmic_deck() const
 void GameState::shuffle_cosmic_deck()
 {
 	cosmic_deck.shuffle();
-	GameEvent g(PlayerColors::Invalid,GameEventType::CosmicDeckShuffle);
-	resolve_game_event(g);
 }
 
 void GameState::deal_starting_hands()
@@ -281,7 +279,9 @@ void GameState::shuffle_discard_into_cosmic_deck()
 		cosmic_deck.push_back(*i);
 	}
 	cosmic_discard.clear();
-	cosmic_deck.shuffle();
+	shuffle_cosmic_deck();
+	GameEvent g(PlayerColors::All,GameEventType::CosmicDeckShuffle);
+	resolve_game_event(g);
 }
 
 void GameState::draw_cosmic_card(PlayerInfo &player)
@@ -290,6 +290,12 @@ void GameState::draw_cosmic_card(PlayerInfo &player)
 	if(cosmic_deck.empty())
 	{
 		shuffle_discard_into_cosmic_deck();
+	}
+
+	//If the deck is *still* empty, then there are no cards left to give out, so return
+	if(cosmic_deck.empty())
+	{
+		return;
 	}
 
 	auto iter = cosmic_deck.begin();
@@ -3096,7 +3102,7 @@ void GameState::establish_colony_on_opponent_planet(const PlayerColors c)
 			}
 		}
 	}
-	options.push_back("None"); //Technically the player can choose not to establish a colony. Presumably they wouldn't play the flare then, but hey, it's a legal option
+	//I suppose we could have "None" as an option here, but then the player wouldn't have played the card. Let's keep it simple for now
 
 	std::stringstream prompt;
 	prompt << "[planet_response]\n";

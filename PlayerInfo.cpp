@@ -312,7 +312,6 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	//TODO: Test this
 	else if(g.event_type == GameEventType::CosmicDeckShuffle)
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -328,7 +327,6 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	//TODO: Test this via negotiation
 	else if(g.event_type == GameEventType::SuccessfulDeal || g.event_type == GameEventType::EncounterWin) //For now these two events can only be responded to by the Tick-Tock flare; if that changes we'll need to handle them separately
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)

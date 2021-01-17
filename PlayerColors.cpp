@@ -28,6 +28,10 @@ std::string to_string(const PlayerColors &p)
 			ret = "Green";
 		break;
 
+		case PlayerColors::All:
+			ret = "All";
+		break;
+
 		case PlayerColors::Invalid:
 			assert(0 && "Attempt to print string for invalid Player color!");
 		break;
