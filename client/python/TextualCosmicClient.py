@@ -849,8 +849,7 @@ class GuiPart(object):
                     #TODO: Make this information more prominent once it has been revealed?
                     self.player_aliens[player][0].set(player + ' player alien: ' + alien_name)
                     self.player_aliens[player].append(alien_desc)
-                    #FIXME: We get 'IndexError: list index out of range' when trying to view the number of remaining Tick-Tock tokens here sometimes...why?
-                    self.player_aliens[player][1].bind('<Enter>', lambda e: self.update_revealed_alien_info(self.player_aliens[player][2]))
+                    self.player_aliens[player][1].bind('<Enter>', lambda e,player=player: self.update_revealed_alien_info(self.player_aliens[player][2]))
                 if msg.find('[alien_aux_update]') != -1: #Some other alien information was received from the server
                     tag_found = True
                     tick_tock_aux_match = re.search('\[alien_aux_update\]\n(.*) tokens remaining: (.*)',msg)
