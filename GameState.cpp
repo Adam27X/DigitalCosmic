@@ -1511,7 +1511,7 @@ void GameState::setup_negotiation()
 
 	//Check for a response from either player
 	//TODO: Add a 1-2 minute timer that causes the deal to fail if time runs out
-	//TODO: Support trading cards (either at random or by choice and eventually allow the declaration of specific cards or even a specific type of card: "highest attack card" or  "any artifact card")
+	//TODO: Support trading a specific type of card: "highest attack card" or  "any artifact card"
 	bool offense_done = false;
 	bool defense_done = false;
 	std::chrono::milliseconds span(500); //How long to wait for each client during each wait_for call
@@ -1530,6 +1530,12 @@ void GameState::setup_negotiation()
 	unsigned defense_proposed_cards_to_defense = 0;
 	bool defense_proposed_cards_to_defense_random = false;
 
+	//Start the timer
+	std::chrono::steady_clock::time_point negotiation_begin = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point negotiation_end;
+	std::chrono::seconds negotiation_span;
+	std::chrono::seconds negotiation_limit(60); //The official rules state one minute for a deal but we may want to be more generous here since users will need some time to input the deal parameters rather than just agree verbally
+	bool deal_failed = false;
 	while(1)
 	{
 		if(!offense_done && offense_proposal.wait_for(span) == std::future_status::ready)
@@ -1671,6 +1677,12 @@ void GameState::setup_negotiation()
 			else if(offense_msg.find("[ack]") != std::string::npos)
 			{
 				break;
+			}
+			else if(offense_msg.find("[failed_deal_ack]") != std::string::npos)
+			{
+				offense_done = true;
+				if(offense_done && defense_done)
+					break;
 			}
 			else
 			{
@@ -1819,16 +1831,39 @@ void GameState::setup_negotiation()
 			{
 				break;
 			}
+			else if(defense_msg.find("[failed_deal_ack]") != std::string::npos)
+			{
+				defense_done = true;
+				if(offense_done && defense_done)
+					break;
+			}
 			else
 			{
 				std::cerr << "Error: Unexpected message from client: " << defense_msg << "\n";
 				assert(0 && "Unexpected message from client");
 			}
 		}
+
+		negotiation_end = std::chrono::steady_clock::now();
+		negotiation_span = std::chrono::duration_cast<std::chrono::seconds>(negotiation_end - negotiation_begin);
+		if((negotiation_span.count() >= negotiation_limit.count()) && !deal_failed)
+		{
+			std::cout << "The players have run out of their " << negotiation_limit.count() << " second time limit and this deal will fail!\n";
+			deal_failed = true; //We only want to send the failed_deal messages once
+			deal_params.successful = false;
+
+			//We need both of the offense_proposal and defense_proposal threads to return here before this function exits. Send them a message that the deal has failed and expect a deal failed ack in response
+			std::string failed_msg("[needs_response][failed_deal] The players have run out of time to negotiate and will suffer the consequences of a failed deal!\n");
+			server.send_message_to_client(assignments.get_offense(),failed_msg);
+			server.send_message_to_client(assignments.get_defense(),failed_msg);
+		}
 	}
 
-	bool valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
-	assert(valid_deal && "The client did not enforce a valid deal!");
+	if(deal_params.successful)
+	{
+		bool valid_deal = (deal_params.offense_receives_colony || deal_params.defense_receives_colony || deal_params.num_cards_to_offense > 0 || deal_params.num_cards_to_defense > 0);
+		assert(valid_deal && "The client did not enforce a valid deal!");
+	}
 }
 
 void GameState::resolve_negotiation()

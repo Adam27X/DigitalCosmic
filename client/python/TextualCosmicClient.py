@@ -235,6 +235,7 @@ class GuiPart(object):
         self.connected = False
 
         #Create the deal window but hide it until it's needed
+        #TODO: Show time remaining before the deal fails
         self.deal_window = Toplevel(self.master)
         self.deal_window.withdraw()
         self.deal_window.title("Textual Cosmic -- Deal brokering")
@@ -354,8 +355,19 @@ class GuiPart(object):
         msg += '[accept_deal]\n'
         msg += self.deal_terms.get()
         self.send_message_to_server(msg)
+        self.reset_deal_state()
+
+    def reject_deal(self):
+        msg = '[needs_response]\n'
+        msg += '[reject_deal]\n'
+        self.send_message_to_server(msg)
         self.deal_acceptance_window.withdraw()
-        self.deal_window.withdraw() #Remove the proposal window too now that a deal has been made
+
+    def reset_deal_state(self):
+        #Hide the deal windows
+        self.deal_window.withdraw()
+        self.deal_acceptance_window.withdraw()
+        #Clear the state from the last deal in preparation for the next one
         for option in self.offense_to_defense_colonies:
             option.grid_forget()
         self.offense_to_defense_colonies = []
@@ -364,12 +376,6 @@ class GuiPart(object):
         self.defense_to_offense_colonies = []
         self.offense_to_defense_num_random_cards.set('0')
         self.defense_to_offense_num_random_cards.set('0')
-
-    def reject_deal(self):
-        msg = '[needs_response]\n'
-        msg += '[reject_deal]\n'
-        self.send_message_to_server(msg)
-        self.deal_acceptance_window.withdraw()
 
     #NOTE: The offset of 20 here is so the scrollbars are visible
     def resize_canvas(self, event):
@@ -635,16 +641,10 @@ class GuiPart(object):
                     elif msg.find('[accept_deal]') != -1:
                         #Our deal has been accepted, send an ack to the server since it's still looping on a response from us
                         self.send_message_to_server('[ack]')
-                        self.deal_acceptance_window.withdraw() #If we were deciding on a different offer we can get rid of that window now; the deal_window should already be removed from the deal we proposed that has now been accepted
-                        #Now that our deal has been accepted, we can reset the original window
-                        for option in self.offense_to_defense_colonies:
-                            option.grid_forget()
-                        self.offense_to_defense_colonies = []
-                        for option in self.defense_to_offense_colonies:
-                            option.grid_forget()
-                        self.defense_to_offense_colonies = []
-                        self.offense_to_defense_num_random_cards.set('0')
-                        self.defense_to_offense_num_random_cards.set('0')
+                        self.reset_deal_state()
+                    elif msg.find('[failed_deal]') != -1:
+                        self.send_message_to_server('[failed_deal_ack]') #Synchronize with the server
+                        self.reset_deal_state()
                     else:
                         option_num = None
                         prompt = ''
