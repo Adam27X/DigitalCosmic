@@ -240,19 +240,23 @@ class GuiPart(object):
         self.deal_window.withdraw()
         self.deal_window.title("Textual Cosmic -- Deal brokering")
 
+        self.deal_timer = StringVar()
+        self.deal_timer_label = ttk.Label(self.deal_window, textvariable=self.deal_timer)
+        self.deal_timer_label.grid(row=0, column=0, columnspan=2)
+
         self.offense_to_defense_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
         self.offense_colony_label = ttk.Label(self.offense_to_defense_frame, text='Potential colonies for the defense to establish')
         self.offense_colony_label.grid(row=0, column=0)
         self.offense_to_defense_colony = StringVar() #Which colony choice was made?
         self.offense_to_defense_colonies = [] #List of colony options
-        self.offense_to_defense_frame.grid(row=0, column=0)
+        self.offense_to_defense_frame.grid(row=1, column=0)
 
         self.defense_to_offense_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
         self.defense_colony_label = ttk.Label(self.defense_to_offense_frame, text='Potential colonies for the offense to establish')
         self.defense_colony_label.grid(row=0, column=0)
         self.defense_to_offense_colony = StringVar() #Which colony choice was made?
         self.defense_to_offense_colonies = [] #List of colony options
-        self.defense_to_offense_frame.grid(row=0, column=1)
+        self.defense_to_offense_frame.grid(row=1, column=1)
 
         #TODO: Deals involving cards: Support cards chosen by the giving player, then support requesting specific cards?
         self.offense_to_defense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
@@ -269,7 +273,7 @@ class GuiPart(object):
         self.offense_cards_random.set('False')
         self.offense_cards_random_checkbutton = ttk.Checkbutton(self.offense_to_defense_cards_frame, text='Give cards at random (otherwise the offense will choose)', variable=self.offense_cards_random, onvalue='True', offvalue='False')
         self.offense_cards_random_checkbutton.grid(row=1, column=0)
-        self.offense_to_defense_cards_frame.grid(row=1, column=0)
+        self.offense_to_defense_cards_frame.grid(row=2, column=0)
 
         self.defense_to_offense_cards_frame = ttk.Frame(self.deal_window, padding="5 5 5 5")
         self.defense_cards_label = ttk.Label(self.defense_to_offense_cards_frame, text='Number of cards for the defense to give to the offense: ')
@@ -285,10 +289,10 @@ class GuiPart(object):
         self.defense_cards_random.set('False')
         self.defense_cards_random_checkbutton = ttk.Checkbutton(self.defense_to_offense_cards_frame, text='Give cards at random (otherwise the defense will choose)', variable=self.defense_cards_random, onvalue='True', offvalue='False')
         self.defense_cards_random_checkbutton.grid(row=1, column=0)
-        self.defense_to_offense_cards_frame.grid(row=1, column=1)
+        self.defense_to_offense_cards_frame.grid(row=2, column=1)
 
         self.deal_confirmation_button = ttk.Button(self.deal_window, text="Propose deal", command=self.propose_deal)
-        self.deal_confirmation_button.grid(row=2,column=0,columnspan=2)
+        self.deal_confirmation_button.grid(row=3,column=0,columnspan=2)
 
         #Another window for accepting another player's proposed deal
         self.deal_acceptance_window = Toplevel(self.master)
@@ -932,6 +936,9 @@ class GuiPart(object):
                             self.player_score_labels[player].grid(column=len(self.player_score_labels)-1,row=3)
                         else:
                             self.player_score_labels[player].configure(text='Number of foreign colonies: ' + player_score_match.group(2))
+                if msg.find('[deal_timer]') != -1:
+                    tag_found = True
+                    self.deal_timer.set(msg[12:]) #Remove the [deal_timer] tag but keep the rest
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

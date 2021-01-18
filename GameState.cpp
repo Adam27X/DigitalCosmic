@@ -1846,16 +1846,26 @@ void GameState::setup_negotiation()
 
 		negotiation_end = std::chrono::steady_clock::now();
 		negotiation_span = std::chrono::duration_cast<std::chrono::seconds>(negotiation_end - negotiation_begin);
-		if((negotiation_span.count() >= negotiation_limit.count()) && !deal_failed)
+		if(!offense_done && !defense_done) //If a deal has yet to be accepted...
 		{
-			std::cout << "The players have run out of their " << negotiation_limit.count() << " second time limit and this deal will fail!\n";
-			deal_failed = true; //We only want to send the failed_deal messages once
-			deal_params.successful = false;
+			if((negotiation_span.count() >= negotiation_limit.count()) && !deal_failed)
+			{
+				std::cout << "The players have run out of their " << negotiation_limit.count() << " second time limit and this deal will fail!\n";
+				deal_failed = true; //We only want to send the failed_deal messages once
+				deal_params.successful = false;
 
-			//We need both of the offense_proposal and defense_proposal threads to return here before this function exits. Send them a message that the deal has failed and expect a deal failed ack in response
-			std::string failed_msg("[needs_response][failed_deal] The players have run out of time to negotiate and will suffer the consequences of a failed deal!\n");
-			server.send_message_to_client(assignments.get_offense(),failed_msg);
-			server.send_message_to_client(assignments.get_defense(),failed_msg);
+				//We need both of the offense_proposal and defense_proposal threads to return here before this function exits. Send them a message that the deal has failed and expect a deal failed ack in response
+				std::string failed_msg("[needs_response][failed_deal] The players have run out of time to negotiate and will suffer the consequences of a failed deal!\n");
+				server.send_message_to_client(assignments.get_offense(),failed_msg);
+				server.send_message_to_client(assignments.get_defense(),failed_msg);
+			}
+			else if(!deal_failed)
+			{
+				std::stringstream message;
+				message << "[deal_timer]Remaining time to negotiate before this deal fails: " << (negotiation_limit.count() - negotiation_span.count()) << " seconds";
+				server.send_message_to_client(assignments.get_offense(),message.str());
+				server.send_message_to_client(assignments.get_defense(),message.str());
+			}
 		}
 	}
 
@@ -1888,6 +1898,7 @@ void GameState::resolve_negotiation()
 			assert(!defense_valid_colonies.empty());
 
 			//The offense must choose one of their existing colonies to take a ship from! We already have offense_valid_colonies for this purpose
+			//FIXME: When establishing a colony players can typically move up to four ships there...allow this behavior here as well
 			std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
 			server.send_message_to_client(assignments.get_offense(),msg);
 			const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_offense(),offense_valid_colonies);
@@ -1920,6 +1931,7 @@ void GameState::resolve_negotiation()
 			assert(!defense_valid_colonies.empty());
 
 			//The defense must choose one of their existing colonies to take a ship from! We already have defense_valid_colonies for this purpose
+			//FIXME: When establishing a colony players can typically move up to four ships there...allow this behavior here as well
 			std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
 			server.send_message_to_client(assignments.get_defense(),msg);
 			const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_defense(),defense_valid_colonies);
