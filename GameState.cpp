@@ -1893,69 +1893,98 @@ void GameState::resolve_negotiation()
 		std::vector< std::pair<PlayerColors,unsigned> > offense_valid_colonies = get_valid_colonies(assignments.get_offense()); //A list of planet colors and indices
 		if(deal_params.offense_receives_colony)
 		{
-			//TODO: Is there any logic from the deal making process to enforce these assertions?
-			assert(!offense_valid_colonies.empty());
-			assert(!defense_valid_colonies.empty());
-
-			//The offense must choose one of their existing colonies to take a ship from! We already have offense_valid_colonies for this purpose
-			//FIXME: When establishing a colony players can typically move up to four ships there...allow this behavior here as well
-			std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
-			server.send_message_to_client(assignments.get_offense(),msg);
-			const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_offense(),offense_valid_colonies);
-
-			//Now actually remove a ship from the colony
-			PlanetInfo &home_planet = get_player(chosen_home_colony.first).planets.get_planet(chosen_home_colony.second);
-			for(auto i=home_planet.begin();i!=home_planet.end();)
+			for(unsigned ship=0; ship<4; ship++)
 			{
-				if(*i == assignments.get_offense())
+				if(ship == 0)
 				{
-					get_player(chosen_home_colony.first).planets.planet_erase(chosen_home_colony.second,i);
+					//TODO: Is there any logic from the deal making process to enforce these assertions?
+					assert(!offense_valid_colonies.empty());
+					assert(!defense_valid_colonies.empty());
+				}
+
+				//The offense must choose one of their existing colonies to take a ship from! We already have offense_valid_colonies for this purpose
+				std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
+				server.send_message_to_client(assignments.get_offense(),msg);
+				bool allow_none = (ship != 0);
+				const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_offense(),offense_valid_colonies,allow_none);
+
+				if(chosen_home_colony.first == PlayerColors::Invalid)
+				{
+					//Player chose not to add another ship, break
 					break;
 				}
-				else
+
+				//Now actually remove a ship from the colony
+				PlanetInfo &home_planet = get_player(chosen_home_colony.first).planets.get_planet(chosen_home_colony.second);
+				for(auto i=home_planet.begin();i!=home_planet.end();)
 				{
-					++i;
+					if(*i == assignments.get_offense())
+					{
+						get_player(chosen_home_colony.first).planets.planet_erase(chosen_home_colony.second,i);
+						break;
+					}
+					else
+					{
+						++i;
+					}
 				}
+
+				const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_offense;
+
+				//Finally, add the ship to the newly established colony
+				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+				player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());
+
+				//Refresh offense_valid_colonies in case the offense removed the last ship from one of their colonies
+				offense_valid_colonies = get_valid_colonies(assignments.get_offense());
 			}
-
-			const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_offense;
-
-			//Finally, add the ship to the newly established colony
-			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());
 		}
 		if(deal_params.defense_receives_colony)
 		{
-			//TODO: Is there any logic from the deal making process to enforce these assertions?
-			assert(!offense_valid_colonies.empty());
-			assert(!defense_valid_colonies.empty());
-
-			//The defense must choose one of their existing colonies to take a ship from! We already have defense_valid_colonies for this purpose
-			//FIXME: When establishing a colony players can typically move up to four ships there...allow this behavior here as well
-			std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
-			server.send_message_to_client(assignments.get_defense(),msg);
-			const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_defense(),defense_valid_colonies);
-
-			//Now actually remove a ship from the colony
-			PlanetInfo &home_planet = get_player(chosen_home_colony.first).planets.get_planet(chosen_home_colony.second);
-			for(auto i=home_planet.begin();i!=home_planet.end();)
+			for(unsigned ship=0; ship<4; ship++)
 			{
-				if(*i == assignments.get_defense())
+				if(ship == 0)
 				{
-					get_player(chosen_home_colony.first).planets.planet_erase(chosen_home_colony.second,i);
+					//TODO: Is there any logic from the deal making process to enforce these assertions?
+					assert(!offense_valid_colonies.empty());
+					assert(!defense_valid_colonies.empty());
+				}
+
+				//The defense must choose one of their existing colonies to take a ship from! We already have defense_valid_colonies for this purpose
+				std::string msg("Choose one of your colonies to take a ship from to establish the new colony.\n");
+				server.send_message_to_client(assignments.get_defense(),msg);
+				bool allow_none = (ship != 0);
+				const std::pair<PlayerColors,unsigned> chosen_home_colony = prompt_valid_colonies(assignments.get_defense(),defense_valid_colonies,allow_none);
+
+				if(chosen_home_colony.first == PlayerColors::Invalid)
+				{
 					break;
 				}
-				else
+
+				//Now actually remove a ship from the colony
+				PlanetInfo &home_planet = get_player(chosen_home_colony.first).planets.get_planet(chosen_home_colony.second);
+				for(auto i=home_planet.begin();i!=home_planet.end();)
 				{
-					++i;
+					if(*i == assignments.get_defense())
+					{
+						get_player(chosen_home_colony.first).planets.planet_erase(chosen_home_colony.second,i);
+						break;
+					}
+					else
+					{
+						++i;
+					}
 				}
+
+				const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_defense;
+
+				//Finally, add the ship to the newly established colony
+				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+				player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
+
+				//Refresh defense_valid_colonies in case the defense removed the last ship from one of their colonies
+				defense_valid_colonies = get_valid_colonies(assignments.get_defense());
 			}
-
-			const std::pair<PlayerColors,unsigned> chosen_colony = deal_params.colony_for_defense;
-
-			//Finally, add the ship to the newly established colony
-			PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
-			player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
 		}
 		std::vector<CosmicCardType> cards_to_offense;
 		//Choose which cards will be taken from the defense
