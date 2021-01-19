@@ -25,6 +25,7 @@ enum class CosmicCardType
 	Attack23 = 23, //1
 	Attack30 = 30, //1
 	Attack40 = 40, //1
+	Attack42 = 42, //0 (Not a real card, but used by the Wild Human flare)
 	Negotiate, //15
 	Morph, //1
 	Reinforcement2, //2
@@ -39,14 +40,15 @@ enum class CosmicCardType
 	Plague, //1
 	Quash, //1
 	Flare_TickTock,
+	Flare_Human,
 	None
 };
 
 std::string to_string(const CosmicCardType &c);
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name);
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name, const std::string &opponent_alien_name);
 GameEventType to_game_event_type(const CosmicCardType c);
 CosmicCardType to_cosmic_card_type(const GameEventType g);
-std::string card_info(const CosmicCardType c);
+bool is_flare(const CosmicCardType c);
 
 class CosmicDeck
 {

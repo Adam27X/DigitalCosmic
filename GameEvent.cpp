@@ -86,6 +86,14 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Tick-Tock (Super)";
 		break;
 
+		case GameEventType::Flare_Human_Wild:
+			ret = "Flare: Human (Wild)";
+		break;
+
+		case GameEventType::Flare_Human_Super:
+			ret = "Flare: Human (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
 		break;

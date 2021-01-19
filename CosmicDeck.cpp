@@ -83,6 +83,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Attack 40";
 		break;
 
+		case CosmicCardType::Attack42:
+			ret = "Attack 42";
+		break;
+
 		case CosmicCardType::Negotiate:
 			ret = "Negotiate";
 		break;
@@ -139,6 +143,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Tick-Tock";
 		break;
 
+		case CosmicCardType::Flare_Human:
+			ret = "Flare: Human";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -147,8 +155,12 @@ std::string to_string(const CosmicCardType &c)
 	return ret;
 }
 
-//TODO: alien_name is unused for now, but will eventually be needed for flares
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name)
+bool is_flare(const CosmicCardType c)
+{
+	return c >= CosmicCardType::Flare_TickTock && c <= CosmicCardType::None;
+}
+
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name, const std::string &opponent_alien_name)
 {
 	switch(c)
 	{
@@ -225,6 +237,18 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Flare_Human:
+			//Wild flare for the Human; as a main player or ally during reveal, and of course can't be used by the Human because the super would be used instead. Finally, the flare states "if our opponent is not the Human", so check for that as well
+			if(state == TurnPhase::Reveal && role != EncounterRole::None && alien_name.compare("Human") != 0 && opponent_alien_name.compare("Human") != 0)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -272,6 +296,11 @@ GameEventType to_game_event_type(const CosmicCardType c)
 
 		case CosmicCardType::IonicGas:
 			return GameEventType::IonicGas;
+		break;
+
+		//NOTE: Only some flares exist here because only some flares can be played on an empty stack
+		case CosmicCardType::Flare_Human:
+			return GameEventType::Flare_Human_Wild;
 		break;
 
 		default:
@@ -330,87 +359,16 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::IonicGas;
 		break;
 
+		case GameEventType::Flare_Human_Wild:
+			return CosmicCardType::Flare_Human;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
 			std::cerr << "Type: " << to_string(g) << "\n";
 			assert(0);
 		break;
 	}
-}
-
-std::string card_info(const CosmicCardType c)
-{
-	std::stringstream ret;
-	if(static_cast<unsigned>(c) <= 40) 
-	{
-		ret << "Attack N";
-	}
-	else if(c == CosmicCardType::Reinforcement2 || c == CosmicCardType::Reinforcement3 || c == CosmicCardType::Reinforcement5)
-	{
-		ret << "Reinforcement +N";
-	}
-	else
-	{
-		ret << to_string(c);
-	}
-	ret << ": ";
-
-	if(static_cast<unsigned>(c) <= 40) //Attack card
-	{
-		ret << "[Encounter card] Opposed by attack: Higher total (ships + N) wins. Opposed by Negotiate: Wins, but opponent collects compensation.";
-	}
-	else if(c == CosmicCardType::Negotiate)
-	{
-		ret << "[Encounter card] Opposed by attack: Loses, but collects compensation. Opposed by Negotiate: Players have one minute to make a deal or lose three ships to the warp.";
-	}
-	else if(c == CosmicCardType::Morph)
-	{
-		ret << "[Encounter card] Duplicates opponent's encounter card when revealed.";
-	}
-	else if(c == CosmicCardType::Reinforcement2 || c == CosmicCardType::Reinforcement3 || c == CosmicCardType::Reinforcement5)
-	{
-		ret << "[Reinforcement card] Adds N to either side's total. Play after encounter cards are revealed. [Play as a main player or ally only] [Play during the reveal phase only]";
-	}
-	else if(c == CosmicCardType::CardZap)
-	{
-		ret << "[Artifact card] Negates Cards. Play this card at any time to negate a flare or artifact card just as a player attempts to use it. The flare or artifact must then be discarded. [As any player] [During any turn phase]";
-	}
-	else if(c == CosmicCardType::CosmicZap)
-	{
-		ret << "[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien's power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]";
-	}
-	else if(c == CosmicCardType::MobiusTubes)
-	{
-		ret << "[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners' colonies. [Play as the offense only] [ Play during the regroup phase only]";
-	}
-	else if(c == CosmicCardType::Plague)
-	{
-		ret << "[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]";
-	}
-	else if(c == CosmicCardType::ForceField)
-	{
-		ret << "[Artifact card] Stops Allies. Play after alliances are formed during an encounter. You may cancel the alliances of any or all players. Cancelled allies return their ships to any of their colonies. [As any player] [Play during the alliance phase only]";
-	}
-	else if(c == CosmicCardType::EmotionControl)
-	{
-		ret << "[Artifact card] Alters Attack. Play after encounter cards are revealed to treat all attack cards played this encounter as negotiate cards. The main players must then attempt to make a deal. [As any player] [Play during the reveal phase only]";
-	}
-	else if(c == CosmicCardType::Quash)
-	{
-		ret << "[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]";
-	}
-	else if(c == CosmicCardType::IonicGas)
-	{
-		ret << "[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]";
-	}
-	else
-	{
-		std::cerr << "Unexpected CosmicCardType passed to card_info(): " << to_string(c) << "\n";
-		assert(0);
-	}
-
-	ret << "\n";
-	return ret.str();
 }
 
 CosmicDeck::CosmicDeck()
@@ -449,6 +407,7 @@ CosmicDeck::CosmicDeck()
 
 	//Flares: TODO: Add in specific flares for each alien option provided to players (once we actually let players choose aliens)
 	deck.insert(deck.end(),1,CosmicCardType::Flare_TickTock);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Human);
 
 	shuffle();
 }

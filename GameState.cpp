@@ -703,6 +703,27 @@ void GameState::stop_allies()
 	allies_to_be_stopped.clear();
 }
 
+std::string GameState::get_opponent_alien_name(const PlayerColors c) const
+{
+	std::string opponent_alien_name;
+	if(c == assignments.get_offense())
+	{
+		if(assignments.get_defense() != PlayerColors::Invalid)
+		{
+			opponent_alien_name = get_player_const(assignments.get_defense()).alien->get_name();
+		}
+	}
+	if(c == assignments.get_defense())
+	{
+		if(assignments.get_offense() != PlayerColors::Invalid)
+		{
+			opponent_alien_name = get_player_const(assignments.get_offense()).alien->get_name();
+		}
+	}
+
+	return opponent_alien_name;
+}
+
 //NOTE:  
 //	 Consider the following scenario:
 //	 Blue player is offense during regroup and choose not to cast Mobius Tubes
@@ -721,11 +742,12 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 	while(satisfied_players < players.size())
 	{
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
+		const std::string opponent_alien_name = get_opponent_alien_name(current_player.color);
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
 		std::vector<GameEvent> valid_plays;
 		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name()))
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name(),opponent_alien_name))
 			{
 				GameEvent g(current_player.color,to_game_event_type(*i));
 				valid_plays.push_back(g);
@@ -771,17 +793,20 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					CosmicCardType play = to_cosmic_card_type(g.event_type);
 
 					//Remove this card from the player's hand and add it to discard
-					add_to_discard_pile(play);
-					unsigned old_hand_size = current_player.hand_size(); //Sanity checking
-					for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
+					if(!is_flare(play)) //Flares aren't discarded on use
 					{
-						if(*i == play)
+						add_to_discard_pile(play);
+						unsigned old_hand_size = current_player.hand_size(); //Sanity checking
+						for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 						{
-							current_player.hand_erase(i);
-							break;
+							if(*i == play)
+							{
+								current_player.hand_erase(i);
+								break;
+							}
 						}
+						assert(current_player.hand_size()+1 == old_hand_size && "Error removing played card from the player's hand!");
 					}
-					assert(current_player.hand_size()+1 == old_hand_size && "Error removing played card from the player's hand!");
 
 					get_callbacks_for_cosmic_card(play,g);
 				}
@@ -799,7 +824,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				valid_plays.clear();
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name()))
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name(),opponent_alien_name))
 					{
 						GameEvent g(current_player.color,to_game_event_type(*i));
 						valid_plays.push_back(g);
@@ -902,6 +927,67 @@ void GameState::update_player_scores()
 	}
 }
 
+void GameState::resolve_human_wild_flare(const GameEvent &g)
+{
+	const PlayerColors &casting_player = g.player;
+	if(assignments.get_offense() == casting_player)
+	{
+		//If scores have already been added, subtract out the offense encounter card and add in the 42. If they haven't been added, change the offensive attack card to an "Attack 42"
+		assignments.offensive_encounter_card = CosmicCardType::Attack42;
+	}
+	else if(assignments.get_defense() == casting_player)
+	{
+		assignments.defensive_encounter_card = CosmicCardType::Attack42;
+	}
+	else
+	{
+		assert(0 && "Invalid player casted the human wild flare!");
+	}
+
+	//Reevaluate encounter cards because we might have nullifed a deal, compensation, etc.
+	evaluate_encounter_cards();
+
+	//Give this flare to the Human or discard it
+	bool human_found;
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		if(i->alien->get_name().compare("Human") == 0)
+		{
+			human_found = true;
+			//Give the flare to the Human
+			i->hand_push_back(CosmicCardType::Flare_Human);
+			//Get rid of the flare from our hand
+			PlayerInfo &caster = get_player(casting_player);
+			for(auto ii=caster.hand_begin(),ee=caster.hand_end();ii!=ee;++ii)
+			{
+				if(*ii == CosmicCardType::Flare_Human)
+				{
+					caster.hand_erase(ii);
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	if(!human_found)
+	{
+		//Discard the flare upon use
+		//Add the flare to the discard pile
+		add_to_discard_pile(CosmicCardType::Flare_Human);
+		//Get rid ofthe flare from our hand
+		PlayerInfo &caster = get_player(casting_player);
+		for(auto ii=caster.hand_begin(),ee=caster.hand_end();ii!=ee;++ii)
+		{
+			if(*ii == CosmicCardType::Flare_Human)
+			{
+				caster.hand_erase(ii);
+				break;
+			}
+		}
+	}
+}
+
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
 {
 	switch(play)
@@ -945,6 +1031,24 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 
 		case CosmicCardType::IonicGas:
 			g.callback_if_resolved = [this] () { this->assignments.stop_compensation_and_rewards = true; };
+		break;
+
+		case CosmicCardType::Flare_Human:
+			g.callback_if_resolved = [this,g] () { this->resolve_human_wild_flare(g); };
+			//Discard the flare if countered
+			g.callback_if_countered = [this,g] ()
+			{
+				this->add_to_discard_pile(CosmicCardType::Flare_Human);
+				PlayerInfo &current_player = this->get_player(g.player);
+				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
+				{
+					if(*i == CosmicCardType::Flare_Human)
+					{
+						current_player.hand_erase(i);
+						break;
+					}
+				}
+			};
 		break;
 
 		default:
@@ -2606,6 +2710,31 @@ void GameState::update_turn_phase(const TurnPhase phase)
 	server.broadcast_message(msg);
 }
 
+void GameState::evaluate_encounter_cards()
+{
+	std::stringstream announce;
+	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
+	announce << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
+	server.broadcast_message(announce.str());
+
+	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
+	assignments.negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	assignments.compensating = (!assignments.negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
+	if(assignments.negotiating)
+	{
+		setup_negotiation();
+	}
+	else if(assignments.compensating)
+	{
+		setup_compensation();
+	}
+	else
+	{
+		//Both players played attack/morph cards, time to do math
+		setup_attack();
+	}
+}
+
 void GameState::execute_turn()
 {
 	//Start Turn Phase
@@ -2788,11 +2917,6 @@ void GameState::execute_turn()
 	//Reveal Phase
 	update_turn_phase(TurnPhase::Reveal);
 
-	announce.str("");
-	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
-	announce << "The defense has encounter card: " << to_string(assignments.defensive_encounter_card) << "\n";
-	server.broadcast_message(announce.str());
-
 	//Now that the cards are known, we can add them to the discard pile (NOTE: game state effects might dictate that these cards are discarded later, during resolution)
 	for(auto i=cards_to_be_discarded.begin(),e=cards_to_be_discarded.end();i!=e;++i)
 	{
@@ -2800,22 +2924,7 @@ void GameState::execute_turn()
 	}
 	cards_to_be_discarded.clear();
 
-	//Good primer on negotiation specifics: https://boardgamegeek.com/thread/1212948/question-about-trading-cards-during-negotiate/page/1
-	assignments.negotiating = ((assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Negotiate) || (assignments.offensive_encounter_card == CosmicCardType::Negotiate && assignments.defensive_encounter_card == CosmicCardType::Morph) || (assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Negotiate));
-	bool compensating = (!assignments.negotiating && (assignments.offensive_encounter_card == CosmicCardType::Negotiate || assignments.defensive_encounter_card == CosmicCardType::Negotiate));
-	if(assignments.negotiating)
-	{
-		setup_negotiation();
-	}
-	else if(compensating)
-	{
-		setup_compensation();
-	}
-	else
-	{
-		//Both players played attack/morph cards, time to do math
-		setup_attack();
-	}
+	evaluate_encounter_cards();
 
 	check_for_game_events();
 
@@ -2832,7 +2941,7 @@ void GameState::execute_turn()
 	{
 		resolve_negotiation();
 	}
-	else if(compensating)
+	else if(assignments.compensating)
 	{
 		resolve_compensation();
 	}

@@ -450,6 +450,8 @@ class GuiPart(object):
             msg += '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
         elif re.match('Flare: Tick-Tock',card):
             msg += '[Flare card]\nWild (if you are not Tick-Tock): Each time the discard pile is shuffled to create a new deck, you may immediately establish a colony on any one of your opponents\' home planets with up to four of your ships. [As any player] [During any turn phase]\nSuper (if you are Tick-Tock): Each time you win an encounter or make a deal, you may send one of your ships to the warp to discard a token from your alien sheet. This is in addition to any tokens you may discard through normal use of your power. [Main player only] [Play during the resolution phase only]'
+        elif re.match('Flare: Human',card):
+            msg += '[Flare card]\nWild (if you are not the Human): As a main player, if your opponent is not the Human, you may use this flare after encounter cards are revealed to change your encounter card into an attack 42. Afterwards, give this flare to the Human. If the Human is not playing, discard this flare to use it. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Human): You may cause your power to add 8 to your side\'s total instead of 4. Also, you may discard this flare to zap your power. [Main player or ally only] [Play during the reveal phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):

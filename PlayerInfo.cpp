@@ -355,6 +355,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	//TODO: Respond to the Human Alien power with the Human Super flare? Upon cast the user should choose if they want to add 8 instead of 4 or zap their power and on resolution that choice should occur
 	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::DefensiveEncounterWin) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
 	{
 		//Nothing to do here, these events can only be responded to by Alien powers and that's already been taken care of

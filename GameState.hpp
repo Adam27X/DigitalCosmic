@@ -42,6 +42,7 @@ public:
 	bool successful_encounter;
 	bool reestablished_colony;
 	bool negotiating;
+	bool compensating;
 	std::set<CosmicCardType> flares_used_this_turn; //A given flare may only be used once per encounter by *any* player
 
 	void set_offense(const PlayerColors c)
@@ -77,6 +78,7 @@ public:
 		successful_encounter = false;
 		reestablished_colony = false;
 		negotiating = false;
+		compensating = false;
 		flares_used_this_turn.clear();
 	}
 
@@ -212,6 +214,9 @@ private:
 	void add_score_from_ships();
 	void broadcast_encounter_scores() const;
 	void end_of_turn_clean_up();
+	std::string get_opponent_alien_name(const PlayerColors c) const; //If c is a main player, obtain the opposing alien's name to figure out if certain flares are valid
+	void resolve_human_wild_flare(const GameEvent &g);
+	void evaluate_encounter_cards();
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
