@@ -779,6 +779,14 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				{
 					opt << " (mandatory)";
 				}
+				if(is_flare(valid_plays[i].event_type))
+				{
+					//Ensure that this specific flare wasn't already used this turn and that the casting player hasn't used a flare this turn
+					if(current_player.used_flare_this_turn || check_for_used_flare(to_cosmic_card_type(valid_plays[i].event_type)))
+					{
+						continue;
+					}
+				}
 				options.push_back(opt.str());
 			}
 			options.push_back("None");
@@ -988,6 +996,43 @@ void GameState::resolve_human_wild_flare(const GameEvent &g)
 	}
 }
 
+void GameState::setup_human_super_flare(const PlayerColors human)
+{
+	std::string prompt("Which option would you prefer?\n");
+	std::vector<std::string> options;
+	options.push_back("Add 8 to your side's total instead of 4");
+	options.push_back("Discard this flare to zap your power");
+	assignments.human_super_flare_choice = prompt_player(human,prompt,options);
+}
+
+void GameState::resolve_human_super_flare(const PlayerColors human)
+{
+	assert((assignments.human_super_flare_choice == 0 || assignments.human_super_flare_choice == 1) && "Invalid selection for the human's super flare!");
+
+	if(assignments.human_super_flare_choice == 0) //Add 8 to the human's side instead of 4; this needs to be done in a way where if the human is zapped nothing is added (though in that case the human wins anyway...)
+	{
+		//TODO: It would be better to edit the stack directly and have the existing alien power event add 8 but my first attempt at that failed
+		GameEvent tmp(human,GameEventType::None);
+		add_reinforcements(tmp,4,false);
+	}
+	else //Zap the human's power by discarding the flare
+	{
+		add_to_discard_pile(CosmicCardType::Flare_Human);
+		PlayerInfo &current_player = get_player(human);
+		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
+		{
+			if(*i == CosmicCardType::Flare_Human)
+			{
+				current_player.hand_erase(i);
+				break;
+			}
+		}
+
+		set_invalidate_next_callback(true); //This should be safe as the next callback should always be the alien power itself
+		zap_alien(human);
+	}
+}
+
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
 {
 	switch(play)
@@ -1049,6 +1094,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 					}
 				}
 			};
+			g.callback_if_action_taken = [this,g] () { PlayerInfo &player = this->get_player(g.player); player.used_flare_this_turn = true; this->insert_flare_used_this_turn(CosmicCardType::Flare_Human); };
 		break;
 
 		default:

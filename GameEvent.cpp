@@ -109,3 +109,9 @@ std::string to_string(const GameEventType &g)
 
 	return ret;
 }
+
+bool is_flare(const GameEventType g)
+{
+	return g >= GameEventType::Flare_TickTock_Wild && g < GameEventType::None;
+}
+

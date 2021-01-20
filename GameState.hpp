@@ -44,6 +44,7 @@ public:
 	bool negotiating;
 	bool compensating;
 	std::set<CosmicCardType> flares_used_this_turn; //A given flare may only be used once per encounter by *any* player
+	int human_super_flare_choice; //-1 == invalid, 0 == add 8 instead of 4, 1 == zap power //TODO: Can we shove this into GameEvent itself?
 
 	void set_offense(const PlayerColors c)
 	{
@@ -79,6 +80,7 @@ public:
 		reestablished_colony = false;
 		negotiating = false;
 		compensating = false;
+		human_super_flare_choice = -1;
 		flares_used_this_turn.clear();
 	}
 
@@ -166,6 +168,8 @@ public:
 	void trade_ship_for_tick_tock_token(const PlayerColors c);
 	bool check_for_used_flare(const CosmicCardType c) const { return assignments.flares_used_this_turn.find(c) != assignments.flares_used_this_turn.end(); } //Returns true if the given flare was already used this turn
 	void insert_flare_used_this_turn(const CosmicCardType c) { assignments.flares_used_this_turn.insert(c); }
+	void setup_human_super_flare(const PlayerColors human);
+	void resolve_human_super_flare(const PlayerColors human);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

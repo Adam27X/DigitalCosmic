@@ -35,6 +35,7 @@ enum class GameEventType
 };
 
 std::string to_string(const GameEventType &g);
+bool is_flare(const GameEventType g);
 
 class GameEvent
 {

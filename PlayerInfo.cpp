@@ -160,6 +160,15 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
 			}
+			else if(*i == CosmicCardType::Flare_Human && alien->get_name().compare("Human") == 0 && color == g.player && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i)) //If we have the Human flare, we are the Human, and we're responding to an AlienPower that matches our color (that is, responding to our own Alien power)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Human_Super);
+				ret.callback_if_resolved = [this] () { this->game->resolve_human_super_flare(this->color); };
+				const CosmicCardType c = *i; //Flares are only discarded when zapped
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } this->game->setup_human_super_flare(this->color); }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+				vret.push_back(ret);
+			}
 		}
 	}
 	else if(g.event_type == GameEventType::CosmicZap)
@@ -344,8 +353,9 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				}
 			}
 		}
-	}
-	else if((static_cast<unsigned>(g.event_type) >= static_cast<unsigned>(GameEventType::Flare_TickTock_Wild)) && g.event_type != GameEventType::None) //Catchall for any flare
+	} 
+	//Catchall for any flare; NOTE: We may need to change these nested if/else stmts to separate if stmts in case there are responses to flares that aren't card zaps
+	else if((static_cast<unsigned>(g.event_type) >= static_cast<unsigned>(GameEventType::Flare_TickTock_Wild)) && g.event_type != GameEventType::None)
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
