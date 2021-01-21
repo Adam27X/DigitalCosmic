@@ -147,6 +147,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Human";
 		break;
 
+		case CosmicCardType::Flare_Remora:
+			ret = "Flare: Remora";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -160,7 +164,7 @@ bool is_flare(const CosmicCardType c)
 	return c >= CosmicCardType::Flare_TickTock && c <= CosmicCardType::None;
 }
 
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name, const std::string &opponent_alien_name)
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name)
 {
 	switch(c)
 	{
@@ -238,8 +242,8 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 		break;
 
 		case CosmicCardType::Flare_Human:
-			//Wild flare for the Human; as a main player or ally during reveal, and of course can't be used by the Human because the super would be used instead. Finally, the flare states "if our opponent is not the Human", so check for that as well
-			if(state == TurnPhase::Reveal && role != EncounterRole::None && alien_name.compare("Human") != 0 && opponent_alien_name.compare("Human") != 0)
+			//Wild flare for the Human; as a main player or ally during reveal, and can't be used by the Human because the super would be used instead (unless the human has lost their power or was zapped, but for the human I'm not sure if a zap response is possible). Finally, the flare states "if our opponent is not the Human", so check for that as well
+			if(state == TurnPhase::Reveal && role != EncounterRole::None && (alien_name.compare("Human") != 0 || !alien_enabled) && opponent_alien_name.compare("Human") != 0)
 			{
 				return true;
 			}
@@ -408,6 +412,7 @@ CosmicDeck::CosmicDeck()
 	//Flares: TODO: Add in specific flares for each alien option provided to players (once we actually let players choose aliens)
 	deck.insert(deck.end(),1,CosmicCardType::Flare_TickTock);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Human);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Remora);
 
 	shuffle();
 }

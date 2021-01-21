@@ -747,7 +747,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		std::vector<GameEvent> valid_plays;
 		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name(),opponent_alien_name))
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
 			{
 				GameEvent g(current_player.color,to_game_event_type(*i));
 				valid_plays.push_back(g);
@@ -832,7 +832,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				valid_plays.clear();
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien->get_name(),opponent_alien_name))
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
 					{
 						GameEvent g(current_player.color,to_game_event_type(*i));
 						valid_plays.push_back(g);
@@ -1033,6 +1033,14 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 	}
 }
 
+void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare)
+{
+	get_player(player).used_flare_this_turn = true;
+	insert_flare_used_this_turn(flare);
+
+	GameEvent g(player,GameEventType::CastFlare);
+}
+
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
 {
 	switch(play)
@@ -1094,7 +1102,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 					}
 				}
 			};
-			g.callback_if_action_taken = [this,g] () { PlayerInfo &player = this->get_player(g.player); player.used_flare_this_turn = true; this->insert_flare_used_this_turn(CosmicCardType::Flare_Human); };
+			g.callback_if_action_taken = [this,g] () { cast_flare(g.player,CosmicCardType::Flare_Human); };
 		break;
 
 		default:

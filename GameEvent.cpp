@@ -94,8 +94,20 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Human (Super)";
 		break;
 
+		case GameEventType::Flare_Remora_Wild:
+			ret = "Flare: Remora (Wild)";
+		break;
+
+		case GameEventType::Flare_Remora_Super:
+			ret = "Flare: Remora (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
+		break;
+
+		case GameEventType::CastFlare:
+			ret = "A flare was casted";
 		break;
 
 		case GameEventType::None:

@@ -166,7 +166,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->resolve_human_super_flare(this->color); };
 				const CosmicCardType c = *i; //Flares are only discarded when zapped
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } this->game->setup_human_super_flare(this->color); }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } this->game->setup_human_super_flare(this->color); }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
 				vret.push_back(ret);
 			}
 		}
@@ -331,7 +331,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->establish_colony_on_opponent_planet(this->color); };
 				const CosmicCardType c = *i; //Flares are only discarded when zapped
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); };
 				vret.push_back(ret);
 			}
 		}
@@ -348,9 +348,25 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 					ret.callback_if_resolved = [this] () { this->game->trade_ship_for_tick_tock_token(this->color); };
 					const CosmicCardType c = *i; //Flares are only discarded when zapped
 					ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-					ret.callback_if_action_taken = [this,c] () { this->used_flare_this_turn = true; this->game->insert_flare_used_this_turn(c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+					ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
 					vret.push_back(ret);
 				}
+			}
+		}
+	}
+	else if(g.event_type == GameEventType::CastFlare)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			//TODO: Put 'standard' wild/super flare checks into a helper
+			if(*i == CosmicCardType::Flare_Remora && g.player != color && (alien->get_name().compare("Remora") != 0 || !alien_enabled()) && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Standard wild flare checks + this response is only valid if we're responding to a player that isn't ourself
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Remora_Wild);
+				ret.callback_if_resolved = [this] () {this->game->draw_cosmic_card(*this); };
+				const CosmicCardType c = *i;
+				ret.callback_if_countered = [this,c] () { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); };
+				vret.push_back(ret);
 			}
 		}
 	} 

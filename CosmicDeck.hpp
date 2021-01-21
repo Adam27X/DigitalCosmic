@@ -41,11 +41,12 @@ enum class CosmicCardType
 	Quash, //1
 	Flare_TickTock,
 	Flare_Human,
+	Flare_Remora,
 	None
 };
 
 std::string to_string(const CosmicCardType &c);
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, const std::string &alien_name, const std::string &opponent_alien_name);
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name);
 GameEventType to_game_event_type(const CosmicCardType c);
 CosmicCardType to_cosmic_card_type(const GameEventType g);
 bool is_flare(const CosmicCardType c);
