@@ -166,7 +166,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->resolve_human_super_flare(this->color); };
 				const CosmicCardType c = *i; //Flares are only discarded when zapped
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } this->game->setup_human_super_flare(this->color); }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); this->game->setup_human_super_flare(this->color); };
 				vret.push_back(ret);
 			}
 		}
@@ -331,7 +331,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->establish_colony_on_opponent_planet(this->color); };
 				const CosmicCardType c = *i; //Flares are only discarded when zapped
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,false); };
 				vret.push_back(ret);
 			}
 		}
@@ -348,7 +348,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 					ret.callback_if_resolved = [this] () { this->game->trade_ship_for_tick_tock_token(this->color); };
 					const CosmicCardType c = *i; //Flares are only discarded when zapped
 					ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-					ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } }; //If the alien wasn't revealed yet we'll reveal it upon the super cast
+					ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); };
 					vret.push_back(ret);
 				}
 			}
@@ -365,7 +365,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () {this->game->draw_cosmic_card(*this); };
 				const CosmicCardType c = *i;
 				ret.callback_if_countered = [this,c] () { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,false); };
 				vret.push_back(ret);
 			}
 		}
@@ -380,7 +380,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->resolve_defender_reward(this->color); };
 				const CosmicCardType c = *i;
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true);};
 				vret.push_back(ret);
 			}
 		}

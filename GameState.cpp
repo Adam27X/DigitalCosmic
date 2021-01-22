@@ -1033,11 +1033,18 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 	}
 }
 
-//FIXME: Take in a bool to distinguish wild from super and broadcast the alien in the super case if it wasn't already revealed
-void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare)
+void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare, bool super)
 {
 	get_player(player).used_flare_this_turn = true;
 	insert_flare_used_this_turn(flare);
+
+	//If we cast a super flare we need to reveal our alien if we haven't already
+	if(super && !get_player(player).alien->get_revealed())
+	{
+		std::string message = get_player(player).alien->get_reveal_msg(player);
+		server.broadcast_message(message);
+		get_player(player).alien->set_revealed();
+	}
 
 	GameEvent g(player,GameEventType::CastFlare);
 }
@@ -1103,7 +1110,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 					}
 				}
 			};
-			g.callback_if_action_taken = [this,g] () { cast_flare(g.player,CosmicCardType::Flare_Human); };
+			g.callback_if_action_taken = [this,g] () { cast_flare(g.player,CosmicCardType::Flare_Human,false); };
 		break;
 
 		default:

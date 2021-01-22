@@ -170,7 +170,7 @@ public:
 	void insert_flare_used_this_turn(const CosmicCardType c) { assignments.flares_used_this_turn.insert(c); }
 	void setup_human_super_flare(const PlayerColors human);
 	void resolve_human_super_flare(const PlayerColors human);
-	void cast_flare(const PlayerColors player, const CosmicCardType flare);
+	void cast_flare(const PlayerColors player, const CosmicCardType flare, bool super);
 	void resolve_defender_reward(const PlayerColors c);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
