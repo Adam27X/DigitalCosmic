@@ -171,6 +171,7 @@ public:
 	void setup_human_super_flare(const PlayerColors human);
 	void resolve_human_super_flare(const PlayerColors human);
 	void cast_flare(const PlayerColors player, const CosmicCardType flare);
+	void resolve_defender_reward(const PlayerColors c);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

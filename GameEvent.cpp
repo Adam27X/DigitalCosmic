@@ -110,6 +110,10 @@ std::string to_string(const GameEventType &g)
 			ret = "A flare was casted";
 		break;
 
+		case GameEventType::NewColony:
+			ret = "A new colony was established";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

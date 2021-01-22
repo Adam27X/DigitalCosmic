@@ -1033,6 +1033,7 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 	}
 }
 
+//FIXME: Take in a bool to distinguish wild from super and broadcast the alien in the super case if it wasn't already revealed
 void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare)
 {
 	get_player(player).used_flare_this_turn = true;
@@ -1463,6 +1464,12 @@ void GameState::send_in_ships(const PlayerColors player, bool custom_destination
 					PlayerInfo &off = get_player(dest_planet.first);
 					const unsigned planet_id = dest_planet.second;
 					off.planets.planet_push_back(planet_id,dest_planet.first);
+
+					if(launched_ships == 0)
+					{
+						GameEvent g(player,GameEventType::NewColony);
+						resolve_game_event(g);
+					}
 				}
 				else
 				{
@@ -2093,6 +2100,12 @@ void GameState::resolve_negotiation()
 				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 				player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_offense());
 
+				if(ship == 0)
+				{
+					GameEvent g(assignments.get_offense(),GameEventType::NewColony);
+					resolve_game_event(g);
+				}
+
 				//Refresh offense_valid_colonies in case the offense removed the last ship from one of their colonies
 				offense_valid_colonies = get_valid_colonies(assignments.get_offense());
 			}
@@ -2139,6 +2152,13 @@ void GameState::resolve_negotiation()
 				//Finally, add the ship to the newly established colony
 				PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
 				player_with_chosen_colony.planets.planet_push_back(chosen_colony.second,assignments.get_defense());
+
+				if(ship == 0)
+				{
+					GameEvent g(assignments.get_defense(),GameEventType::NewColony);
+					resolve_game_event(g);
+				}
+
 
 				//Refresh defense_valid_colonies in case the defense removed the last ship from one of their colonies
 				defense_valid_colonies = get_valid_colonies(assignments.get_defense());
@@ -2399,11 +2419,25 @@ void GameState::offense_win_resolution()
 		i=defensive_ally_ships.erase(i);
 	}
 
+	//Keep track of which colonies will be 'new' colonies for triggers
+	std::set<PlayerColors> colonies_on_planet;
+	for(unsigned i=0; i<get_player(assignments.planet_location).planets.planet_size(assignments.planet_id); i++)
+	{
+		colonies_on_planet.insert(get_player(assignments.planet_location).planets.get_ship(assignments.planet_id,i));
+	}
+
 	//Offense and offensive ally ships create (or reinforce) a colony on the encounter planet
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
 		get_player(assignments.planet_location).planets.planet_push_back(assignments.planet_id,*i); //FIXME: Ugly here too
 		i=hyperspace_gate.erase(i);
+
+		if(colonies_on_planet.find(*i) != colonies_on_planet.end())
+		{
+			GameEvent g(*i,GameEventType::NewColony);
+			resolve_game_event(g);
+			colonies_on_planet.insert(*i);
+		}
 	}
 
 	assignments.successful_encounter = true;
@@ -2458,20 +2492,7 @@ void GameState::defense_win_resolution()
 				}
 				else
 				{
-					std::string prompt("Choose which defender reward you would like to receieve.\n");
-					std::vector<std::string> options;
-					options.push_back("Retrieve one of your ships from the warp.");
-					options.push_back("Draw a card from the Cosmic deck.");
-					unsigned choice = prompt_player(i->first,prompt,options);
-
-					if(choice == 0)
-					{
-						move_ship_from_warp_to_colony(get_player(i->first));
-					}
-					else
-					{
-						draw_cosmic_card(get_player(i->first));
-					}
+					resolve_defender_reward(i->first);
 				}
 			}
 		}
@@ -2487,6 +2508,24 @@ void GameState::defense_win_resolution()
 	{
 		GameEvent g(i->first,GameEventType::EncounterWin);
 		resolve_game_event(g);
+	}
+}
+
+void GameState::resolve_defender_reward(const PlayerColors c)
+{
+	std::string prompt("Choose which defender reward you would like to receieve.\n");
+	std::vector<std::string> options;
+	options.push_back("Retrieve one of your ships from the warp.");
+	options.push_back("Draw a card from the Cosmic deck.");
+	unsigned choice = prompt_player(c,prompt,options);
+
+	if(choice == 0)
+	{
+		move_ship_from_warp_to_colony(get_player(c));
+	}
+	else
+	{
+		draw_cosmic_card(get_player(c));
 	}
 }
 
@@ -3391,6 +3430,13 @@ void GameState::establish_colony_on_opponent_planet(const PlayerColors c)
 				old_host.planets.planet_erase(old_colony.second,i);
 				break;
 			}
+		}
+
+		//Once a new colony has officially been established we can raise a trigger
+		if(ship == 0)
+		{
+			GameEvent g(c,GameEventType::NewColony);
+			resolve_game_event(g);
 		}
 	}
 }

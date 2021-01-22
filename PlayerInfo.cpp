@@ -369,7 +369,22 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				vret.push_back(ret);
 			}
 		}
-	} 
+	}
+	else if(g.event_type == GameEventType::NewColony)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::Flare_Remora && g.player != color && alien->get_name().compare("Remora") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i))
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Remora_Super);
+				ret.callback_if_resolved = [this] () { this->game->resolve_defender_reward(this->color); };
+				const CosmicCardType c = *i;
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c); if(!this->alien->get_revealed()) { std::string msg = this->alien->get_reveal_msg(this->color); game->get_server().broadcast_message(msg); this->alien->set_revealed(); } };
+				vret.push_back(ret);
+			}
+		}
+	}
 	//Catchall for any flare; NOTE: We may need to change these nested if/else stmts to separate if stmts in case there are responses to flares that aren't card zaps
 	else if((static_cast<unsigned>(g.event_type) >= static_cast<unsigned>(GameEventType::Flare_TickTock_Wild)) && g.event_type != GameEventType::None)
 	{
