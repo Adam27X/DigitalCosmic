@@ -35,6 +35,10 @@ enum class GameEventType
 	Flare_Human_Super,
 	Flare_Remora_Wild,
 	Flare_Remora_Super,
+	Flare_Trader_Wild,
+	Flare_Trader_Super,
+	Flare_Sorcerer_Wild,
+	Flare_Sorcerer_Super,
 	None
 };
 

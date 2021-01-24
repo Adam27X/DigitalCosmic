@@ -454,6 +454,8 @@ class GuiPart(object):
             msg += '[Flare card]\nWild (if you are not the Human): As a main player, if your opponent is not the Human, you may use this flare after encounter cards are revealed to change your encounter card into an attack 42. Afterwards, give this flare to the Human. If the Human is not playing, discard this flare to use it. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Human): You may cause your power to add 8 to your side\'s total instead of 4. Also, you may discard this flare to zap your power. [Main player or ally only] [Play during the reveal phase only]'
         elif re.match('Flare: Remora',card):
             msg += '[Flare card]\nWild (if you are not Remora): When another player uses a super or wild flare, you may draw a card from the deck. [As any player] [During any turn phase]\nSuper (if you are Remora): When another player gains a colony, you may either draw a card from the deck or retrieve a ship from the warp. If multiple players gain colonies at once, draw a card of retrieve a ship for each. [As any player] [During any turn phase]'
+        elif re.match('Flare: Trader',card):
+            msg += '[Flare card]\nWild (if you are not the Trader): As a main player, before alliances are declared, you may draw one card at random from your opponent\'s hand and add it to your hand. You must then give your opponent one card of your choice (even the card you just drew) in return. [Main player only] [Play during the alliance phase only]\nSuper (if you are the Trader): You may use your power to trade hands with any player, not just your opponent. [Main player only] [Play during the planning phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):
@@ -711,7 +713,7 @@ class GuiPart(object):
                         phase_index = 2
                     elif msg.find('Launch') != -1:
                         phase_index = 3
-                    elif msg.find('Alliance') != -1:
+                    elif msg.find('Alliance') != -1: #This covers Alliance before and after alliances are formed
                         phase_index = 4
                     elif msg.find('Planning') != -1: #This covers Planning before and after cards are selected
                         phase_index = 5

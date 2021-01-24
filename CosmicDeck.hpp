@@ -42,6 +42,8 @@ enum class CosmicCardType
 	Flare_TickTock,
 	Flare_Human,
 	Flare_Remora,
+	Flare_Trader,
+	Flare_Sorcerer,
 	None
 };
 

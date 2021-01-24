@@ -102,6 +102,22 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Remora (Super)";
 		break;
 
+		case GameEventType::Flare_Trader_Wild:
+			ret = "Flare: Trader (Wild)";
+		break;
+
+		case GameEventType::Flare_Trader_Super:
+			ret = "Flare: Trader (Super)";
+		break;
+
+		case GameEventType::Flare_Sorcerer_Wild:
+			ret = "Flare: Sorcerer (Wild)";
+		break;
+
+		case GameEventType::Flare_Sorcerer_Super:
+			ret = "Flare: Sorcerer (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
 		break;

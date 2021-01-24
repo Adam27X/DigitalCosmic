@@ -749,6 +749,10 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		{
 			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
 			{
+				if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
+				{
+					continue;
+				}
 				GameEvent g(current_player.color,to_game_event_type(*i));
 				valid_plays.push_back(g);
 			}
@@ -778,14 +782,6 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				if(valid_plays[i].event_type == GameEventType::AlienPower && alien_power_mandatory)
 				{
 					opt << " (mandatory)";
-				}
-				if(is_flare(valid_plays[i].event_type))
-				{
-					//Ensure that this specific flare wasn't already used this turn and that the casting player hasn't used a flare this turn
-					if(current_player.used_flare_this_turn || check_for_used_flare(to_cosmic_card_type(valid_plays[i].event_type)))
-					{
-						continue;
-					}
 				}
 				options.push_back(opt.str());
 			}
@@ -834,6 +830,10 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				{
 					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
 					{
+						if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
+						{
+							continue;
+						}
 						GameEvent g(current_player.color,to_game_event_type(*i));
 						valid_plays.push_back(g);
 					}
@@ -996,6 +996,32 @@ void GameState::resolve_human_wild_flare(const GameEvent &g)
 	}
 }
 
+void GameState::resolve_trader_wild_flare(const GameEvent &g)
+{
+	bool is_offense = (g.player == assignments.get_offense());
+
+	//Draw one card at random from the opponent's hand
+	PlayerInfo &opponent = is_offense ? get_player(assignments.get_defense()) : get_player(assignments.get_offense());
+	unsigned card_choice = rand() % (opponent.hand_size());
+	CosmicCardType c = opponent.hand_get(card_choice);
+	opponent.hand_erase(opponent.hand_begin()+card_choice);
+
+	PlayerInfo &player = get_player(g.player);
+	player.hand_push_back(c);
+
+	//Now the drawing player must give their opponent a card in return of their choice (including the card that was just drawn)
+	std::string prompt("Choose a card to give back to your opponent.\n");
+	std::vector<std::string> options;
+	for(auto i=player.hand_begin(),e=player.hand_end();i!=e;++i)
+	{
+		options.push_back(to_string(*i));
+	}
+	unsigned return_choice = prompt_player(g.player,prompt,options);
+	CosmicCardType return_c = player.hand_get(return_choice);
+	player.hand_erase(player.hand_begin()+return_choice);
+	opponent.hand_push_back(return_c);
+}
+
 void GameState::setup_human_super_flare(const PlayerColors human)
 {
 	std::string prompt("Which option would you prefer?\n");
@@ -1051,6 +1077,27 @@ void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare
 
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
 {
+	//Discard the flare if countered
+	auto discard_flare_callback = [this,play,g] ()
+	{
+		this->add_to_discard_pile(play);
+		PlayerInfo &current_player = this->get_player(g.player);
+		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
+		{
+			if(*i == play)
+			{
+				current_player.hand_erase(i);
+				break;
+			}
+		}
+	};
+
+	auto cast_flare_callback = [this,play,g] (bool super)
+	{
+		auto ret = [this,play,g,super] () { cast_flare(g.player,play,super); };
+		return ret;
+	};
+
 	switch(play)
 	{
 		case CosmicCardType::MobiusTubes:
@@ -1094,23 +1141,16 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_resolved = [this] () { this->assignments.stop_compensation_and_rewards = true; };
 		break;
 
-		case CosmicCardType::Flare_Human:
+		case CosmicCardType::Flare_Human: //Wild
 			g.callback_if_resolved = [this,g] () { this->resolve_human_wild_flare(g); };
-			//Discard the flare if countered
-			g.callback_if_countered = [this,g] ()
-			{
-				this->add_to_discard_pile(CosmicCardType::Flare_Human);
-				PlayerInfo &current_player = this->get_player(g.player);
-				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
-				{
-					if(*i == CosmicCardType::Flare_Human)
-					{
-						current_player.hand_erase(i);
-						break;
-					}
-				}
-			};
-			g.callback_if_action_taken = [this,g] () { cast_flare(g.player,CosmicCardType::Flare_Human,false); };
+			g.callback_if_countered = discard_flare_callback;
+			g.callback_if_action_taken = cast_flare_callback(false);
+		break;
+
+		case CosmicCardType::Flare_Trader: //Wild
+			g.callback_if_resolved = [this,g] () { this->resolve_trader_wild_flare(g); };
+			g.callback_if_countered = discard_flare_callback;
+			g.callback_if_action_taken = cast_flare_callback(false);
 		break;
 
 		default:
@@ -2904,7 +2944,9 @@ void GameState::execute_turn()
 	check_for_game_events();
 
 	//Alliance Phase
-	update_turn_phase(TurnPhase::Alliance);
+	update_turn_phase(TurnPhase::Alliance_before_selection);
+
+	check_for_game_events(); //Allow alliance phase events that require action before alliances are formed to resolve (for instance, the wild portion of the Trader flare)
 
 	//Offense invites, then the defense invites, then players accept/reject and commit ships in turn order
 	std::set<PlayerColors> potential_allies;
@@ -2921,6 +2963,7 @@ void GameState::execute_turn()
 
 	form_alliances(invited_by_offense,invited_by_defense);
 
+	update_turn_phase(TurnPhase::Alliance_after_selection);
 	check_for_game_events();
 
 	//Planning Phase

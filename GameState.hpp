@@ -222,6 +222,7 @@ private:
 	void end_of_turn_clean_up();
 	std::string get_opponent_alien_name(const PlayerColors c) const; //If c is a main player, obtain the opposing alien's name to figure out if certain flares are valid
 	void resolve_human_wild_flare(const GameEvent &g);
+	void resolve_trader_wild_flare(const GameEvent &g);
 	void evaluate_encounter_cards();
 
 	unsigned num_players;

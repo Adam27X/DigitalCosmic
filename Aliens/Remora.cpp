@@ -14,7 +14,8 @@ Remora::Remora()
 	valid_phases_insert(TurnPhase::Regroup);
 	valid_phases_insert(TurnPhase::Destiny);
 	valid_phases_insert(TurnPhase::Launch);
-	valid_phases_insert(TurnPhase::Alliance);
+	valid_phases_insert(TurnPhase::Alliance_before_selection);
+	valid_phases_insert(TurnPhase::Alliance_after_selection);
 	valid_phases_insert(TurnPhase::Planning_before_selection);
 	valid_phases_insert(TurnPhase::Planning_after_selection);
 	valid_phases_insert(TurnPhase::Reveal);

@@ -160,7 +160,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
 			}
-			else if(*i == CosmicCardType::Flare_Human && alien->get_name().compare("Human") == 0 && color == g.player && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i)) //If we have the Human flare, we are the Human, and we're responding to an AlienPower that matches our color (that is, responding to our own Alien power)
+			else if(*i == CosmicCardType::Flare_Human && color == g.player && can_use_flare(*i,true,"Human")) //If we have the Human flare, we are the Human, and we're responding to an AlienPower that matches our color (that is, responding to our own Alien power)
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Flare_Human_Super);
 				ret.callback_if_resolved = [this] () { this->game->resolve_human_super_flare(this->color); };
@@ -325,7 +325,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_TickTock && (alien->get_name().compare("Tick-Tock") != 0 || !alien_enabled()) && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Wild part of the flare: Can be used by aliens that aren't Tick-Tock or by Tick-Tock when he is zapped or has lost his alien power
+			if(*i == CosmicCardType::Flare_TickTock && can_use_flare(*i,false,"Tick-Tock"))
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Flare_TickTock_Wild);
 				ret.callback_if_resolved = [this] () { this->game->establish_colony_on_opponent_planet(this->color); };
@@ -340,7 +340,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_TickTock && alien->get_name().compare("Tick-Tock") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i) && (current_role == EncounterRole::Offense || current_role == EncounterRole::Defense)) //Super part of the flare: Can only be used by Tick-Tock when he hasn't been zapped and hasn't lost his alien power
+			if(*i == CosmicCardType::Flare_TickTock && can_use_flare(*i,true,"Tick-Tock") && (current_role == EncounterRole::Offense || current_role == EncounterRole::Defense))
 			{
 				if((g.event_type == GameEventType::SuccessfulDeal && (game->get_offense() == color || game->get_defense() == color)) || (g.event_type == GameEventType::EncounterWin && g.player == color))
 				{
@@ -358,8 +358,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			//TODO: Put 'standard' wild/super flare checks into a helper
-			if(*i == CosmicCardType::Flare_Remora && g.player != color && (alien->get_name().compare("Remora") != 0 || !alien_enabled()) && !used_flare_this_turn && !game->check_for_used_flare(*i)) //Standard wild flare checks + this response is only valid if we're responding to a player that isn't ourself
+			if(*i == CosmicCardType::Flare_Remora && g.player != color && can_use_flare(*i,false,"Remora"))
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Flare_Remora_Wild);
 				ret.callback_if_resolved = [this] () {this->game->draw_cosmic_card(*this); };
@@ -374,7 +373,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
 		{
-			if(*i == CosmicCardType::Flare_Remora && g.player != color && alien->get_name().compare("Remora") == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(*i))
+			if(*i == CosmicCardType::Flare_Remora && g.player != color && can_use_flare(*i,true,"Remora"))
 			{
 				GameEvent ret = GameEvent(color,GameEventType::Flare_Remora_Super);
 				ret.callback_if_resolved = [this] () { this->game->resolve_defender_reward(this->color); };
@@ -404,6 +403,20 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 	else
 	{
 		assert(0);
+	}
+}
+
+bool PlayerInfo::can_use_flare(const CosmicCardType flare, bool super, const std::string &alien_name) const
+{
+	if(super)
+	{
+		//Super part of the flare: Can only be used by the alien on the card when that alien hasn't been zapped and that alien's power has not been lost
+		return alien->get_name().compare(alien_name) == 0 && alien_enabled() && !used_flare_this_turn && !game->check_for_used_flare(flare);
+	}
+	else
+	{
+		//Wild part of the flare: Can be used by aliens that aren't the name of the alien on the card or by the alien on the card when that alien's power is disabled or zapped
+		return (alien->get_name().compare(alien_name) != 0 || !alien_enabled()) && !used_flare_this_turn && !game->check_for_used_flare(flare);
 	}
 }
 

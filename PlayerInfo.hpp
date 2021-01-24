@@ -74,6 +74,7 @@ public:
 	bool alien_revealed() const;
 	void discard_card_callback(const CosmicCardType c);
 	std::function<void()> set_invalidate_next_callback_helper() const;
+	bool can_use_flare(const CosmicCardType flare, bool super, const std::string &alien_name) const;
 
 	void add_card_zap_response(std::vector<GameEvent> &vret, const CosmicCardType c);
 

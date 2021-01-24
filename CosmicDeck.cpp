@@ -151,6 +151,14 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Remora";
 		break;
 
+		case CosmicCardType::Flare_Trader:
+			ret = "Flare: Trader";
+		break;
+
+		case CosmicCardType::Flare_Sorcerer:
+			ret = "Flare: Sorcerer";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -203,7 +211,7 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 		break;
 
 		case CosmicCardType::ForceField:
-			if(state == TurnPhase::Alliance)
+			if(state == TurnPhase::Alliance_after_selection)
 			{
 				return true;
 			}
@@ -244,6 +252,17 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 		case CosmicCardType::Flare_Human:
 			//Wild flare for the Human; as a main player or ally during reveal, and can't be used by the Human because the super would be used instead (unless the human has lost their power or was zapped, but for the human I'm not sure if a zap response is possible). Finally, the flare states "if our opponent is not the Human", so check for that as well
 			if(state == TurnPhase::Reveal && role != EncounterRole::None && (alien_name.compare("Human") != 0 || !alien_enabled) && opponent_alien_name.compare("Human") != 0)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
+		case CosmicCardType::Flare_Trader: //Wild
+			if(state == TurnPhase::Alliance_before_selection && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Trader") != 0 || !alien_enabled))
 			{
 				return true;
 			}
@@ -307,6 +326,10 @@ GameEventType to_game_event_type(const CosmicCardType c)
 			return GameEventType::Flare_Human_Wild;
 		break;
 
+		case CosmicCardType::Flare_Trader:
+			return GameEventType::Flare_Trader_Wild;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -367,6 +390,10 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::Flare_Human;
 		break;
 
+		case GameEventType::Flare_Trader_Wild:
+			return CosmicCardType::Flare_Trader;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
 			std::cerr << "Type: " << to_string(g) << "\n";
@@ -413,6 +440,7 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::Flare_TickTock);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Human);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Remora);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Trader);
 
 	shuffle();
 }

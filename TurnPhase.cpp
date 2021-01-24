@@ -23,8 +23,12 @@ std::string to_string(const TurnPhase &t)
 			ret = "Launch";
 		break;
 
-		case TurnPhase::Alliance:
-			ret = "Alliance";
+		case TurnPhase::Alliance_before_selection:
+			ret = "Alliance (before alliances are declared)";
+		break;
+
+		case TurnPhase::Alliance_after_selection:
+			ret = "Alliance (after alliances are declared)";
 		break;
 
 		case TurnPhase::Planning_before_selection:
