@@ -17,6 +17,6 @@ Trader::Trader()
 
 std::function<void()> Trader::get_resolution_callback(GameState *g, const PlayerColors player, GameEvent &this_event, const GameEvent responding_to)
 {
-	std::function<void()> ret = [g] () { g->swap_main_player_hands(); };
+	std::function<void()> ret = [g,this_event] () { g->swap_player_hands(this_event.player,false); };
 	return ret;
 }

@@ -169,6 +169,15 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); this->game->setup_human_super_flare(this->color); };
 				vret.push_back(ret);
 			}
+			else if(*i == CosmicCardType::Flare_Trader && color == g.player && can_use_flare(*i,true,"Trader")) //Trader's super flare enchances the trader alien power, which we model here as a response
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Trader_Super);
+				ret.callback_if_resolved = [this] () { this->game->set_invalidate_next_callback(true); /*Fizzle the original alien power in favor of the super flare (but don't actually zap it)*/ this->game->swap_player_hands(this->color,true); };
+				const CosmicCardType c = *i;
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); };
+				vret.push_back(ret);
+			}
 		}
 	}
 	else if(g.event_type == GameEventType::CosmicZap)

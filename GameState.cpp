@@ -3118,16 +3118,37 @@ void GameState::swap_encounter_cards()
 	assignments.defensive_encounter_card = tmp;
 }
 
-void GameState::swap_main_player_hands()
+void GameState::swap_player_hands(const PlayerColors choosing_player, bool has_choice)
 {
-	PlayerInfo &offense = get_player(assignments.get_offense());
-	PlayerInfo &defense = get_player(assignments.get_defense());
+	unsigned choice = max_player_sentinel;
+	std::map<unsigned,PlayerColors> choice_num_to_player_color;
+	if(has_choice)
+	{
+		std::string prompt("Which player would you like to trade hands with?\n");
+		std::vector<std::string> options;
+		for(unsigned i=0; i<players.size(); i++)
+		{
+			const std::string &alien_name = players[i].alien->get_name();
+			if(alien_name.compare("Trader") != 0)
+			{
+				options.push_back(to_string(players[i].color));
+				choice_num_to_player_color.insert(std::make_pair(options.size()-1,players[i].color));
+			}
+		}
+		choice = prompt_player(choosing_player,prompt,options);
+	}
 
-	std::vector<CosmicCardType> tmp = offense.get_hand_data();
-	offense.set_hand_data(defense.get_hand_data());
-	defense.set_hand_data(tmp);
+	PlayerInfo &trader = get_player(choosing_player);
+	if(has_choice)
+	{
+		assert(choice != max_player_sentinel); //A choice was never made!
+	}
+	PlayerInfo &other_player = has_choice ? get_player(choice_num_to_player_color[choice]) : (choosing_player == assignments.get_offense()) ? get_player(assignments.get_defense()) : get_player(assignments.get_offense());
+
+	std::vector<CosmicCardType> tmp = trader.get_hand_data();
+	trader.set_hand_data(other_player.get_hand_data());
+	other_player.set_hand_data(tmp);
 }
-
 
 //FIXME: Don't ships on the hyperspace gate, defensive allies, etc. count for most (or all) use cases here too?
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color) const

@@ -87,7 +87,7 @@ public:
 	bool hand_empty() const { return hand.empty(); }
 	CosmicCardType hand_get(unsigned index) { return hand[index]; }
 	std::vector<CosmicCardType> get_hand_data() const { return hand; }
-	void set_hand_data(std::vector<CosmicCardType> data) { hand = data; }
+	void set_hand_data(std::vector<CosmicCardType> data) { hand = data; update_client_hand(); }
 
 	template<typename Iterator>
 	Iterator hand_erase(Iterator pos)
