@@ -172,7 +172,7 @@ bool is_flare(const CosmicCardType c)
 	return c >= CosmicCardType::Flare_TickTock && c <= CosmicCardType::None;
 }
 
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name)
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name, bool &super_flare)
 {
 	switch(c)
 	{
@@ -261,9 +261,16 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
-		case CosmicCardType::Flare_Trader: //Wild
+		case CosmicCardType::Flare_Trader:
 			if(state == TurnPhase::Alliance_before_selection && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Trader") != 0 || !alien_enabled))
 			{
+				//Wild
+				return true;
+			}
+			else if(state == TurnPhase::Planning_before_selection && (role == EncounterRole::Offense || role == EncounterRole::Defense) && alien_name.compare("Trader") == 0 && alien_enabled)
+			{
+				//Super
+				super_flare = true;
 				return true;
 			}
 			else
@@ -281,7 +288,7 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 	}
 }
 
-GameEventType to_game_event_type(const CosmicCardType c)
+GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 {
 	switch(c)
 	{
@@ -327,7 +334,14 @@ GameEventType to_game_event_type(const CosmicCardType c)
 		break;
 
 		case CosmicCardType::Flare_Trader:
-			return GameEventType::Flare_Trader_Wild;
+			if(super_flare)
+			{
+				return GameEventType::Flare_Trader_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Trader_Wild;
+			}
 		break;
 
 		default:

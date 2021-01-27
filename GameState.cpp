@@ -747,13 +747,14 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		std::vector<GameEvent> valid_plays;
 		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
+			bool super_flare = false;
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare))
 			{
 				if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
 				{
 					continue;
 				}
-				GameEvent g(current_player.color,to_game_event_type(*i));
+				GameEvent g(current_player.color,to_game_event_type(*i,super_flare));
 				valid_plays.push_back(g);
 			}
 		}
@@ -828,13 +829,14 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				valid_plays.clear();
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name))
+					bool super_flare = false;
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare))
 					{
 						if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
 						{
 							continue;
 						}
-						GameEvent g(current_player.color,to_game_event_type(*i));
+						GameEvent g(current_player.color,to_game_event_type(*i,super_flare));
 						valid_plays.push_back(g);
 					}
 				}
@@ -1148,9 +1150,22 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 		break;
 
 		case CosmicCardType::Flare_Trader: //Wild
-			g.callback_if_resolved = [this,g] () { this->resolve_trader_wild_flare(g); };
-			g.callback_if_countered = discard_flare_callback;
-			g.callback_if_action_taken = cast_flare_callback(false);
+			if(g.event_type == GameEventType::Flare_Trader_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { this->resolve_trader_wild_flare(g); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Trader_Super)
+			{
+				g.callback_if_resolved = [this,g] () { this->swap_player_hands(g.player,true); };
+				g.callback_if_action_taken = cast_flare_callback(true);
+				//NOTE: No discard flare callback here as that's done conditionally based on the type of counter
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Trader");
+			}
 		break;
 
 		default:
