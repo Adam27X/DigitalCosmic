@@ -160,17 +160,6 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
 			}
-			//TODO: Remodel these as stack based events; if they're responded to with a card zap, the flare is discarded and the original alien power resolves
-			//	If they're responded to with a cosmic zap the player keeps the flare but neither the original power nor the super flare resolves
-			else if(*i == CosmicCardType::Flare_Human && color == g.player && can_use_flare(*i,true,"Human")) //If we have the Human flare, we are the Human, and we're responding to an AlienPower that matches our color (that is, responding to our own Alien power)
-			{
-				GameEvent ret = GameEvent(color,GameEventType::Flare_Human_Super);
-				ret.callback_if_resolved = [this] () { this->game->resolve_human_super_flare(this->color); };
-				const CosmicCardType c = *i; //Flares are only discarded when zapped
-				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); this->game->setup_human_super_flare(this->color); };
-				vret.push_back(ret);
-			}
 		}
 	}
 	else if(g.event_type == GameEventType::CosmicZap)
@@ -386,6 +375,42 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	else if(g.event_type == GameEventType::Flare_Human_Super) //Needs special handling compared to other flares
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			//Card zapping the flare lets the alien power resolve if that choice was selected or it prevents the human from zapping themself
+			if(*i == CosmicCardType::CardZap)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CardZap);
+				ret.callback_if_resolved = [this,g] ()
+				{
+					this->game->set_invalidate_next_callback(true);
+					this->game->player_discard(g.player,to_cosmic_card_type(g.event_type));
+					assert(this->game->get_human_super_flare_choice() != -1 && "Need to card zap Human super flare but it was never cast!");
+					if(this->game->get_human_super_flare_choice() == 0)
+					{
+						//Resolve the Human's alien power instead of the alternate version from the super flare
+						GameEvent tmp(g.player,GameEventType::None);
+						this->game->add_reinforcements(tmp,4,false);
+					}
+					//Otherwise invalidating the next callback is sufficient, so we're done
+				};
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
+				vret.push_back(ret);
+			}
+			//Sort of nonsensical in this case; if human chooses to zap himself then zapping him produces the same effect except he keeps the flare and if human chooses to add 8 zapping still lets him win
+			else if(*i == CosmicCardType::CosmicZap)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); this->game->human_encounter_win_condition(); };
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
+				vret.push_back(ret);
+			}
+		}
+	}
 	else if(g.event_type == GameEventType::Flare_Trader_Super) //Needs special handling compared to other flares; this event really represents an alien power+flare
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -396,7 +421,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				//We counter the existing event which was the alien power + super, but still need the base alien power to resolve so we do that as a resolution of the counter; a bit ghetto, but it should work
 				//FIXME: Instead of calling swap_player_hands() use the GameState object to call Trader's get_resolution_callback directly
-				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->swap_player_hands(g.player,false); };
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->player_discard(g.player,to_cosmic_card_type(g.event_type)); this->game->swap_player_hands(g.player,false); };
 				const CosmicCardType c = *i;
 				ret.callback_if_action_taken = [this,c] { this->discard_card_callback(c); };
 				vret.push_back(ret);

@@ -814,6 +814,12 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					}
 
 					get_callbacks_for_cosmic_card(play,g);
+
+					//These super flares technically use their corresponding alien powers, so we need to mark them as used
+					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super)
+					{
+						used_aliens_this_phase.insert(current_player.color);
+					}
 				}
 				else
 				{
@@ -1024,6 +1030,7 @@ void GameState::resolve_trader_wild_flare(const GameEvent &g)
 	opponent.hand_push_back(return_c);
 }
 
+//FIXME: Opponents should know which choice was made; ideally this information would be added to the GameEvent and accessible from the stack. For these super flares that enchance aliens the users need more details to begin with
 void GameState::setup_human_super_flare(const PlayerColors human)
 {
 	std::string prompt("Which option would you prefer?\n");
@@ -1037,11 +1044,10 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 {
 	assert((assignments.human_super_flare_choice == 0 || assignments.human_super_flare_choice == 1) && "Invalid selection for the human's super flare!");
 
-	if(assignments.human_super_flare_choice == 0) //Add 8 to the human's side instead of 4; this needs to be done in a way where if the human is zapped nothing is added (though in that case the human wins anyway...)
+	if(assignments.human_super_flare_choice == 0) //Add 8 to the human's side instead of 4
 	{
-		//TODO: It would be better to edit the stack directly and have the existing alien power event add 8 but my first attempt at that failed
 		GameEvent tmp(human,GameEventType::None);
-		add_reinforcements(tmp,4,false);
+		add_reinforcements(tmp,8,false);
 	}
 	else //Zap the human's power by discarding the flare
 	{
@@ -1056,8 +1062,8 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 			}
 		}
 
-		set_invalidate_next_callback(true); //This should be safe as the next callback should always be the alien power itself
 		zap_alien(human);
+		human_encounter_win_condition();
 	}
 }
 
@@ -1144,9 +1150,22 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 		break;
 
 		case CosmicCardType::Flare_Human: //Wild
-			g.callback_if_resolved = [this,g] () { this->resolve_human_wild_flare(g); };
-			g.callback_if_countered = discard_flare_callback;
-			g.callback_if_action_taken = cast_flare_callback(false);
+			if(g.event_type == GameEventType::Flare_Human_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { this->resolve_human_wild_flare(g); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Human_Super)
+			{
+				g.callback_if_resolved = [this,g] () { this->resolve_human_super_flare(g.player); };
+				g.callback_if_action_taken = [this,play,g] () { cast_flare(g.player,play,true); this->setup_human_super_flare(g.player); };
+				//NOTE: No discard flare callback here as that's done conditionally based on the type of counter
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Human");
+			}
 		break;
 
 		case CosmicCardType::Flare_Trader: //Wild
@@ -1171,6 +1190,27 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 		default:
 			assert(0 && "CosmicCardType callbacks not yet implemenmted\n");
 		break;
+	}
+}
+
+void GameState::player_discard(const PlayerColors player, const CosmicCardType c)
+{
+	bool card_found = false;
+
+	PlayerInfo &p = get_player(player);
+	for(auto i=p.hand_begin(),e=p.hand_end();i!=e;++i)
+	{
+		if(*i == c)
+		{
+			p.hand_erase(i);
+			card_found = true;
+			break;
+		}
+	}
+
+	if(card_found)
+	{
+		add_to_discard_pile(c);
 	}
 }
 
@@ -2729,6 +2769,7 @@ void GameState::add_reinforcements(const GameEvent &g, const unsigned value, boo
 	server.broadcast_message(announce.str());
 }
 
+//FIXME: Should this be more immediate?
 void GameState::human_encounter_win_condition()
 {
 
@@ -3694,6 +3735,7 @@ void GameState::resolve_game_event(const GameEvent g)
 			}
 		}
 
+		bool broke_from_inner_loop = false;
 		while(valid_plays.size() && take_action) //If there are valid responses and we have yet to decline to choose one of them...
 		{
 			GameEvent can_respond(current_player.color,GameEventType::None); //Arbitrary initialization value
@@ -3739,7 +3781,6 @@ void GameState::resolve_game_event(const GameEvent g)
 				}
 				resolve_game_event(can_respond);
 
-				//TODO: Is this bit still valid now that an event can have multiple responses?
 				//This action resolved and will counter the next item in the stack, which means there's nothing for the other players to actually respond to
 				//For example:
 				//
@@ -3753,6 +3794,7 @@ void GameState::resolve_game_event(const GameEvent g)
 				//Assume this player does not want to CardZap the other CardZap that's already on the stack. They shouldn't be prompted to CardZap the CosmicZap after the CardZap on the stack resolves, because it's the CosmicZap has already been zapped (but hasn't actually been countered yet)
 				if(invalidate_next_callback && (can_respond.event_type == GameEventType::CosmicZap || can_respond.event_type == GameEventType::CardZap))
 				{
+					broke_from_inner_loop = true; //NOTE: Need to break from both loops now, hence the extra bool
 					break;
 				}
 
@@ -3776,7 +3818,10 @@ void GameState::resolve_game_event(const GameEvent g)
 				take_action = true; //Force another loop so the player can use their alien power
 			}
 		}
-
+		if(broke_from_inner_loop)
+		{
+			break;
+		}
 	}
 
 	if(invalidate_next_callback) //Countered!

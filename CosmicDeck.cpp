@@ -253,6 +253,13 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			//Wild flare for the Human; as a main player or ally during reveal, and can't be used by the Human because the super would be used instead (unless the human has lost their power or was zapped, but for the human I'm not sure if a zap response is possible). Finally, the flare states "if our opponent is not the Human", so check for that as well
 			if(state == TurnPhase::Reveal && role != EncounterRole::None && (alien_name.compare("Human") != 0 || !alien_enabled) && opponent_alien_name.compare("Human") != 0)
 			{
+				//Wild
+				return true;
+			}
+			else if(state == TurnPhase::Reveal && role != EncounterRole::None && alien_name.compare("Human") == 0 && alien_enabled)
+			{
+				//Super
+				super_flare = true;
 				return true;
 			}
 			else
@@ -330,7 +337,14 @@ GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 
 		//NOTE: Only some flares exist here because only some flares can be played on an empty stack
 		case CosmicCardType::Flare_Human:
-			return GameEventType::Flare_Human_Wild;
+			if(super_flare)
+			{
+				return GameEventType::Flare_Human_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Human_Wild;
+			}
 		break;
 
 		case CosmicCardType::Flare_Trader:
@@ -404,7 +418,15 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::Flare_Human;
 		break;
 
+		case GameEventType::Flare_Human_Super:
+			return CosmicCardType::Flare_Human;
+		break;
+
 		case GameEventType::Flare_Trader_Wild:
+			return CosmicCardType::Flare_Trader;
+		break;
+
+		case GameEventType::Flare_Trader_Super:
 			return CosmicCardType::Flare_Trader;
 		break;
 
