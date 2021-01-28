@@ -391,8 +391,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 					if(this->game->get_human_super_flare_choice() == 0)
 					{
 						//Resolve the Human's alien power instead of the alternate version from the super flare
-						GameEvent tmp(g.player,GameEventType::None);
-						this->game->add_reinforcements(tmp,4,false);
+						this->game->get_alien_resolution_callback(g.player);
 					}
 					//Otherwise invalidating the next callback is sufficient, so we're done
 				};
@@ -420,8 +419,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			{
 				GameEvent ret = GameEvent(color,GameEventType::CardZap);
 				//We counter the existing event which was the alien power + super, but still need the base alien power to resolve so we do that as a resolution of the counter; a bit ghetto, but it should work
-				//FIXME: Instead of calling swap_player_hands() use the GameState object to call Trader's get_resolution_callback directly
-				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->player_discard(g.player,to_cosmic_card_type(g.event_type)); this->game->swap_player_hands(g.player,false); };
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->player_discard(g.player,to_cosmic_card_type(g.event_type)); this->game->get_alien_resolution_callback(g.player); };
 				const CosmicCardType c = *i;
 				ret.callback_if_action_taken = [this,c] { this->discard_card_callback(c); };
 				vret.push_back(ret);

@@ -1193,6 +1193,13 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 	}
 }
 
+std::function<void()> GameState::get_alien_resolution_callback(const PlayerColors c)
+{
+	GameEvent this_event(c,GameEventType::None);
+	GameEvent responding_to(PlayerColors::Invalid,GameEventType::None); //Bogus event that is unused here
+	return get_player_const(c).alien->get_resolution_callback(this,c,this_event,responding_to);
+}
+
 void GameState::player_discard(const PlayerColors player, const CosmicCardType c)
 {
 	bool card_found = false;
