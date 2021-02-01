@@ -818,7 +818,8 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					get_callbacks_for_cosmic_card(play,g);
 
 					//These super flares technically use their corresponding alien powers, so we need to mark them as used
-					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super)
+					//FIXME: If these aliens use choose to use their power normally then their flare needs to be made unavailable
+					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super || g.event_type == GameEventType::Flare_Sorcerer_Super)
 					{
 						used_aliens_this_phase.insert(current_player.color);
 					}
@@ -1261,10 +1262,23 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			}
 		break;
 
-		case CosmicCardType::Flare_Sorcerer: //Wild
-			g.callback_if_resolved = [this,g] () { this->resolve_sorcerer_wild_flare(g); };
-			g.callback_if_countered = discard_flare_callback;
-			g.callback_if_action_taken = cast_flare_callback(false);
+		case CosmicCardType::Flare_Sorcerer:
+			if(g.event_type == GameEventType::Flare_Sorcerer_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { this->resolve_sorcerer_wild_flare(g); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Sorcerer_Super)
+			{
+				g.callback_if_resolved = [this] () { this->swap_encounter_cards(); };
+				g.callback_if_action_taken = cast_flare_callback(true);
+				//NOTE: No discard flare callback here as that's done conditionally based on the type of counter
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Sorcerer");
+			}
 		break;
 
 		default:

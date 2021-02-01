@@ -287,9 +287,15 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 		break;
 
 		case CosmicCardType::Flare_Sorcerer:
-			//Wild; can't be played if the Sorcerer is a main player
 			if(state == TurnPhase::Planning_before_selection && (alien_name.compare("Sorcerer") != 0 || !alien_enabled) && offense_alien_name.compare("Sorcerer") != 0 && defense_alien_name.compare("Sorcerer") != 0)
 			{
+				//Wild; can't be played if the Sorcerer is a main player
+				return true;
+			}
+			else if(state == TurnPhase::Planning_after_selection && (role == EncounterRole::OffensiveAlly || role == EncounterRole::DefensiveAlly) && alien_name.compare("Sorcerer") == 0 && alien_enabled)
+			{
+				//Super
+				super_flare = true;
 				return true;
 			}
 			else
