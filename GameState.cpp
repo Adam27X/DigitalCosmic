@@ -739,6 +739,8 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 
 	unsigned satisfied_players = 0; //When all of the players decline to make a play (or have no play to make), we can move on
 	unsigned current_player_index = 0;
+	const std::string offense_alien_name = (assignments.get_offense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_offense()).alien->get_name();
+	const std::string defense_alien_name = (assignments.get_defense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_defense()).alien->get_name();
 	while(satisfied_players < players.size())
 	{
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
@@ -748,7 +750,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 		{
 			bool super_flare = false;
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare))
+			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
 			{
 				if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
 				{
@@ -836,7 +838,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
 					bool super_flare = false;
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare))
+					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
 					{
 						if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
 						{
@@ -1030,6 +1032,78 @@ void GameState::resolve_trader_wild_flare(const GameEvent &g)
 	opponent.hand_push_back(return_c);
 }
 
+void GameState::resolve_sorcerer_wild_flare(const GameEvent &g)
+{
+	const PlayerColors &casting_player = g.player;
+
+	//Force main players to trade alien powers
+	//TODO: How do existing cosmic zaps work here? If the offense's alien was zapped presumably then when the defense takes control it should be zapped and the offense should be free to use their new alien?
+	PlayerInfo &offense = get_player(assignments.get_offense());
+	PlayerInfo &defense = get_player(assignments.get_defense());
+	const bool offense_was_zapped = offense.alien_zapped;
+	const bool defense_was_zapped = defense.alien_zapped;
+
+	offense.alien.swap(defense.alien); //unique_ptr::swap
+	offense.alien_zapped = defense_was_zapped;
+	defense.alien_zapped = offense_was_zapped;
+
+	//Update the client GUIs to resolve this mess
+	std::stringstream announce;
+	announce << "[alien_change]\n";
+	announce << "The " << to_string(assignments.get_offense()) << " player and the " << to_string(assignments.get_defense()) << " player have swapped alien powers!\n";
+	server.broadcast_message(announce.str());
+
+	//Send out alien_update tags to both the offense and defense so that they know the details of their new alien if it was previously unrevealed
+	std::string msg("[alien_update]");
+	msg.append(offense.get_alien_desc());
+	server.send_message_to_client(assignments.get_offense(),msg);
+	msg.clear();
+	msg.append("[alien_update]");
+	msg.append(defense.get_alien_desc());
+	server.send_message_to_client(assignments.get_defense(),msg);
+
+	//Give this flare to the Sorcerer or discard it
+	//TODO: Create a helper out of this technique since we also use it for Human's wild flare (taking in an alien name string and flare card as args)
+	bool sorcerer_found;
+	for(auto i=players.begin(),e=players.end();i!=e;++i)
+	{
+		if(i->alien->get_name().compare("Sorcerer") == 0)
+		{
+			sorcerer_found = true;
+			//Give the flare to the Sorcerer
+			i->hand_push_back(CosmicCardType::Flare_Sorcerer);
+			//Get rid of the flare from our hand
+			PlayerInfo &caster = get_player(casting_player);
+			for(auto ii=caster.hand_begin(),ee=caster.hand_end();ii!=ee;++ii)
+			{
+				if(*ii == CosmicCardType::Flare_Sorcerer)
+				{
+					caster.hand_erase(ii);
+					break;
+				}
+			}
+			break;
+		}
+	}
+
+	if(!sorcerer_found)
+	{
+		//Discard the flare upon use
+		//Add the flare to the discard pile
+		add_to_discard_pile(CosmicCardType::Flare_Sorcerer);
+		//Get rid of the flare from our hand
+		PlayerInfo &caster = get_player(casting_player);
+		for(auto ii=caster.hand_begin(),ee=caster.hand_end();ii!=ee;++ii)
+		{
+			if(*ii == CosmicCardType::Flare_Sorcerer)
+			{
+				caster.hand_erase(ii);
+				break;
+			}
+		}
+	}
+}
+
 //FIXME: Opponents should know which choice was made; ideally this information would be added to the GameEvent and accessible from the stack. For these super flares that enchance aliens the users need more details to begin with
 void GameState::setup_human_super_flare(const PlayerColors human)
 {
@@ -1149,7 +1223,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			g.callback_if_resolved = [this] () { this->assignments.stop_compensation_and_rewards = true; };
 		break;
 
-		case CosmicCardType::Flare_Human: //Wild
+		case CosmicCardType::Flare_Human:
 			if(g.event_type == GameEventType::Flare_Human_Wild)
 			{
 				g.callback_if_resolved = [this,g] () { this->resolve_human_wild_flare(g); };
@@ -1168,7 +1242,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			}
 		break;
 
-		case CosmicCardType::Flare_Trader: //Wild
+		case CosmicCardType::Flare_Trader:
 			if(g.event_type == GameEventType::Flare_Trader_Wild)
 			{
 				g.callback_if_resolved = [this,g] () { this->resolve_trader_wild_flare(g); };
@@ -1185,6 +1259,12 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Trader");
 			}
+		break;
+
+		case CosmicCardType::Flare_Sorcerer: //Wild
+			g.callback_if_resolved = [this,g] () { this->resolve_sorcerer_wild_flare(g); };
+			g.callback_if_countered = discard_flare_callback;
+			g.callback_if_action_taken = cast_flare_callback(false);
 		break;
 
 		default:

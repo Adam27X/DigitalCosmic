@@ -59,7 +59,7 @@ public:
 	PlanetSystem planets;
 	std::unique_ptr<AlienBase> alien;
 	EncounterRole current_role;
-	bool alien_zapped;
+	bool alien_zapped; //TODO: Should this data belong within the alien data structure?
 	bool used_flare_this_turn; //Each player can only use one flare per encounter
 
 	void make_default_player(const PlayerColors c);

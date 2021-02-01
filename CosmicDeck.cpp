@@ -172,7 +172,7 @@ bool is_flare(const CosmicCardType c)
 	return c >= CosmicCardType::Flare_TickTock && c <= CosmicCardType::None;
 }
 
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name, bool &super_flare)
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name, bool &super_flare, const std::string &offense_alien_name, const std::string &defense_alien_name)
 {
 	switch(c)
 	{
@@ -286,6 +286,18 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Flare_Sorcerer:
+			//Wild; can't be played if the Sorcerer is a main player
+			if(state == TurnPhase::Planning_before_selection && (alien_name.compare("Sorcerer") != 0 || !alien_enabled) && offense_alien_name.compare("Sorcerer") != 0 && defense_alien_name.compare("Sorcerer") != 0)
+			{
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -358,6 +370,17 @@ GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 			}
 		break;
 
+		case CosmicCardType::Flare_Sorcerer:
+			if(super_flare)
+			{
+				return GameEventType::Flare_Sorcerer_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Sorcerer_Wild;
+			}
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -415,19 +438,18 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 		break;
 
 		case GameEventType::Flare_Human_Wild:
-			return CosmicCardType::Flare_Human;
-		break;
-
 		case GameEventType::Flare_Human_Super:
 			return CosmicCardType::Flare_Human;
 		break;
 
 		case GameEventType::Flare_Trader_Wild:
+		case GameEventType::Flare_Trader_Super:
 			return CosmicCardType::Flare_Trader;
 		break;
 
-		case GameEventType::Flare_Trader_Super:
-			return CosmicCardType::Flare_Trader;
+		case GameEventType::Flare_Sorcerer_Wild:
+		case GameEventType::Flare_Sorcerer_Super:
+			return CosmicCardType::Flare_Sorcerer;
 		break;
 
 		default:
@@ -477,6 +499,7 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Human);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Remora);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Trader);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Sorcerer);
 
 	shuffle();
 }

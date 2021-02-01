@@ -48,7 +48,8 @@ enum class CosmicCardType
 };
 
 std::string to_string(const CosmicCardType &c);
-bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name, bool &super_flare);
+//TODO: Restructure this function so that it takes in a const GameState reference or some other data structure instead of these random fields
+bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType c, const EncounterRole role, bool alien_enabled, const std::string &alien_name, const std::string &opponent_alien_name, bool &super_flare, const std::string &offense_alien_name, const std::string &defense_alien_name);
 GameEventType to_game_event_type(const CosmicCardType c, bool super_flare=false);
 CosmicCardType to_cosmic_card_type(const GameEventType g);
 bool is_flare(const CosmicCardType c);

@@ -437,7 +437,7 @@ class GuiPart(object):
         elif re.match('Cosmic Zap',card):
             msg += '[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien\'s power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]'
         elif re.match('Mobius Tubes',card):
-            msg += '[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners\' colonies. [Play as the offense only] [ Play during the regroup phase only]'
+            msg += '[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners\' colonies. [Play as the offense only] [Play during the regroup phase only]'
         elif re.match('Plague',card):
             msg += '[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]'
         elif re.match('Force Field',card):
@@ -456,6 +456,8 @@ class GuiPart(object):
             msg += '[Flare card]\nWild (if you are not Remora): When another player uses a super or wild flare, you may draw a card from the deck. [As any player] [During any turn phase]\nSuper (if you are Remora): When another player gains a colony, you may either draw a card from the deck or retrieve a ship from the warp. If multiple players gain colonies at once, draw a card of retrieve a ship for each. [As any player] [During any turn phase]'
         elif re.match('Flare: Trader',card):
             msg += '[Flare card]\nWild (if you are not the Trader): As a main player, before alliances are declared, you may draw one card at random from your opponent\'s hand and add it to your hand. You must then give your opponent one card of your choice (even the card you just drew) in return. [Main player only] [Play during the alliance phase only]\nSuper (if you are the Trader): You may use your power to trade hands with any player, not just your opponent. [Main player only] [Play during the planning phase only]'
+        elif re.match('Flare: Sorcerer',card):
+            msg += '[Flare card]\nWild (if you are not the Sorcerer): When the Sorcerer is not a main player, before cards are selected during an encounter, you may force the main players to trade alien powers with each other. They keep their new powers after the encounter ends. After using this flare, give it to the Sorcerer. If the Sorcerer is not playing, discard this flare to use it. [As any player] [Play during the planning phase only]\nSuper (if you are the Sorcerer): You may use your power as an ally, switching the main players\' encounter cards. [Ally only] [Play during the planning phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):
@@ -776,6 +778,7 @@ class GuiPart(object):
                                     self.player_aliens[player] = []
                                     self.player_aliens[player].append(StringVar())
                                     self.player_aliens[player].append(Label(self.game_board_frame, textvariable=self.player_aliens[player][0]))
+                                    self.player_aliens[player].append('')
                                     self.player_aliens[player][0].set(player + ' player alien: ???') #Keep the client's Alien in an unrevealed state to let them know that thier alien is still unknown to others (they can see their own alien info elsewhere)
                                     self.player_aliens[player][1].grid(column=i,row=2)
                                     self.color_to_num[player] = i
@@ -858,7 +861,7 @@ class GuiPart(object):
                     alien_desc = msg[msg.find('!\n')+2:]
                     #TODO: Make this information more prominent once it has been revealed?
                     self.player_aliens[player][0].set(player + ' player alien: ' + alien_name)
-                    self.player_aliens[player].append(alien_desc)
+                    self.player_aliens[player][2] = alien_desc
                     self.player_aliens[player][1].bind('<Enter>', lambda e,player=player: self.update_revealed_alien_info(self.player_aliens[player][2]))
                 if msg.find('[alien_aux_update]') != -1: #Some other alien information was received from the server
                     tag_found = True
@@ -870,6 +873,27 @@ class GuiPart(object):
                                 alien_info[2] = re.sub('Tokens remaining: (.*)','Tokens remaining: ' + tick_tock_aux_match.group(2), alien_info[2])
                             else:
                                 alien_info[2] += 'Tokens remaining: ' + tick_tock_aux_match.group(2)
+                if msg.find('[alien_change]') != -1: #Sorcerer wild flare or some other sort of swapping of alien powers
+                    tag_found = True
+                    player_match = re.search('The (.*) player and the (.*) player',msg)
+                    assert player_match, 'Failed to parse alien change!'
+                    first_player = player_match.group(1)
+                    second_player = player_match.group(2)
+                    #What do we need to fill in here? self.alien_name, self.alien_desc, and then grid_forget()/grid self.alien_label; self.player_aliens[player]
+                    if (first_player == self.player_color) or (second_player == self.player_color):
+                        #The client's alien was swapped, reset their alien info and it'll be updated shortly via the alien_update tag
+                        self.alien_name.set('')
+                        self.alien_desc = ''
+                        self.alien_label.grid_forget()
+                    #Swap client alien data for the two players
+                    old_first_player_label_str = self.player_aliens[first_player][0].get()
+                    old_first_player_alien_desc = self.player_aliens[first_player][2]
+                    self.player_aliens[first_player][0].set(self.player_aliens[second_player][0].get())
+                    self.player_aliens[first_player][2] = self.player_aliens[second_player][2]
+                    self.player_aliens[first_player][1].bind('<Enter>', lambda e,player=first_player: self.update_revealed_alien_info(self.player_aliens[player][2])) #This bind should overwrite any previous bindings
+                    self.player_aliens[second_player][0].set(old_first_player_label_str)
+                    self.player_aliens[second_player][2] = old_first_player_alien_desc
+                    self.player_aliens[second_player][1].bind('<Enter>', lambda e,player=second_player: self.update_revealed_alien_info(self.player_aliens[player][2])) #This bind should overwrite any previous bindings
                 if msg.find('[cosmic_discard_update]') != -1: #Cards have moved to or have been removed from the cosmic discard pile
                     tag_found = True
                     lbrace = msg.find('{')
