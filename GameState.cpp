@@ -818,7 +818,6 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					get_callbacks_for_cosmic_card(play,g);
 
 					//These super flares technically use their corresponding alien powers, so we need to mark them as used
-					//FIXME: If these aliens use choose to use their power normally then their flare needs to be made unavailable
 					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super || g.event_type == GameEventType::Flare_Sorcerer_Super)
 					{
 						used_aliens_this_phase.insert(current_player.color);
@@ -835,6 +834,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				resolve_game_event(g);
 
 				//Recalculate the set of valid plays since either the current play or a response to it could have changed it
+				//TODO: Move this calculation to a helper so we don't have a distinction betwen the initial calculation code and the recalculation code
 				valid_plays.clear();
 				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
 				{
@@ -842,6 +842,11 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
 					{
 						if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
+						{
+							continue;
+						}
+						//If the player already used their alien power and their super flare enhances their alien power, they already gave up their opportunity to do so
+						if(super_flare && (*i == CosmicCardType::Flare_Human || *i == CosmicCardType::Flare_Trader || *i == CosmicCardType::Flare_Sorcerer)  && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
 						{
 							continue;
 						}
