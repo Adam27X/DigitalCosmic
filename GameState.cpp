@@ -2468,7 +2468,7 @@ void GameState::broadcast_encounter_scores() const
 	server.broadcast_message(announce.str());
 }
 
-void GameState::setup_compensation()
+void GameState::setup_compensation(const PlayerColors virus)
 {
 	//The player with the negotiate loses, but collects compensation later
 	if(assignments.offensive_encounter_card == CosmicCardType::Negotiate)
@@ -2485,11 +2485,11 @@ void GameState::setup_compensation()
 	}
 
 	//Update scores just in case that matters for some odd edge case
-	add_score_from_ships();
+	add_score_from_ships(virus);
 	broadcast_encounter_scores();
 
 	std::stringstream announce;
-	announce << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encountner, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
+	announce << "The " << to_string(assignments.player_receiving_compensation) << " player has lost the encounter, but will receive compensation from the " << to_string(assignments.player_giving_compensation) << " player.\n";
 	server.broadcast_message(announce.str());
 
 }
@@ -2543,12 +2543,54 @@ void GameState::resolve_compensation()
 	}
 }
 
-void GameState::add_score_from_ships()
+void GameState::add_score_from_ships(const PlayerColors virus)
 {
 	std::stringstream announce;
+	if(virus != PlayerColors::Invalid)
+	{
+		//Virus alien power: ships from the virus are multiplied instead of added
+		if(virus == assignments.get_offense())
+		{
+			assignments.offense_attack_value = 0; //Reset
+
+			unsigned num_virus_ships = 0;
+			for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+			{
+				if(*i == assignments.get_offense())
+				{
+					num_virus_ships++;
+				}
+			}
+
+			announce << "Multiplying " << num_virus_ships << " ships from the virus times the offensive attack card to the offense score.\n";
+			assignments.offense_attack_value += (num_virus_ships*static_cast<unsigned>(assignments.offensive_encounter_card));
+		}
+		else if(virus == assignments.get_defense())
+		{
+			assignments.defense_attack_value = 0; //Reset
+			unsigned num_virus_ships = 0;
+			const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
+			for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
+			{
+				if(*i == assignments.get_defense())
+				{
+					num_virus_ships++;
+				}
+			}
+
+			announce << "Multiplying " << num_virus_ships << " ships from the virus times the defensive attack card to the defense score.\n";
+			assignments.defense_attack_value += (num_virus_ships*static_cast<unsigned>(assignments.defensive_encounter_card));
+		}
+		else
+		{
+			assert(0 && "Valid color passed as Virus to add_score_from_ships but Virus isn't a main player");
+		}
+	}
+
+	//Add in remaining ships, skipping virus if valid since we've already accounted for those ships
 	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end(); i!=e; ++i)
 	{
-		if(*i == assignments.get_offense() || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
+		if((*i == assignments.get_offense() && *i != virus) || assignments.offensive_allies.find(*i) != assignments.offensive_allies.end())
 		{
 			announce << "Adding " << to_string(*i) << " ship from hyperspace gate to offense score.\n";
 			assignments.offense_attack_value++;
@@ -2558,7 +2600,7 @@ void GameState::add_score_from_ships()
 	const PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin(),e=encounter_planet.end();i!=e;++i)
 	{
-		if(*i == assignments.get_defense())
+		if(*i == assignments.get_defense() && *i != virus)
 		{
 			announce << "Adding " << to_string(*i) << " ship from the colony being attacked to defense score.\n";
 			assignments.defense_attack_value++;
@@ -2572,7 +2614,7 @@ void GameState::add_score_from_ships()
 	server.broadcast_message(announce.str());
 }
 
-void GameState::setup_attack()
+void GameState::setup_attack(const PlayerColors virus)
 {
 	//Base values from encounter cards
 	if(assignments.offensive_encounter_card == CosmicCardType::Morph && assignments.defensive_encounter_card == CosmicCardType::Morph)
@@ -2601,7 +2643,7 @@ void GameState::setup_attack()
 	announce << "Initial scores from encounter cards: Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
 	server.broadcast_message(announce.str());
 
-	add_score_from_ships();
+	add_score_from_ships(virus);
 	broadcast_encounter_scores();
 }
 
@@ -3012,7 +3054,7 @@ void GameState::update_turn_phase(const TurnPhase phase)
 	server.broadcast_message(msg);
 }
 
-void GameState::evaluate_encounter_cards()
+void GameState::evaluate_encounter_cards(const PlayerColors virus)
 {
 	std::stringstream announce;
 	announce << "The offense has encounter card: " << to_string(assignments.offensive_encounter_card) << "\n";
@@ -3028,12 +3070,12 @@ void GameState::evaluate_encounter_cards()
 	}
 	else if(assignments.compensating)
 	{
-		setup_compensation();
+		setup_compensation(virus);
 	}
 	else
 	{
 		//Both players played attack/morph cards, time to do math
-		setup_attack();
+		setup_attack(virus);
 	}
 }
 
