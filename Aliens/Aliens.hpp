@@ -5,3 +5,4 @@
 #include "Remora.hpp"
 #include "Trader.hpp"
 #include "Sorcerer.hpp"
+#include "Virus.hpp"
