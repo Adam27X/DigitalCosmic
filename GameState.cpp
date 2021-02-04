@@ -2682,7 +2682,7 @@ void GameState::offense_win_resolution()
 		get_player(assignments.planet_location).planets.planet_push_back(assignments.planet_id,*i); //FIXME: Ugly here too
 		i=hyperspace_gate.erase(i);
 
-		if(colonies_on_planet.find(*i) != colonies_on_planet.end())
+		if(colonies_on_planet.find(*i) == colonies_on_planet.end()) //If a ship of this color wasn't already on the planet, we've established a new colony
 		{
 			GameEvent g(*i,GameEventType::NewColony);
 			resolve_game_event(g);
@@ -2702,11 +2702,33 @@ void GameState::offense_win_resolution()
 	}
 }
 
+void GameState::possible_crash_landing(const PlayerColors spiff)
+{
+	std::string prompt("Would you like to crash land one of your ships that would otherwise be lost to the warp on the winning defensive planet?\n");
+	std::vector<std::string> options;
+	options.push_back("Y");
+	options.push_back("N");
+	unsigned choice = prompt_player(spiff,prompt,options);
+
+	if(choice == 0)
+	{
+		assignments.crash_landing = true;
+	}
+}
+
 void GameState::defense_win_resolution()
 {
 	//Offense and offensive ally ships go to the warp
+	bool first_offense_ship_found = false;
 	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
 	{
+		if(*i == assignments.get_offense() && !first_offense_ship_found && assignments.crash_landing)
+		{
+			//Prevent the first ship from going to the warp, it will crash land instead
+			first_offense_ship_found = true;
+			i=hyperspace_gate.erase(i);
+			continue;
+		}
 		warp.push_back(std::make_pair(*i,encounter_num));
 		i=hyperspace_gate.erase(i);
 	}
@@ -2715,6 +2737,29 @@ void GameState::defense_win_resolution()
 	{
 		move_ship_to_colony(get_player(*defensive_ally_ships.begin()),defensive_ally_ships);
 	}
+
+	//Handle crash landing, if applicable
+	if(assignments.crash_landing && first_offense_ship_found)
+	{
+		//Keep track of which colonies will be 'new' colonies for triggers
+		//TODO: Refactor this logic into a helper
+		std::set<PlayerColors> colonies_on_planet;
+		for(unsigned i=0; i<get_player(assignments.planet_location).planets.planet_size(assignments.planet_id); i++)
+		{
+			colonies_on_planet.insert(get_player(assignments.planet_location).planets.get_ship(assignments.planet_id,i));
+		}
+
+		//Crash land
+		get_player(assignments.planet_location).planets.planet_push_back(assignments.planet_id,assignments.get_offense());
+
+		//If the colony is new, fire a trigger for that event
+		if(colonies_on_planet.find(assignments.get_offense()) == colonies_on_planet.end())
+		{
+			GameEvent g(assignments.get_offense(),GameEventType::NewColony);
+			resolve_game_event(g);
+		}
+	}
+
 	//Handle defender rewards (Note: This should generate quite a few Remora triggers)
 	if(!assignments.stop_compensation_and_rewards)
 	{
@@ -2817,6 +2862,12 @@ void GameState::resolve_attack()
 	}
 	else //Ties go to the defense
 	{
+		unsigned win_amount = assignments.defense_attack_value - assignments.offense_attack_value;
+		if(win_amount >= 10)
+		{
+			GameEvent g(assignments.get_offense(),GameEventType::CrashLandTrigger);
+			resolve_game_event(g);
+		}
 		defense_win_resolution();
 	}
 }

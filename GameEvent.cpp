@@ -130,6 +130,10 @@ std::string to_string(const GameEventType &g)
 			ret = "A new colony was established";
 		break;
 
+		case GameEventType::CrashLandTrigger:
+			ret = "Offense lost the encounter by 10 or more";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

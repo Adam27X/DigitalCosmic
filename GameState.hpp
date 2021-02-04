@@ -45,6 +45,7 @@ public:
 	bool compensating;
 	std::set<CosmicCardType> flares_used_this_turn; //A given flare may only be used once per encounter by *any* player
 	int human_super_flare_choice; //-1 == invalid, 0 == add 8 instead of 4, 1 == zap power //TODO: Can we shove this into GameEvent itself?
+	bool crash_landing;
 
 	void set_offense(const PlayerColors c)
 	{
@@ -82,6 +83,7 @@ public:
 		compensating = false;
 		human_super_flare_choice = -1;
 		flares_used_this_turn.clear();
+		crash_landing = false;
 	}
 
 private:
@@ -176,6 +178,7 @@ public:
 	int get_human_super_flare_choice() const { return assignments.human_super_flare_choice; }
 	std::function<void()> get_alien_resolution_callback(const PlayerColors c);
 	void evaluate_encounter_cards(const PlayerColors virus = PlayerColors::Invalid);
+	void possible_crash_landing(const PlayerColors spiff);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

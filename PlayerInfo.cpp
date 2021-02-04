@@ -470,7 +470,7 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::DefensiveEncounterWin) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
+	else if(g.event_type == GameEventType::DrawCard || g.event_type == GameEventType::RetrieveWarpShip || g.event_type == GameEventType::DefensiveEncounterWin || g.event_type == GameEventType::CrashLandTrigger) //SuccessfulDeal -> Negotiation was successful and has completed (was not quashed)
 	{
 		//Nothing to do here, these events can only be responded to by Alien powers and that's already been taken care of
 	}

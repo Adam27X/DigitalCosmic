@@ -6,3 +6,4 @@
 #include "Trader.hpp"
 #include "Sorcerer.hpp"
 #include "Virus.hpp"
+#include "Spiff.hpp"
