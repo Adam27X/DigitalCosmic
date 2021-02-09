@@ -179,6 +179,7 @@ public:
 	std::function<void()> get_alien_resolution_callback(const PlayerColors c);
 	void evaluate_encounter_cards(const PlayerColors virus = PlayerColors::Invalid);
 	void possible_crash_landing(const PlayerColors spiff);
+	void set_machine_continues_turn() { machine_continues_turn = true; }
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -251,5 +252,6 @@ private:
 	PlanetInfoVector<PlayerColors> defensive_ally_ships;
 	PlayerAssignments assignments;
 	PlanetInfoVector<CosmicCardType> cosmic_discard;
+	bool machine_continues_turn;
 };
 

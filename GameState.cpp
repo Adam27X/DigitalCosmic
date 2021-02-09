@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); })
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -3026,42 +3026,65 @@ void GameState::start_game()
 
 	while(1)
 	{
-		bool go_to_next_player;
-		std::stringstream announce;
-		if(assignments.successful_encounter && !is_second_encounter_for_offense)
+		//If the Machine is on offense and they have at least one encounter card in hand, ask if they want to use their alien power to go again
+		PlayerInfo &offense = get_player(assignments.get_offense());
+		machine_continues_turn = false;
+		if(offense.alien->get_name().compare("Machine") == 0 && offense.has_encounter_cards_in_hand())
 		{
-			//The offense has the option of having a second encounter
-			std::string prompt("You just had your first successful encounter of the turn. Would you like to have a second encounter?\n");
+			std::string prompt("Would you like to use your alien power to have another encounter?\n");
 			std::vector<std::string> options;
 			options.push_back("Y");
 			options.push_back("N");
 			unsigned response = prompt_player(assignments.get_offense(),prompt,options);
-
 			if(response == 0)
 			{
-				announce << "The offense has elected to have a second encounter this turn.\n";
-				is_second_encounter_for_offense = true;
-				go_to_next_player = false;
+				GameEvent g(assignments.get_offense(),GameEventType::AlienPower);
+				GameEvent bogus(PlayerColors::Invalid,GameEventType::None);
+				g.callback_if_resolved = offense.alien->get_resolution_callback(this,assignments.get_offense(),g,bogus);
+				resolve_game_event(g);
+			}
+		}
+
+		bool go_to_next_player = false;
+
+		if(!machine_continues_turn)
+		{
+			std::stringstream announce;
+			if(assignments.successful_encounter && !is_second_encounter_for_offense)
+			{
+				//The offense has the option of having a second encounter
+				std::string prompt("You just had your first successful encounter of the turn. Would you like to have a second encounter?\n");
+				std::vector<std::string> options;
+				options.push_back("Y");
+				options.push_back("N");
+				unsigned response = prompt_player(assignments.get_offense(),prompt,options);
+
+				if(response == 0)
+				{
+					announce << "The offense has elected to have a second encounter this turn.\n";
+					is_second_encounter_for_offense = true;
+					go_to_next_player = false;
+				}
+				else
+				{
+					announce << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
+					go_to_next_player = true;
+				}
+			}
+			else if(assignments.successful_encounter)
+			{
+				announce << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
+				is_second_encounter_for_offense = false;
+				go_to_next_player = true;
 			}
 			else
 			{
-				announce << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
+				announce << "The offense did not win the last encounter. Play proceeds to the next player.\n";
+				is_second_encounter_for_offense = false;
 				go_to_next_player = true;
 			}
+			server.broadcast_message(announce.str());
 		}
-		else if(assignments.successful_encounter)
-		{
-			announce << "The offense has won their second encounter of their turn. Play proceeds to the next player.\n";
-			is_second_encounter_for_offense = false;
-			go_to_next_player = true;
-		}
-		else
-		{
-			announce << "The offense did not win the last encounter. Play proceeds to the next player.\n";
-			is_second_encounter_for_offense = false;
-			go_to_next_player = true;
-		}
-		server.broadcast_message(announce.str());
 
 		const PlayerColors last_offense = assignments.get_offense();
 		assignments.clear();

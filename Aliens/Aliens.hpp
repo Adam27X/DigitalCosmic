@@ -2,6 +2,7 @@
 
 #include "TickTock.hpp"
 #include "Human.hpp"
+#include "Machine.hpp"
 #include "Remora.hpp"
 #include "Trader.hpp"
 #include "Sorcerer.hpp"
