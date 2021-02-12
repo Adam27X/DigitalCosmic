@@ -180,6 +180,7 @@ public:
 	void evaluate_encounter_cards(const PlayerColors virus = PlayerColors::Invalid);
 	void possible_crash_landing(const PlayerColors spiff);
 	void set_machine_continues_turn() { machine_continues_turn = true; }
+	void execute_ship(const PlayerColors shadow, PlayerColors victim);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }

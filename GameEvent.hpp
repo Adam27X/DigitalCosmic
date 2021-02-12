@@ -29,6 +29,8 @@ enum class GameEventType
 	CastFlare,
 	NewColony,
 	CrashLandTrigger,
+	DestinyCardDrawn,
+	DestinyWildDrawn,
 	//NOTE: Flares should be last here (other than none) for ease of grouping them together in other logic
 	Flare_TickTock_Wild,
 	Flare_TickTock_Super,

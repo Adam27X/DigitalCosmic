@@ -8,3 +8,4 @@
 #include "Sorcerer.hpp"
 #include "Virus.hpp"
 #include "Spiff.hpp"
+#include "Shadow.hpp"

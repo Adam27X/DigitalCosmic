@@ -134,6 +134,14 @@ std::string to_string(const GameEventType &g)
 			ret = "Offense lost the encounter by 10 or more";
 		break;
 
+		case GameEventType::DestinyCardDrawn:
+			ret = "A (non wild) card was drawn from the destiny deck";
+		break;
+
+		case GameEventType::DestinyWildDrawn:
+			ret = "A Wild card was drawn from the destiny deck";
+		break;
+
 		case GameEventType::None:
 			assert(0 && "Tried to print string of GameEventType::None, which is an invalid GameEventType");
 		break;

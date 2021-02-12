@@ -515,6 +515,64 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 	}
 }
 
+void GameState::execute_ship(const PlayerColors shadow, PlayerColors victim)
+{
+	if(victim == PlayerColors::Invalid) //Wild destiny card: shadow chooses any opponent ship to execute
+	{
+		std::vector<std::string> options;
+		for(unsigned i=0; i<players.size(); i++)
+		{
+			if(players[i].color != shadow)
+			{
+				options.push_back(to_string(players[i].color));
+			}
+		}
+
+		std::string prompt("Which player's ship would you like to execute?\n");
+		unsigned chosen_option = prompt_player(shadow,prompt,options);
+
+		//Extract the chosen alien from the player's choice; it doesn't correspond to players[chosen_option] because of how we have to skip shadow above
+		unsigned current_choice = 0;
+		for(unsigned i=0; i<players.size(); i++)
+		{
+			if(players[i].color != shadow)
+			{
+				if(chosen_option == current_choice)
+				{
+					victim = players[i].color;
+					break;
+				}
+				current_choice++;
+			}
+		}
+	}
+
+	assert(victim != PlayerColors::Invalid && "Failed to obtain choice of victim for Shadow's alien power after a wild destiny card was drawn!");
+
+	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(victim);
+	std::string msg("[planet_response] Which colony would you like to execute a ship from?\n");
+	std::vector<std::string> options;
+	for(auto i=valid_colonies.begin(),e=valid_colonies.end(); i!=e; ++i)
+	{
+		std::stringstream opt;
+		opt << to_string(i->first) << " Planet " << i->second;
+		options.push_back(opt.str());
+	}
+	unsigned chosen_option = prompt_player(shadow,msg,options);
+
+	const std::pair<PlayerColors,unsigned> chosen_colony = valid_colonies[chosen_option];
+	PlayerInfo &player_with_chosen_colony = get_player(chosen_colony.first);
+	for(auto i=player_with_chosen_colony.planets.planet_begin(chosen_colony.second),e=player_with_chosen_colony.planets.planet_end(chosen_colony.second);i!=e;++i)
+	{
+		if(*i == victim)
+		{
+			warp.push_back(std::make_pair(*i,encounter_num));
+			player_with_chosen_colony.planets.planet_erase(chosen_colony.second,i);
+			break;
+		}
+	}
+}
+
 void GameState::plague_player()
 {
 	assert(player_to_be_plagued < players.size());
@@ -1330,6 +1388,9 @@ void GameState::draw_from_destiny_deck()
 		//We drew a player color
 		PlayerColors drawn = to_PlayerColors(dest);
 
+		GameEvent g(drawn,GameEventType::DestinyCardDrawn);
+		resolve_game_event(g);
+
 		if(drawn == off)
 		{
 			std::stringstream announce;
@@ -1492,6 +1553,9 @@ void GameState::draw_from_destiny_deck()
 			assignments.planet_location = players[defense_index].color;
 			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
+
+			GameEvent g(assignments.get_defense(),GameEventType::DestinyCardDrawn);
+			resolve_game_event(g);
 		}
 		else if(dest == DestinyCardType::Special_most_cards_in_hand)
 		{
@@ -1529,6 +1593,9 @@ void GameState::draw_from_destiny_deck()
 			assignments.planet_location = players[defense_index].color;
 			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
+
+			GameEvent g(assignments.get_defense(),GameEventType::DestinyCardDrawn);
+			resolve_game_event(g);
 		}
 		else if(dest == DestinyCardType::Special_most_foreign_colonies)
 		{
@@ -1566,6 +1633,9 @@ void GameState::draw_from_destiny_deck()
 			assignments.planet_location = players[defense_index].color;
 			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
+
+			GameEvent g(assignments.get_defense(),GameEventType::DestinyCardDrawn);
+			resolve_game_event(g);
 		}
 		else if(dest == DestinyCardType::Wild)
 		{
@@ -1600,6 +1670,10 @@ void GameState::draw_from_destiny_deck()
 
 			PlayerInfo &def = get_player(assignments.get_defense());
 			def.current_role = EncounterRole::Defense;
+
+			//Note that we need a slightly different event type here because Shadow's alien power resolves slightly differently
+			GameEvent g(assignments.get_defense(),GameEventType::DestinyWildDrawn); //Color is arbitrary here
+			resolve_game_event(g);
 		}
 		else
 		{
