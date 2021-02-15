@@ -1,4 +1,4 @@
-add_library(Aliens AlienBase.cpp Human.cpp Machine.cpp Remora.cpp shadow.cpp Sorcerer.cpp Spiff.cpp TickTock.cpp Trader.cpp Virus.cpp)
+add_library(Aliens AlienBase.cpp Human.cpp Machine.cpp Remora.cpp shadow.cpp Sorcerer.cpp Spiff.cpp TickTock.cpp Trader.cpp Virus.cpp Warpish.cpp)
 target_include_directories(Aliens PUBLIC ..)
 target_include_directories(Aliens PUBLIC .)
 target_compile_options(Aliens PUBLIC -g -O3 -std=c++14 -Wall -pedantic)

@@ -53,6 +53,7 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 GameEventType to_game_event_type(const CosmicCardType c, bool super_flare=false);
 CosmicCardType to_cosmic_card_type(const GameEventType g);
 bool is_flare(const CosmicCardType c);
+bool is_attack_card(const CosmicCardType c);
 
 class CosmicDeck
 {

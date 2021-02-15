@@ -9,3 +9,4 @@
 #include "Virus.hpp"
 #include "Spiff.hpp"
 #include "Shadow.hpp"
+#include "Warpish.hpp"

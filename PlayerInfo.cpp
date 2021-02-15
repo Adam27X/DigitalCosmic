@@ -498,12 +498,29 @@ GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
 {
 	if(alien->check_for_game_event(current_role,t) && alien_enabled())
 	{
-		GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
-		GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
-		ret.callback_if_resolved = alien->get_resolution_callback(game,color,ret,bogus);
-		ret.callback_if_countered = alien->get_callback_if_countered(game,color);
-		ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
-		return ret;
+		//Warpish also needs to have revealed an attack card; ideally this check would be within check_for_game_event but we don't yet pass that information
+		bool event_valid = false;
+		if(alien->get_name().compare("Warpish") == 0)
+		{
+			if((game->get_offense() == color && is_attack_card(game->get_offensive_encounter_card())) || (game->get_defense() == color && is_attack_card(game->get_defensive_encounter_card())))
+			{
+				event_valid = true;
+			}
+		}
+		else
+		{
+			event_valid = true;
+		}
+
+		if(event_valid)
+		{
+			GameEvent ret  = GameEvent(color,GameEventType::AlienPower);
+			GameEvent bogus = GameEvent(PlayerColors::Invalid,GameEventType::None); //Some Aliens need to know which GameEvent they're responding to in order to take the correct action (Remora). In this case, there is no event to respond to
+			ret.callback_if_resolved = alien->get_resolution_callback(game,color,ret,bogus);
+			ret.callback_if_countered = alien->get_callback_if_countered(game,color);
+			ret.callback_if_action_taken = alien->get_callback_if_action_taken(game,color);
+			return ret;
+		}
 	}
 
 	return GameEvent(color,GameEventType::None);

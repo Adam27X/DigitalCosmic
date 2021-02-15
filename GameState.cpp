@@ -3042,6 +3042,28 @@ void GameState::add_reinforcements(const GameEvent &g, const unsigned value, boo
 	server.broadcast_message(announce.str());
 }
 
+void GameState::apply_necromancy(const PlayerColors warpish)
+{
+	unsigned warp_size = warp.size();
+	std::stringstream announce;
+	announce << "[score_update] After necromancy, the revised score is (ties go to the defense): Offense = ";
+	if(warpish == assignments.get_offense())
+	{
+		assignments.offense_attack_value += warp_size;
+	}
+	else if(warpish == assignments.get_defense())
+	{
+		assignments.defense_attack_value += warp_size;
+	}
+	else
+	{
+		assert(0 && "Warpish alien power used without being a main player");
+	}
+
+	announce << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
+}
+
 //FIXME: Should this be more immediate?
 void GameState::human_encounter_win_condition()
 {

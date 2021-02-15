@@ -167,6 +167,8 @@ public:
 	void establish_colony_on_opponent_planet(const PlayerColors c); //Player 'c' gets a new colony on an opponent planet
 	PlayerColors get_offense() const { return assignments.get_offense(); }
 	PlayerColors get_defense() const { return assignments.get_defense(); }
+	CosmicCardType get_offensive_encounter_card() const { return assignments.offensive_encounter_card; }
+	CosmicCardType get_defensive_encounter_card() const { return assignments.defensive_encounter_card; }
 	void trade_ship_for_tick_tock_token(const PlayerColors c);
 	bool check_for_used_flare(const CosmicCardType c) const { return assignments.flares_used_this_turn.find(c) != assignments.flares_used_this_turn.end(); } //Returns true if the given flare was already used this turn
 	void insert_flare_used_this_turn(const CosmicCardType c) { assignments.flares_used_this_turn.insert(c); }
@@ -181,6 +183,7 @@ public:
 	void possible_crash_landing(const PlayerColors spiff);
 	void set_machine_continues_turn() { machine_continues_turn = true; }
 	void execute_ship(const PlayerColors shadow, PlayerColors victim);
+	void apply_necromancy(const PlayerColors warpish); //Add 1 to warpish's total for each ship in the warp
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
