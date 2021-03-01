@@ -118,6 +118,14 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Sorcerer (Super)";
 		break;
 
+		case GameEventType::Flare_Virus_Wild:
+			ret = "Flare: Virus (Wild)";
+		break;
+
+		case GameEventType::Flare_Virus_Super:
+			ret = "Flare: Virus (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
 		break;

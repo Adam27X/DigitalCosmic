@@ -179,7 +179,7 @@ public:
 	void player_discard(const PlayerColors player, const CosmicCardType c);
 	int get_human_super_flare_choice() const { return assignments.human_super_flare_choice; }
 	std::function<void()> get_alien_resolution_callback(const PlayerColors c);
-	void evaluate_encounter_cards(const PlayerColors virus = PlayerColors::Invalid);
+	void evaluate_encounter_cards(const PlayerColors virus = PlayerColors::Invalid, const PlayerColors virus_wild_flare = PlayerColors::Invalid);
 	void possible_crash_landing(const PlayerColors spiff);
 	void set_machine_continues_turn() { machine_continues_turn = true; }
 	void execute_ship(const PlayerColors shadow, PlayerColors victim);
@@ -210,9 +210,9 @@ private:
 	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
 	void setup_negotiation();
 	void resolve_negotiation();
-	void setup_compensation(const PlayerColors virus = PlayerColors::Invalid);
+	void setup_compensation(const PlayerColors virus = PlayerColors::Invalid, const PlayerColors virus_wild_flare = PlayerColors::Invalid);
 	void resolve_compensation();
-	void setup_attack(const PlayerColors virus = PlayerColors::Invalid);
+	void setup_attack(const PlayerColors virus = PlayerColors::Invalid, const PlayerColors virus_wild_flare = PlayerColors::Invalid);
 	void resolve_attack();
 	void offense_win_resolution();
 	void defense_win_resolution();
@@ -229,7 +229,7 @@ private:
 	void update_defense() const;
 	void update_cosmic_discard() const;
 	void update_destiny_discard() const;
-	void add_score_from_ships(const PlayerColors virus = PlayerColors::Invalid);
+	void add_score_from_ships(const PlayerColors virus = PlayerColors::Invalid, const PlayerColors virus_wild_flare = PlayerColors::Invalid);
 	void broadcast_encounter_scores() const;
 	void end_of_turn_clean_up();
 	std::string get_opponent_alien_name(const PlayerColors c) const; //If c is a main player, obtain the opposing alien's name to figure out if certain flares are valid

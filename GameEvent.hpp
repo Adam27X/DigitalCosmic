@@ -42,6 +42,8 @@ enum class GameEventType
 	Flare_Trader_Super,
 	Flare_Sorcerer_Wild,
 	Flare_Sorcerer_Super,
+	Flare_Virus_Wild,
+	Flare_Virus_Super,
 	None
 };
 

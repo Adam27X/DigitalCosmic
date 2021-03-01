@@ -159,6 +159,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Sorcerer";
 		break;
 
+		case CosmicCardType::Flare_Virus:
+			ret = "Flare: Virus";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -309,6 +313,23 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Flare_Virus:
+			if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Virus") != 0 || !alien_enabled))
+			{
+				//Wild
+				return true;
+			}
+			/*else if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && alien_name.compare("Virus") == 0 && alien_enabled)
+			{
+				//Super
+				return true;
+			}*/
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -392,6 +413,17 @@ GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 			}
 		break;
 
+		case CosmicCardType::Flare_Virus:
+			if(super_flare)
+			{
+				return GameEventType::Flare_Virus_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Virus_Wild;
+			}
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -463,6 +495,11 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::Flare_Sorcerer;
 		break;
 
+		case GameEventType::Flare_Virus_Wild:
+		case GameEventType::Flare_Virus_Super:
+			return CosmicCardType::Flare_Virus;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
 			std::cerr << "Type: " << to_string(g) << "\n";
@@ -511,6 +548,7 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Remora);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Trader);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Sorcerer);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Virus);
 
 	shuffle();
 }
