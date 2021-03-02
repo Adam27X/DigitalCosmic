@@ -319,11 +319,12 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 				//Wild
 				return true;
 			}
-			/*else if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && alien_name.compare("Virus") == 0 && alien_enabled)
+			else if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && alien_name.compare("Virus") == 0 && alien_enabled)
 			{
 				//Super
+				super_flare = true;
 				return true;
-			}*/
+			}
 			else
 			{
 				return false;
