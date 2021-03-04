@@ -460,6 +460,8 @@ class GuiPart(object):
             msg += '[Flare card]\nWild (if you are not the Sorcerer): When the Sorcerer is not a main player, before cards are selected during an encounter, you may force the main players to trade alien powers with each other. They keep their new powers after the encounter ends. After using this flare, give it to the Sorcerer. If the Sorcerer is not playing, discard this flare to use it. [As any player] [Play during the planning phase only]\nSuper (if you are the Sorcerer): You may use your power as an ally, switching the main players\' encounter cards. [Ally only] [Play during the planning phase only]'
         elif re.match('Flare: Virus',card):
             msg += '[Flare card]\nWild (if you are not the Virus): As a main player, you may multiply the number of ships you have in the encounter by the number of ships alied with you instead of adding them. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Virus): You may multiply the total of all ships on your side by your attack card when using your power, not just your own. [Main player only] [Play during the reveal phase only]'
+        elif re.match('Flare: Spiff',card):
+            msg += '[Flare card]\nWild (if you are not Spiff): As the defense, when you lose an encounter, you may leave one of your ships on the planet instead of sending it to the warp. It coexists with the offensive ships. [Defense only] [Play during the resolution phase only]\nSuper (if you are Spiff): You may use your power to crash land if you lose by a total of 5 or more instead of 10. [Offense only] [Play during the resolution phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):

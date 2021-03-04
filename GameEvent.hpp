@@ -24,6 +24,7 @@ enum class GameEventType
 	SuccessfulNegotiation, //Negotiation has not yet resolved and can still be quashed
 	SuccessfulDeal, //Negotiation actually resolved
 	DefensiveEncounterWin,
+	DefensiveEncounterLoss,
 	CosmicDeckShuffle,
 	EncounterWin,
 	CastFlare,
@@ -44,6 +45,8 @@ enum class GameEventType
 	Flare_Sorcerer_Super,
 	Flare_Virus_Wild,
 	Flare_Virus_Super,
+	Flare_Spiff_Wild,
+	Flare_Spiff_Super,
 	None
 };
 

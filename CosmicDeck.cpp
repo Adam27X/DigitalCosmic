@@ -163,6 +163,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Virus";
 		break;
 
+		case CosmicCardType::Flare_Spiff:
+			ret = "Flare: Spiff";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -550,6 +554,7 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Trader);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Sorcerer);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Virus);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Spiff);
 
 	shuffle();
 }

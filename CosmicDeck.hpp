@@ -45,6 +45,7 @@ enum class CosmicCardType
 	Flare_Trader,
 	Flare_Sorcerer,
 	Flare_Virus,
+	Flare_Spiff,
 	None
 };
 

@@ -370,7 +370,22 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				ret.callback_if_resolved = [this] () { this->game->resolve_defender_reward(this->color); };
 				const CosmicCardType c = *i;
 				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
-				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true);};
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); };
+				vret.push_back(ret);
+			}
+		}
+	}
+	else if(g.event_type == GameEventType::DefensiveEncounterLoss)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::Flare_Spiff && current_role == EncounterRole::Defense && t == TurnPhase::Resolution && can_use_flare(*i,false,"Spiff"))
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Spiff_Wild);
+				ret.callback_if_resolved = [this] () { this->game->resolve_spiff_wild_flare(); };
+				const CosmicCardType c = *i;
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,false); };
 				vret.push_back(ret);
 			}
 		}

@@ -184,6 +184,7 @@ public:
 	void set_machine_continues_turn() { machine_continues_turn = true; }
 	void execute_ship(const PlayerColors shadow, PlayerColors victim);
 	void apply_necromancy(const PlayerColors warpish); //Add 1 to warpish's total for each ship in the warp
+	void resolve_spiff_wild_flare() { save_one_defensive_ship = true; }
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -257,5 +258,6 @@ private:
 	PlayerAssignments assignments;
 	PlanetInfoVector<CosmicCardType> cosmic_discard;
 	bool machine_continues_turn;
+	bool save_one_defensive_ship;
 };
 

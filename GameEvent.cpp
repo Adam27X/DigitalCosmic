@@ -74,6 +74,10 @@ std::string to_string(const GameEventType &g)
 			ret = "Defense won the encounter";
 		break;
 
+		case GameEventType::DefensiveEncounterLoss:
+			ret = "Defense lost the encounter";
+		break;
+
 		case GameEventType::CosmicDeckShuffle:
 			ret = "Shuffling of the Cosmic Deck";
 		break;
@@ -124,6 +128,14 @@ std::string to_string(const GameEventType &g)
 
 		case GameEventType::Flare_Virus_Super:
 			ret = "Flare: Virus (Super)";
+		break;
+
+		case GameEventType::Flare_Spiff_Wild:
+			ret = "Flare: Spiff (Wild)";
+		break;
+
+		case GameEventType::Flare_Spiff_Super:
+			ret = "Flare: Spiff (Super)";
 		break;
 
 		case GameEventType::EncounterWin:

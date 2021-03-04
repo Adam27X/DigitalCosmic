@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), save_one_defensive_ship(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -2849,12 +2849,20 @@ void GameState::setup_attack(const PlayerColors virus, const PlayerColors virus_
 
 void GameState::offense_win_resolution()
 {
+	GameEvent g_loss(assignments.get_defense(),GameEventType::DefensiveEncounterLoss);
+	resolve_game_event(g_loss);
+
 	//Defense and defensive ally ships go to the warp
 	PlanetInfo &encounter_planet = get_player(assignments.planet_location).planets.get_planet(assignments.planet_id);
 	for(auto i=encounter_planet.begin();i!=encounter_planet.end();)
 	{
 		if(*i == assignments.get_defense())
 		{
+			if(save_one_defensive_ship)
+			{
+				save_one_defensive_ship = false;
+				++i;
+			}
 			warp.push_back(std::make_pair(*i,encounter_num));
 			i = get_player(assignments.planet_location).planets.planet_erase(assignments.planet_id,i); //FIXME: This should work but it's pretty ugly...
 		}
@@ -3609,6 +3617,7 @@ void GameState::end_of_turn_clean_up()
 	}
 
 	assignments.flares_used_this_turn.clear();
+	save_one_defensive_ship = false;
 }
 
 void GameState::swap_encounter_cards()
