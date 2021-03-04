@@ -154,6 +154,10 @@ std::string to_string(const GameEventType &g)
 			ret = "Offense lost the encounter by 10 or more";
 		break;
 
+		case GameEventType::CrashLandSuperTrigger:
+			ret = "Offense lost the encounter by 5 or more";
+		break;
+
 		case GameEventType::DestinyCardDrawn:
 			ret = "A (non wild) card was drawn from the destiny deck";
 		break;

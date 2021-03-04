@@ -3071,6 +3071,11 @@ void GameState::resolve_attack()
 	else //Ties go to the defense
 	{
 		unsigned win_amount = assignments.defense_attack_value - assignments.offense_attack_value;
+		if(win_amount >= 5)
+		{
+			GameEvent g(assignments.get_offense(),GameEventType::CrashLandSuperTrigger);
+			resolve_game_event(g);
+		}
 		if(win_amount >= 10)
 		{
 			GameEvent g(assignments.get_offense(),GameEventType::CrashLandTrigger);

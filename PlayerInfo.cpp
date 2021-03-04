@@ -390,6 +390,22 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	else if(g.event_type == GameEventType::CrashLandSuperTrigger)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			//Technically this can't be used if the alien power was used, but since all that does is set a variable to true and since that's all this effect has as well, it doesn't matter if a player opts to do "both"
+			if(*i == CosmicCardType::Flare_Spiff && current_role == EncounterRole::Offense && t == TurnPhase::Resolution && can_use_flare(*i,true,"Spiff"))
+			{
+				GameEvent ret = GameEvent(color,GameEventType::Flare_Spiff_Super);
+				ret.callback_if_resolved = alien->get_resolution_callback(game,color,ret,g);
+				const CosmicCardType c = *i;
+				ret.callback_if_countered = [this,c] { this->discard_card_callback(c); };
+				ret.callback_if_action_taken = [this,c] () { this->game->cast_flare(this->color,c,true); };
+				vret.push_back(ret);
+			}
+		}
+	}
 	else if(g.event_type == GameEventType::Flare_Human_Super) //Needs special handling compared to other flares
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -486,6 +502,26 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 				const CosmicCardType c = *i;
 				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
 				vret.push_back(ret);
+			}
+			else if(*i == CosmicCardType::CosmicZap)
+			{
+				//Nothing resolves but the flare is kept
+				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
+				vret.push_back(ret);
+			}
+		}
+	}
+	else if(g.event_type == GameEventType::Flare_Spiff_Super)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			//Nothing special here; there's a separate event for the base alien power
+			if(*i == CosmicCardType::CardZap)
+			{
+				add_card_zap_response(vret,*i);
 			}
 			else if(*i == CosmicCardType::CosmicZap)
 			{
