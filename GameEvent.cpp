@@ -146,6 +146,14 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Machine (Super)";
 		break;
 
+		case GameEventType::Flare_Shadow_Wild:
+			ret = "Flare: Shadow (Wild)";
+		break;
+
+		case GameEventType::Flare_Shadow_Super:
+			ret = "Flare: Shadow (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
 		break;

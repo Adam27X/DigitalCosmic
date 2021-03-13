@@ -47,6 +47,7 @@ enum class CosmicCardType
 	Flare_Virus,
 	Flare_Spiff,
 	Flare_Machine,
+	Flare_Shadow,
 	None
 };
 

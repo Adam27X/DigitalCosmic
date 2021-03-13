@@ -478,11 +478,11 @@ void GameState::cast_force_field(const PlayerColors casting_player)
 	}
 }
 
-void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num_ships)
+void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num_ships, bool exclude_defensive_planet)
 {
 	for(unsigned ship_num=0; ship_num<num_ships; ship_num++)
 	{
-		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(player); //A list of planet colors and indices
+		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(player,exclude_defensive_planet); //A list of planet colors and indices
 		if(!valid_colonies.size())
 		{
 			//Check if the player has a ship on the hyperspace gate
@@ -1205,6 +1205,27 @@ void GameState::resolve_human_super_flare(const PlayerColors human)
 	}
 }
 
+void GameState::resolve_shadow_wild_flare(const PlayerColors caster)
+{
+	//Send one of the caster's ships not in the encounter to the warp. In this case the caster was on defense so any of their other ships will suffice
+	bool valid_ship_found = false;
+	unsigned old_warp_size = warp.size();
+	lose_ships_to_warp(caster,1,true);
+	unsigned new_warp_size = warp.size();
+	if(new_warp_size > old_warp_size)
+		valid_ship_found = true;
+
+	if(!valid_ship_found)
+		return;
+
+	//Take all opposing (in this case offensive/offensive ally) ships with you
+	for(auto i=hyperspace_gate.begin();i!=hyperspace_gate.end();)
+	{
+		warp.push_back(std::make_pair(*i,encounter_num));
+		i=hyperspace_gate.erase(i);
+	}
+}
+
 void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare, bool super)
 {
 	get_player(player).used_flare_this_turn = true;
@@ -1379,6 +1400,19 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			else
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Machine");
+			}
+		break;
+
+		case CosmicCardType::Flare_Shadow:
+			if(g.event_type == GameEventType::Flare_Shadow_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { resolve_shadow_wild_flare(g.player); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Shadow");
 			}
 		break;
 
@@ -2868,6 +2902,24 @@ void GameState::setup_attack(const PlayerColors virus, const PlayerColors virus_
 
 void GameState::offense_win_resolution()
 {
+	//First check for the Wild Shadow flare
+	PlayerInfo &defense = get_player(assignments.get_defense());
+	if(is_attack_card(assignments.offensive_encounter_card) && defense.has_card(CosmicCardType::Flare_Shadow) && defense.can_use_flare(CosmicCardType::Flare_Shadow,false,"Shadow"))
+	{
+		std::string prompt("Would you like to cast the Shadow wild flare to remove a ship of yours that wasn't in the encounter to take all opposing ships to the warp with you?\n");
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned response = prompt_player(assignments.get_defense(),prompt,options);
+
+		if(response == 0)
+		{
+			GameEvent g(assignments.get_defense(),GameEventType::Flare_Shadow_Wild);
+			get_callbacks_for_cosmic_card(CosmicCardType::Flare_Shadow,g);
+			resolve_game_event(g);
+		}
+	}
+
 	GameEvent g_loss(assignments.get_defense(),GameEventType::DefensiveEncounterLoss);
 	resolve_game_event(g_loss);
 
@@ -3732,7 +3784,7 @@ void GameState::swap_player_hands(const PlayerColors choosing_player, bool has_c
 }
 
 //FIXME: Don't ships on the hyperspace gate, defensive allies, etc. count for most (or all) use cases here too?
-std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color) const
+std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color, bool exclude_defensive_planet) const
 {
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
 
@@ -3740,6 +3792,11 @@ std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(co
 	{
 		for(unsigned planet=0; planet<player_begin->planets.size(); planet++)
 		{
+			if(exclude_defensive_planet && player_begin->color == assignments.planet_location && planet==assignments.planet_id)
+			{
+				continue;
+			}
+
 			for(unsigned ships=0; ships<player_begin->planets.planet_size(planet); ships++)
 			{
 				if(player_begin->planets.get_ship(planet,ships) == color) //If this ship matches our color we have a colony there

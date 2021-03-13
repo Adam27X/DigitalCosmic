@@ -50,6 +50,8 @@ enum class GameEventType
 	Flare_Spiff_Super,
 	Flare_Machine_Wild,
 	Flare_Machine_Super,
+	Flare_Shadow_Wild,
+	Flare_Shadow_Super,
 	None
 };
 

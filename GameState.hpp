@@ -198,7 +198,7 @@ private:
 	void get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g);
 	void check_for_game_events();
 	void check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase);
-	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color) const;
+	std::vector< std::pair<PlayerColors,unsigned> > get_valid_colonies(const PlayerColors color, bool exclude_defensive_planet=false) const;
 	void cast_plague(GameEvent &g);
 	void cast_force_field(const PlayerColors casting_player);
 	void plague_player();
@@ -208,7 +208,7 @@ private:
 	void send_in_ships(const PlayerColors player, bool custom_destination = false, const std::pair<PlayerColors,unsigned> dest_planet = std::make_pair(PlayerColors::Invalid,0));
 	std::set<PlayerColors> invite_allies(const std::set<PlayerColors> &potential_allies, bool offense);
 	void form_alliances(std::set<PlayerColors> &invited_by_offense, std::set<PlayerColors> &invited_by_defense);
-	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships);
+	void lose_ships_to_warp(const PlayerColors player, const unsigned num_ships, bool exclude_defensive_planet=false);
 	void setup_negotiation();
 	void resolve_negotiation();
 	void setup_compensation(const PlayerColors virus = PlayerColors::Invalid, const PlayerColors virus_wild_flare = PlayerColors::Invalid, bool virus_super_flare = false);
@@ -237,6 +237,7 @@ private:
 	void resolve_human_wild_flare(const GameEvent &g);
 	void resolve_trader_wild_flare(const GameEvent &g);
 	void resolve_sorcerer_wild_flare(const GameEvent &g);
+	void resolve_shadow_wild_flare(const PlayerColors caster);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;
