@@ -571,6 +571,24 @@ void GameState::execute_ship(const PlayerColors shadow, PlayerColors victim)
 			break;
 		}
 	}
+
+	//If shadow has their super flare then when it's their turn (in other words, when they're on offense) they can additionally retrieve a ship from the warp
+	PlayerInfo &shad = get_player(shadow);
+	if(assignments.get_offense() == shadow && shad.has_card(CosmicCardType::Flare_Shadow) && shad.can_use_flare(CosmicCardType::Flare_Shadow,true,"Shadow"))
+	{
+		std::string prompt("Would you like to case the Shadow super flare to retrieve a ship from the warp?\n");
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned response = prompt_player(shadow,prompt,options);
+
+		if(response == 0)
+		{
+			GameEvent g(shadow,GameEventType::Flare_Shadow_Super);
+			get_callbacks_for_cosmic_card(CosmicCardType::Flare_Shadow,g);
+			resolve_game_event(g);
+		}
+	}
 }
 
 void GameState::plague_player()
@@ -1409,6 +1427,12 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 				g.callback_if_resolved = [this,g] () { resolve_shadow_wild_flare(g.player); };
 				g.callback_if_countered = discard_flare_callback;
 				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Shadow_Super)
+			{
+				g.callback_if_resolved = [this,g] () { this->move_ship_from_warp_to_colony(this->get_player(g.player)); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(true);
 			}
 			else
 			{
