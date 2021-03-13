@@ -547,6 +547,25 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
+	else if(g.event_type == GameEventType::Flare_Machine_Super)
+	{
+		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+		{
+			if(*i == CosmicCardType::CardZap)
+			{
+				add_card_zap_response(vret,*i);
+			}
+			else if(*i == CosmicCardType::CosmicZap)
+			{
+				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
+				vret.push_back(ret);
+			}
+		}
+	}
+	//FIXME: If the flare is a super, then a cosmic zap should always be a valid response (because once the alien is zapped the player can no longer use the super portion of the flare)
 	//Catchall for any flare; NOTE: We may need to change these nested if/else stmts to separate if stmts in case there are responses to flares that aren't card zaps
 	else if((static_cast<unsigned>(g.event_type) >= static_cast<unsigned>(GameEventType::Flare_TickTock_Wild)) && g.event_type != GameEventType::None)
 	{

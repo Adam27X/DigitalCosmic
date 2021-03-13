@@ -260,5 +260,6 @@ private:
 	bool machine_continues_turn;
 	bool machine_wild_continues_turn;
 	bool save_one_defensive_ship;
+	bool machine_drew_card_for_super;
 };
 

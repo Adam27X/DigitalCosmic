@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -1366,9 +1366,15 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 		case CosmicCardType::Flare_Machine:
 			if(g.event_type == GameEventType::Flare_Machine_Wild)
 			{
-				g.callback_if_resolved = [this,g] () { this->machine_wild_continues_turn = true; };
+				g.callback_if_resolved = [this] () { this->machine_wild_continues_turn = true; };
 				g.callback_if_countered = discard_flare_callback;
 				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Machine_Super)
+			{
+				g.callback_if_resolved = [this,g] () { this->draw_cosmic_card(this->get_player(g.player)); this->machine_drew_card_for_super = true; };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(true);
 			}
 			else
 			{
@@ -3459,16 +3465,36 @@ void GameState::execute_turn()
 	//Regroup Phase
 	update_turn_phase(TurnPhase::Regroup);
 
-	//If the offense has any ships in the warp, they retrieve one of them
-	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	//If the offense has any ships in the warp, they retrieve one of them. If the offense happens to be the Machine with their super flare, they have the option of drawing a cosmic card instead
+	machine_drew_card_for_super = false;
+	if(offense.has_card(CosmicCardType::Flare_Machine) && offense.can_use_flare(CosmicCardType::Flare_Machine,true,"Machine"))
 	{
-		if(i->first == offense.color)
+		std::string prompt("Would you like to draw a card from the cosmic deck instead of retrieving a ship from the warp?\n");
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned response = prompt_player(assignments.get_offense(),prompt,options);
+
+		if(response == 0)
 		{
-			announce.str("");
-			announce << "The " << to_string(assignments.get_offense()) << " player will now regroup\n";
-			server.broadcast_message(announce.str());
-			move_ship_from_warp_to_colony(offense);
-			break;
+			GameEvent g(assignments.get_offense(),GameEventType::Flare_Machine_Super);
+			get_callbacks_for_cosmic_card(CosmicCardType::Flare_Machine,g);
+			resolve_game_event(g);
+		}
+	}
+
+	if(!machine_drew_card_for_super)
+	{
+		for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+		{
+			if(i->first == offense.color)
+			{
+				announce.str("");
+				announce << "The " << to_string(assignments.get_offense()) << " player will now regroup\n";
+				server.broadcast_message(announce.str());
+				move_ship_from_warp_to_colony(offense);
+				break;
+			}
 		}
 	}
 
