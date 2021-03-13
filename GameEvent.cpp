@@ -191,3 +191,16 @@ bool is_flare(const GameEventType g)
 	return g >= GameEventType::Flare_TickTock_Wild && g < GameEventType::None;
 }
 
+bool is_super_flare(const GameEventType g)
+{
+	if(!is_flare(g))
+	{
+		return false;
+	}
+
+	//This bit assumes we'll always order game events for flares in wild, super order and that each flare will in fact have both a wild and super event
+	unsigned super_offset = static_cast<unsigned>(GameEventType::Flare_TickTock_Super) % 2;
+	unsigned this_offset = static_cast<unsigned>(g) % 2;
+	return (super_offset == this_offset);
+}
+
