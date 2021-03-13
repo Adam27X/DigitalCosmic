@@ -60,6 +60,19 @@ bool PlayerInfo::has_encounter_cards_in_hand() const
 	return false;
 }
 
+bool PlayerInfo::has_card(const CosmicCardType c) const
+{
+	for(auto i=hand.begin(),e=hand.end();i!=e;++i)
+	{
+		if(*i == c)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 //If the player doesn't have colonies on three of their own planets they they can't respond with an Alien power
 //The alien is also disabled for the remainder of an encounter in which it was zapped
 bool PlayerInfo::alien_enabled() const

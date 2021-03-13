@@ -66,6 +66,7 @@ public:
 	void dump_hand() const;
 	std::string get_hand() const;
 	bool has_encounter_cards_in_hand() const;
+	bool has_card(const CosmicCardType c) const;
 	void can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &vret);
 	void set_game_state(GameState *g);
 	GameEvent can_use_alien_with_empty_stack(const TurnPhase t);

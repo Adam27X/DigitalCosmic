@@ -462,6 +462,8 @@ class GuiPart(object):
             msg += '[Flare card]\nWild (if you are not the Virus): As a main player, you may multiply the number of ships you have in the encounter by the number of ships alied with you instead of adding them. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Virus): You may multiply the total of all ships on your side by your attack card when using your power, not just your own. [Main player only] [Play during the reveal phase only]'
         elif re.match('Flare: Spiff',card):
             msg += '[Flare card]\nWild (if you are not Spiff): As the defense, when you lose an encounter, you may leave one of your ships on the planet instead of sending it to the warp. It coexists with the offensive ships. [Defense only] [Play during the resolution phase only]\nSuper (if you are Spiff): You may use your power to crash land if you lose by a total of 5 or more instead of 10. [Offense only] [Play during the resolution phase only]'
+        elif re.match('Flare: Machine',card):
+            msg += '[Flare card]\nWild (if you are not the Machine): As the offense, you may always have a second encounter, even if you lost your first encounter or are out of encounter cards. If you have no encounter cards at the start of your second encounter, draw a new hand. [Offense only] [Play during the resolution phase only]\nSuper (if you are the Machine): During each of your regroup phases, you may draw the top card from the deck instead of retrieving a ship from the warp. [Offense only] [Play during the regroup phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):

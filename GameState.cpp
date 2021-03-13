@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), save_one_defensive_ship(false)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -1360,6 +1360,19 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			else
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Virus");
+			}
+		break;
+
+		case CosmicCardType::Flare_Machine:
+			if(g.event_type == GameEventType::Flare_Machine_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { this->machine_wild_continues_turn = true; };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Machine");
 			}
 		break;
 
@@ -3280,30 +3293,58 @@ void GameState::start_game()
 			}
 		}
 
+		machine_wild_continues_turn = false;
+		if(!is_second_encounter_for_offense && offense.has_card(CosmicCardType::Flare_Machine) && offense.can_use_flare(CosmicCardType::Flare_Machine,false,"Machine"))
+		{
+			//The offense can use the Machine wild flare to have a second encounter
+			std::string prompt("Would you like to cast the Machine wild flare to have a second encounter?\n");
+			std::vector<std::string> options;
+			options.push_back("Y");
+			options.push_back("N");
+			unsigned response = prompt_player(assignments.get_offense(),prompt,options);
+
+			if(response == 0)
+			{
+				GameEvent g(assignments.get_offense(),GameEventType::Flare_Machine_Wild);
+				get_callbacks_for_cosmic_card(CosmicCardType::Flare_Machine,g);
+				resolve_game_event(g);
+			}
+		}
+
+
 		bool go_to_next_player = false;
 
-		if(!machine_continues_turn)
+		if(!machine_continues_turn && !machine_wild_continues_turn)
 		{
 			std::stringstream announce;
 			if(assignments.successful_encounter && !is_second_encounter_for_offense)
 			{
-				//The offense has the option of having a second encounter
-				std::string prompt("You just had your first successful encounter of the turn. Would you like to have a second encounter?\n");
-				std::vector<std::string> options;
-				options.push_back("Y");
-				options.push_back("N");
-				unsigned response = prompt_player(assignments.get_offense(),prompt,options);
-
-				if(response == 0)
+				//If the offense wins their first encounter but doesn't have any encounter cards left, they don't get a second encounter (see the Wild portion of the Machine flare)
+				if(!offense.has_encounter_cards_in_hand())
 				{
-					announce << "The offense has elected to have a second encounter this turn.\n";
-					is_second_encounter_for_offense = true;
-					go_to_next_player = false;
+					announce << "The offense has won their first encounter of the turn, but has no encounter cards left in hand. Play proceeds to the next player.\n";
+					go_to_next_player = true;
 				}
 				else
 				{
-					announce << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
-					go_to_next_player = true;
+					//The offense has the option of having a second encounter
+					std::string prompt("You just had your first successful encounter of the turn. Would you like to have a second encounter?\n");
+					std::vector<std::string> options;
+					options.push_back("Y");
+					options.push_back("N");
+					unsigned response = prompt_player(assignments.get_offense(),prompt,options);
+
+					if(response == 0)
+					{
+						announce << "The offense has elected to have a second encounter this turn.\n";
+						is_second_encounter_for_offense = true;
+						go_to_next_player = false;
+					}
+					else
+					{
+						announce << "The offense has declined a second encounter on their turn. Play proceeds to the next player.\n";
+						go_to_next_player = true;
+					}
 				}
 			}
 			else if(assignments.successful_encounter)

@@ -48,6 +48,8 @@ enum class GameEventType
 	Flare_Virus_Super,
 	Flare_Spiff_Wild,
 	Flare_Spiff_Super,
+	Flare_Machine_Wild,
+	Flare_Machine_Super,
 	None
 };
 

@@ -258,6 +258,7 @@ private:
 	PlayerAssignments assignments;
 	PlanetInfoVector<CosmicCardType> cosmic_discard;
 	bool machine_continues_turn;
+	bool machine_wild_continues_turn;
 	bool save_one_defensive_ship;
 };
 
