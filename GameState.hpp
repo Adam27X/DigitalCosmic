@@ -129,7 +129,7 @@ public:
 	void dump_warp() const;
 	void dump_destiny_deck() const;
 	void dump_cosmic_deck() const;
-	void assign_alien(const PlayerColors color, std::unique_ptr<AlienBase> &alien);
+	void assign_aliens();
 	void deal_starting_hands();
 	void dump_player_hands() const;
 	void dump_player_hand(const PlayerInfo &p) const;

@@ -55,17 +55,7 @@ int main(int argc, char *argv[])
 	GameState game(num_players,server);
     	game.dump();
 
-	std::unique_ptr<AlienBase> alien(new TickTock());
-	game.assign_alien(PlayerColors::Red, alien);
-	std::unique_ptr<AlienBase> alien2(new Human());
-	game.assign_alien(PlayerColors::Blue, alien2);
-	std::unique_ptr<AlienBase> alien3(new Remora());
-	game.assign_alien(PlayerColors::Purple, alien3);
-	std::unique_ptr<AlienBase> alien4(new Trader());
-	game.assign_alien(PlayerColors::Yellow, alien4);
-	std::unique_ptr<AlienBase> alien5(new Sorcerer());
-	game.assign_alien(PlayerColors::Green, alien5);
-
+	game.assign_aliens();
 	game.deal_starting_hands();
 	game.send_player_hands();
 	game.choose_first_player();
