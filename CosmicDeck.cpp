@@ -175,6 +175,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Shadow";
 		break;
 
+		case CosmicCardType::Flare_Warpish:
+			ret = "Flare: Warpish";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -343,6 +347,24 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Flare_Warpish:
+			if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Warpish") != 0 || !alien_enabled))
+			{
+				//Wild
+				return true;
+			}
+			else if(state == TurnPhase::Reveal && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Warpish") == 0 && alien_enabled))
+			{
+				//Super
+				super_flare = true;
+				return true;
+			}
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -437,6 +459,17 @@ GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 			}
 		break;
 
+		case CosmicCardType::Flare_Warpish:
+			if(super_flare)
+			{
+				return GameEventType::Flare_Warpish_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Warpish_Wild;
+			}
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -513,6 +546,11 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::Flare_Virus;
 		break;
 
+		case GameEventType::Flare_Warpish_Wild:
+		case GameEventType::Flare_Warpish_Super:
+			return CosmicCardType::Flare_Warpish;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
 			std::cerr << "Type: " << to_string(g) << "\n";
@@ -565,6 +603,7 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Spiff);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Machine);
 	deck.insert(deck.end(),1,CosmicCardType::Flare_Shadow);
+	deck.insert(deck.end(),1,CosmicCardType::Flare_Warpish);
 
 	shuffle();
 }

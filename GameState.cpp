@@ -894,6 +894,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					get_callbacks_for_cosmic_card(play,g);
 
 					//These super flares technically use their corresponding alien powers, so we need to mark them as used
+					//FIXME: Put these aliens into a std::set somewhere and reference that set via a function instead of typing them all out here. Reuse that function when recomputing valid_plays below
 					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super || g.event_type == GameEventType::Flare_Sorcerer_Super || g.event_type == GameEventType::Flare_Virus_Super)
 					{
 						used_aliens_this_phase.insert(current_player.color);
@@ -922,7 +923,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 							continue;
 						}
 						//If the player already used their alien power and their super flare enhances their alien power, they already gave up their opportunity to do so
-						if(super_flare && (*i == CosmicCardType::Flare_Human || *i == CosmicCardType::Flare_Trader || *i == CosmicCardType::Flare_Sorcerer)  && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
+						if(super_flare && (*i == CosmicCardType::Flare_Human || *i == CosmicCardType::Flare_Trader || *i == CosmicCardType::Flare_Sorcerer || *i == CosmicCardType::Flare_Virus)  && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
 						{
 							continue;
 						}
@@ -1244,6 +1245,52 @@ void GameState::resolve_shadow_wild_flare(const PlayerColors caster)
 	}
 }
 
+void GameState::resolve_warpish_wild_flare(const PlayerColors caster)
+{
+	bool caster_is_offense = (caster == assignments.get_offense());
+	unsigned num_caster_warp_ships = 0;
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(i->first == caster)
+		{
+			num_caster_warp_ships++;
+		}
+	}
+
+	if(caster_is_offense)
+	{
+		assignments.offense_attack_value += num_caster_warp_ships;
+	}
+	else
+	{
+		assignments.defense_attack_value += num_caster_warp_ships;
+	}
+
+	std::stringstream announce;
+	announce << "[score_update] After applying the Warpish wild flare, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
+}
+
+void GameState::resolve_warpish_super_flare(const PlayerColors warpish)
+{
+	bool warpish_is_offense = (warpish == assignments.get_offense());
+	for(auto i=warp.begin(),e=warp.end();i!=e;++i)
+	{
+		if(warpish_is_offense && i->first == assignments.get_defense())
+		{
+			assignments.defense_attack_value--;
+		}
+		else if(!warpish_is_offense && i->first == assignments.get_offense())
+		{
+			assignments.offense_attack_value--;
+		}
+	}
+
+	std::stringstream announce;
+	announce << "[score_update] After applying the Warpish super flare, the revised score is (ties go to the defense): Offense = " << assignments.offense_attack_value << "; Defense = " << assignments.defense_attack_value << "\n";
+	server.broadcast_message(announce.str());
+}
+
 void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare, bool super)
 {
 	get_player(player).used_flare_this_turn = true;
@@ -1437,6 +1484,25 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			else
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Shadow");
+			}
+		break;
+
+		case CosmicCardType::Flare_Warpish:
+			if(g.event_type == GameEventType::Flare_Warpish_Wild)
+			{
+				g.callback_if_resolved = [this,g] () { resolve_warpish_wild_flare(g.player); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			else if(g.event_type == GameEventType::Flare_Warpish_Super)
+			{
+				g.callback_if_resolved = [this,g] () { resolve_warpish_super_flare(g.player); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(true);
+			}
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Warpish");
 			}
 		break;
 

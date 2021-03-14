@@ -238,6 +238,8 @@ private:
 	void resolve_trader_wild_flare(const GameEvent &g);
 	void resolve_sorcerer_wild_flare(const GameEvent &g);
 	void resolve_shadow_wild_flare(const PlayerColors caster);
+	void resolve_warpish_wild_flare(const PlayerColors caster);
+	void resolve_warpish_super_flare(const PlayerColors warpish);
 
 	unsigned num_players;
 	std::vector<PlayerInfo> players;

@@ -82,6 +82,7 @@ std::string to_string(const GameEventType &g)
 			ret = "Shuffling of the Cosmic Deck";
 		break;
 
+		//TODO: Could use a macro that takes in each alien name and #include some aliens.inc file listing all of the aliens to handle this tediousness
 		case GameEventType::Flare_TickTock_Wild:
 			ret = "Flare: Tick-Tick (Wild)";
 		break;
@@ -152,6 +153,14 @@ std::string to_string(const GameEventType &g)
 
 		case GameEventType::Flare_Shadow_Super:
 			ret = "Flare: Shadow (Super)";
+		break;
+
+		case GameEventType::Flare_Warpish_Wild:
+			ret = "Flare: Warpish (Wild)";
+		break;
+
+		case GameEventType::Flare_Warpish_Super:
+			ret = "Flare: Warpish (Super)";
 		break;
 
 		case GameEventType::EncounterWin:

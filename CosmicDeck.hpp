@@ -48,6 +48,7 @@ enum class CosmicCardType
 	Flare_Spiff,
 	Flare_Machine,
 	Flare_Shadow,
+	Flare_Warpish,
 	None
 };
 
