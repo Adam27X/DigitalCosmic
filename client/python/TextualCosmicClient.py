@@ -705,7 +705,7 @@ class GuiPart(object):
                     elif msg.find('[alien_options]') != -1:
                         #TODO: Could extract the alien name and fetch flare card info too
                         alien_option1 = re.search('0: (.*)1:', msg, re.DOTALL) #The DOTALL here is needed to include newlines in the '.' operator
-                        alien_option2 = re.search('1: (.*)\[needs_response\]', msg, re.DOTALL)
+                        alien_option2 = re.search('1: (.*)', msg, re.DOTALL)
                         assert alien_option1, "Error parsing first alien option"
                         assert alien_option2, "Error parsing second alien option"
                         self.display_alien_options(alien_option1.group(1),alien_option2.group(1))

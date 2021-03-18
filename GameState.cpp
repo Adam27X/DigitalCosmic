@@ -234,57 +234,53 @@ void GameState::assign_aliens()
 	std::random_shuffle(remaining_aliens.begin(),remaining_aliens.end());
 	assert(remaining_aliens.size() >= 2*players.size() && "Not enough aliens implemented to give each player a choice between two aliens!");
 
-	//TODO: It would be better to allow players to asynchronously choose their aliens. Store the first 2*num_players aliens in a std::vector<std::unique_ptr<AlienBase>> and send the options to all players without blocking
+	std::vector< std::unique_ptr<AlienBase> > aliens;
 	for(unsigned i=0; i<players.size(); i++)
 	{
-		PlayerInfo &player = players[i];
-		std::string prompt("[alien_options] Which of these aliens would you prefer to play as?\n");
 		const std::string &alien0 = remaining_aliens[2*i];
 		const std::string &alien1 = remaining_aliens[(2*i)+1];
-
-		std::unique_ptr<AlienBase> a[2];
 		for(unsigned j=0; j<2; j++)
 		{
 			std::string alien_choice = (j == 0) ? alien0 : alien1;
 			if(alien_choice.compare("TickTock") == 0)
 			{
-				a[j] = std::make_unique<TickTock>();
+				aliens.push_back(std::make_unique<TickTock>());
 			}
 			else if(alien_choice.compare("Human") == 0)
 			{
-				a[j] = std::make_unique<Human>();
+				aliens.push_back(std::make_unique<Human>());
 			}
 			else if(alien_choice.compare("Remora") == 0)
 			{
-				a[j] = std::make_unique<Remora>();
+				aliens.push_back(std::make_unique<Remora>());
 			}
 			else if(alien_choice.compare("Trader") == 0)
 			{
-				a[j] = std::make_unique<Trader>();
+				aliens.push_back(std::make_unique<Trader>());
 			}
 			else if(alien_choice.compare("Sorcerer") == 0)
 			{
-				a[j] = std::make_unique<Sorcerer>();
+				aliens.push_back(std::make_unique<Sorcerer>());
 			}
 			else if(alien_choice.compare("Virus") == 0)
 			{
-				a[j] = std::make_unique<Virus>();
+				aliens.push_back(std::make_unique<Virus>());
 			}
 			else if(alien_choice.compare("Spiff") == 0)
 			{
-				a[j] = std::make_unique<Spiff>();
+				aliens.push_back(std::make_unique<Spiff>());
 			}
 			else if(alien_choice.compare("Machine") == 0)
 			{
-				a[j] = std::make_unique<Machine>();
+				aliens.push_back(std::make_unique<Machine>());
 			}
 			else if(alien_choice.compare("Shadow") == 0)
 			{
-				a[j] = std::make_unique<Shadow>();
+				aliens.push_back(std::make_unique<Shadow>());
 			}
 			else if(alien_choice.compare("Warpish") == 0)
 			{
-				a[j] = std::make_unique<Warpish>();
+				aliens.push_back(std::make_unique<Warpish>());
 			}
 			else
 			{
@@ -292,16 +288,51 @@ void GameState::assign_aliens()
 			}
 		}
 
-		std::vector<std::string> options;
-		options.push_back(a[0]->get_desc());
-		options.push_back(a[1]->get_desc());
-		unsigned response = prompt_player(player.color,prompt,options);
+		std::string prompt("[needs_response] [alien_options] Which of these aliens would you prefer to play as?\n");
+		prompt.append("0: ").append(aliens[2*i]->get_desc()).append("\n");
+		prompt.append("1: ").append(aliens[(2*i)+1]->get_desc()).append("\n");
+		server.send_message_to_client(players[i].color,prompt);
+	}
 
-		player.alien = std::move(a[response]);
+	//Wait for responses
+	std::map<PlayerColors,std::future<std::string>> remaining_players; //Allow players to choose their aliens simultaneously!
+	for(unsigned i=0; i<players.size(); i++)
+	{
+		remaining_players.insert(std::make_pair(players[i].color,std::async(std::launch::async,&CosmicServer::receive_message_from_client,this->server,players[i].color)));
+	}
 
-		std::string msg("[alien_update]");
-		msg.append(player.get_alien_desc());
-		server.send_message_to_client(player.color,msg);
+	std::chrono::seconds span(1); //How long to wait for each client during each wait_for call
+	while(remaining_players.size())
+	{
+		for(auto i=remaining_players.begin(),e=remaining_players.end();i!=e;)
+		{
+			if(i->second.wait_for(span) == std::future_status::ready)
+			{
+				std::string response = i->second.get(); //The GUI should ensure that this response is valid
+				for(unsigned j=0; j<players.size(); j++)
+				{
+					if(players[j].color == i->first)
+					{
+						PlayerInfo &player = players[j];
+
+						unsigned choice = std::stoi(response);
+						player.alien = std::move(aliens[(2*j)+choice]);
+
+						std::string msg("[alien_update]");
+						msg.append(player.get_alien_desc());
+						server.send_message_to_client(player.color,msg);
+
+						break;
+					}
+				}
+
+				i=remaining_players.erase(i);
+			}
+			else
+			{
+				i++;
+			}
+		}
 	}
 }
 
