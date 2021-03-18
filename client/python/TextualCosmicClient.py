@@ -311,10 +311,10 @@ class GuiPart(object):
         self.alien_choice_window.withdraw()
         self.alien_choice_window.title("Textual Cosmic -- Alien choice")
         self.alien_option_1_frame = ttk.Labelframe(self.alien_choice_window, text='Option #1', padding="5 5 5 5")
-        self.alien_option_1_desc = Text(self.alien_option_1_frame, state='disabled', width=50, height=6) #FIXME: Make this bigger
+        self.alien_option_1_desc = Text(self.alien_option_1_frame, state='disabled', width=80, height=15)
         self.alien_option_1_button = ttk.Button(self.alien_option_1_frame, text='Choose Option #1', command=lambda: self.alien_chosen(0))
         self.alien_option_2_frame = ttk.Labelframe(self.alien_choice_window, text='Option #2', padding="5 5 5 5")
-        self.alien_option_2_desc = Text(self.alien_option_2_frame, state='disabled', width=50, height=6) #FIXME: Make this bigger
+        self.alien_option_2_desc = Text(self.alien_option_2_frame, state='disabled', width=80, height=15)
         self.alien_option_2_button = ttk.Button(self.alien_option_2_frame, text='Choose Option #2', command=lambda: self.alien_chosen(1))
         self.alien_option_1_frame.grid(column=0,row=0)
         self.alien_option_1_desc.grid(column=0,row=0)
@@ -704,8 +704,8 @@ class GuiPart(object):
                         self.reset_deal_state()
                     elif msg.find('[alien_options]') != -1:
                         #TODO: Could extract the alien name and fetch flare card info too
-                        alien_option1 = re.search('0: (.*)1:', msg, re.DOTALL)
-                        alien_option2 = re.search('1: (.*)', msg, re.DOTALL) #FIXME: This includes [needs_response], which is tacky
+                        alien_option1 = re.search('0: (.*)1:', msg, re.DOTALL) #The DOTALL here is needed to include newlines in the '.' operator
+                        alien_option2 = re.search('1: (.*)\[needs_response\]', msg, re.DOTALL)
                         assert alien_option1, "Error parsing first alien option"
                         assert alien_option2, "Error parsing second alien option"
                         self.display_alien_options(alien_option1.group(1),alien_option2.group(1))

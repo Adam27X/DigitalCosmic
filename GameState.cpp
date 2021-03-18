@@ -228,13 +228,13 @@ void GameState::shuffle_destiny_deck()
 	destiny_deck.shuffle();
 }
 
-//TODO: Give players a better UI for when they choose their alien. It should show the alien power at a minimum and should probably show the flare cards too
 void GameState::assign_aliens()
 {
 	std::vector<std::string> remaining_aliens = available_aliens;
 	std::random_shuffle(remaining_aliens.begin(),remaining_aliens.end());
 	assert(remaining_aliens.size() >= 2*players.size() && "Not enough aliens implemented to give each player a choice between two aliens!");
 
+	//TODO: It would be better to allow players to asynchronously choose their aliens. Store the first 2*num_players aliens in a std::vector<std::unique_ptr<AlienBase>> and send the options to all players without blocking
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		PlayerInfo &player = players[i];
