@@ -306,12 +306,49 @@ class GuiPart(object):
         self.deal_reject_button = ttk.Button(self.deal_acceptance_window, text='Reject', command=self.reject_deal)
         self.deal_reject_button.grid(column=0, row=2)
 
+        #Window at the start of the game used to choose between aliens
+        self.alien_choice_window = Toplevel(self.master)
+        self.alien_choice_window.withdraw()
+        self.alien_choice_window.title("Textual Cosmic -- Alien choice")
+        self.alien_option_1_frame = ttk.Labelframe(self.alien_choice_window, text='Option #1', padding="5 5 5 5")
+        self.alien_option_1_desc = Text(self.alien_option_1_frame, state='disabled', width=50, height=6) #FIXME: Make this bigger
+        self.alien_option_1_button = ttk.Button(self.alien_option_1_frame, text='Choose Option #1', command=lambda: self.alien_chosen(0))
+        self.alien_option_2_frame = ttk.Labelframe(self.alien_choice_window, text='Option #2', padding="5 5 5 5")
+        self.alien_option_2_desc = Text(self.alien_option_2_frame, state='disabled', width=50, height=6) #FIXME: Make this bigger
+        self.alien_option_2_button = ttk.Button(self.alien_option_2_frame, text='Choose Option #2', command=lambda: self.alien_chosen(1))
+        self.alien_option_1_frame.grid(column=0,row=0)
+        self.alien_option_1_desc.grid(column=0,row=0)
+        self.alien_option_1_button.grid(column=0,row=1)
+        self.alien_option_2_frame.grid(column=1,row=0)
+        self.alien_option_2_desc.grid(column=0,row=0)
+        self.alien_option_2_button.grid(column=0,row=1)
+
     def set_up_main_window(self,*args):
         self.s0.connect((self.server_ip.get(),int(self.server_port.get())))
         self.connected = True
         # Set up the GUI
         # Add more GUI stuff here depending on your specific needs
         self.conn.destroy()
+        #Show the alien choice window right away so the user has something to look at, but don't let them make a choice until the options have been received
+        self.alien_choice_window.state('normal')
+        self.alien_option_1_button['state'] = 'disabled'
+        self.alien_option_2_button['state'] = 'disabled'
+
+    def display_alien_options(self,opt1,opt2):
+        self.alien_option_1_desc['state'] = 'normal'
+        self.alien_option_1_desc.delete(1.0,'end')
+        self.alien_option_1_desc.insert('end',str(opt1)+'\n')
+        self.alien_option_1_desc['state'] = 'disabled'
+        self.alien_option_2_desc['state'] = 'normal'
+        self.alien_option_2_desc.delete(1.0,'end')
+        self.alien_option_2_desc.insert('end',str(opt2)+'\n')
+        self.alien_option_2_desc['state'] = 'disabled'
+        self.alien_option_1_button['state'] = 'normal'
+        self.alien_option_2_button['state'] = 'normal'
+
+    def alien_chosen(self, choice):
+        self.alien_choice_window.destroy()
+        self.send_message_to_server(str(choice))
         self.master.state('normal')
         self.master.title("Textual Cosmic")
 
@@ -665,6 +702,13 @@ class GuiPart(object):
                     elif msg.find('[failed_deal]') != -1:
                         self.send_message_to_server('[failed_deal_ack]') #Synchronize with the server
                         self.reset_deal_state()
+                    elif msg.find('[alien_options]') != -1:
+                        #TODO: Could extract the alien name and fetch flare card info too
+                        alien_option1 = re.search('0: (.*)1:', msg, re.DOTALL)
+                        alien_option2 = re.search('1: (.*)', msg, re.DOTALL) #FIXME: This includes [needs_response], which is tacky
+                        assert alien_option1, "Error parsing first alien option"
+                        assert alien_option2, "Error parsing second alien option"
+                        self.display_alien_options(alien_option1.group(1),alien_option2.group(1))
                     else:
                         option_num = None
                         prompt = ''

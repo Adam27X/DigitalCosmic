@@ -238,59 +238,66 @@ void GameState::assign_aliens()
 	for(unsigned i=0; i<players.size(); i++)
 	{
 		PlayerInfo &player = players[i];
-		std::string prompt("Which of these aliens would you prefer to play as?\n");
+		std::string prompt("[alien_options] Which of these aliens would you prefer to play as?\n");
 		const std::string &alien0 = remaining_aliens[2*i];
-		const std::string &alien1 = remaining_aliens[(2*i)+1]; 
+		const std::string &alien1 = remaining_aliens[(2*i)+1];
+
+		std::unique_ptr<AlienBase> a[2];
+		for(unsigned j=0; j<2; j++)
+		{
+			std::string alien_choice = (j == 0) ? alien0 : alien1;
+			if(alien_choice.compare("TickTock") == 0)
+			{
+				a[j] = std::make_unique<TickTock>();
+			}
+			else if(alien_choice.compare("Human") == 0)
+			{
+				a[j] = std::make_unique<Human>();
+			}
+			else if(alien_choice.compare("Remora") == 0)
+			{
+				a[j] = std::make_unique<Remora>();
+			}
+			else if(alien_choice.compare("Trader") == 0)
+			{
+				a[j] = std::make_unique<Trader>();
+			}
+			else if(alien_choice.compare("Sorcerer") == 0)
+			{
+				a[j] = std::make_unique<Sorcerer>();
+			}
+			else if(alien_choice.compare("Virus") == 0)
+			{
+				a[j] = std::make_unique<Virus>();
+			}
+			else if(alien_choice.compare("Spiff") == 0)
+			{
+				a[j] = std::make_unique<Spiff>();
+			}
+			else if(alien_choice.compare("Machine") == 0)
+			{
+				a[j] = std::make_unique<Machine>();
+			}
+			else if(alien_choice.compare("Shadow") == 0)
+			{
+				a[j] = std::make_unique<Shadow>();
+			}
+			else if(alien_choice.compare("Warpish") == 0)
+			{
+				a[j] = std::make_unique<Warpish>();
+			}
+			else
+			{
+				assert(0 && "Invalid alien found during assignment");
+			}
+		}
+
 		std::vector<std::string> options;
-		options.push_back(alien0);
-		options.push_back(alien1);
+		options.push_back(a[0]->get_desc());
+		options.push_back(a[1]->get_desc());
 		unsigned response = prompt_player(player.color,prompt,options);
 
-		std::string alien_choice = response ? alien1 : alien0;
-		if(alien_choice.compare("TickTock") == 0)
-		{
-			player.alien = std::make_unique<TickTock>();
-		}
-		else if(alien_choice.compare("Human") == 0)
-		{
-			player.alien = std::make_unique<Human>();
-		}
-		else if(alien_choice.compare("Remora") == 0)
-		{
-			player.alien = std::make_unique<Remora>();
-		}
-		else if(alien_choice.compare("Trader") == 0)
-		{
-			player.alien = std::make_unique<Trader>();
-		}
-		else if(alien_choice.compare("Sorcerer") == 0)
-		{
-			player.alien = std::make_unique<Sorcerer>();
-		}
-		else if(alien_choice.compare("Virus") == 0)
-		{
-			player.alien = std::make_unique<Virus>();
-		}
-		else if(alien_choice.compare("Spiff") == 0)
-		{
-			player.alien = std::make_unique<Spiff>();
-		}
-		else if(alien_choice.compare("Machine") == 0)
-		{
-			player.alien = std::make_unique<Machine>();
-		}
-		else if(alien_choice.compare("Shadow") == 0)
-		{
-			player.alien = std::make_unique<Shadow>();
-		}
-		else if(alien_choice.compare("Warpish") == 0)
-		{
-			player.alien = std::make_unique<Warpish>();
-		}
-		else
-		{
-			assert(0 && "Invalid alien found during assignment");
-		}
+		player.alien = std::move(a[response]);
 
 		std::string msg("[alien_update]");
 		msg.append(player.get_alien_desc());
