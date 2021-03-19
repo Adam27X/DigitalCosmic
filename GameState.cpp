@@ -1198,13 +1198,17 @@ void GameState::resolve_trader_wild_flare(const GameEvent &g)
 	//Now the drawing player must give their opponent a card in return of their choice (including the card that was just drawn)
 	std::string prompt("Choose a card to give back to your opponent.\n");
 	std::vector<std::string> options;
+	std::map<unsigned,unsigned> option_num_to_hand_offset;
 	for(auto i=player.hand_begin(),e=player.hand_end();i!=e;++i)
 	{
+		if(*i == CosmicCardType::Flare_Trader) //This is a topic of debate but after some reading I'd argue that the Flare itself shouldn't be allowed to exchange hands while it is resolving
+			continue;
 		options.push_back(to_string(*i));
+		option_num_to_hand_offset.insert(std::make_pair(options.size()-1,i-player.hand_begin()));
 	}
 	unsigned return_choice = prompt_player(g.player,prompt,options);
-	CosmicCardType return_c = player.hand_get(return_choice);
-	player.hand_erase(player.hand_begin()+return_choice);
+	CosmicCardType return_c = player.hand_get(option_num_to_hand_offset[return_choice]);
+	player.hand_erase(player.hand_begin()+option_num_to_hand_offset[return_choice]);
 	opponent.hand_push_back(return_c);
 }
 
@@ -4391,6 +4395,7 @@ unsigned GameState::prompt_player(const PlayerColors player, const std::string &
 	return choice;
 }
 
+//TODO: Provide better diagnostics here for the client
 void GameState::dump_current_stack() const
 {
 	std::stack<GameEvent> copy_stack = stack;

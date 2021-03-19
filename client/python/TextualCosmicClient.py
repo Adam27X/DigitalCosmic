@@ -61,10 +61,14 @@ class GuiPart(object):
         #Stack info
         self.stack_info_frame = ttk.Labelframe(self.master_frame, text='Current Stack', padding="5 5 5 5")
         self.stack_info_frame.grid(column=0, row=1)
-        #TODO: Consider making this a listbox where the user can click on each stack item for a more detailed description
-        #      For instance, the plague item should tell users who was targeted by the plague, etc.
-        self.stack_info_text = Text(self.stack_info_frame, state='disabled', width=50, height=6)
-        self.stack_info_text.grid(column=0,row=0)
+        self.stack = []
+        self.stack_wrapper = StringVar(value=self.stack)
+        self.stack_disp = Listbox(self.stack_info_frame, height=8, listvariable=self.stack_wrapper, selectmode='browse', width=40)
+        self.stack_scroll = ttk.Scrollbar(self.stack_info_frame, orient=HORIZONTAL, command=self.stack_disp.xview)
+        self.stack_disp['xscrollcommand'] = self.stack_scroll.set
+        self.stack_scroll.grid(column=0,row=1,sticky=(E,W))
+        self.stack_disp.grid(column=0,row=0)
+        #TODO: On selection of items in the Listbox update the description box with info about the GameEvent
 
         #Player choices
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)
@@ -540,10 +544,12 @@ class GuiPart(object):
         self.description_box['state'] = 'disabled'
 
     def update_stack_info(self, info):
-        self.stack_info_text['state'] = 'normal'
-        self.stack_info_text.delete(1.0,'end')
-        self.stack_info_text.insert('end',info+'\n')
-        self.stack_info_text['state'] = 'disabled'
+        self.stack = [] #Reset
+        for line in info.splitlines():
+            option_match = re.match('{[0-9]+: (.*) -> (.*)',line)
+            if option_match:
+                self.stack.append(line)
+        self.stack_wrapper.set(self.stack)
 
     def on_colony_click(self, planet_color, planet_num, option_num):
         def hide_options_colony():
