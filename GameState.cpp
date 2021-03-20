@@ -1142,7 +1142,7 @@ void GameState::resolve_human_wild_flare(const GameEvent &g)
 	evaluate_encounter_cards();
 
 	//Give this flare to the Human or discard it
-	bool human_found;
+	bool human_found = false;
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
 		if(i->alien->get_name().compare("Human") == 0)
