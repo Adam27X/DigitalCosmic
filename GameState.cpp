@@ -533,7 +533,7 @@ void GameState::cast_plague(GameEvent &g)
 	player_to_be_plagued = chosen_option;
 
 	std::stringstream aux_msg;
-	aux_msg << "(Targeting the " << to_string(players[player_to_be_plagued].color) << " player)";
+	aux_msg << "Targeting the " << to_string(players[player_to_be_plagued].color) << " player";
 	g.aux = aux_msg.str();
 }
 
@@ -1244,7 +1244,7 @@ void GameState::resolve_sorcerer_wild_flare(const GameEvent &g)
 
 	//Give this flare to the Sorcerer or discard it
 	//TODO: Create a helper out of this technique since we also use it for Human's wild flare (taking in an alien name string and flare card as args)
-	bool sorcerer_found;
+	bool sorcerer_found = false;
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
 		if(i->alien->get_name().compare("Sorcerer") == 0)
@@ -4409,7 +4409,7 @@ void GameState::dump_current_stack() const
 		announce << "{" << depth << ": " << to_string(g.player) << " -> " << to_string(g.event_type);
 		if(!g.aux.empty())
 		{
-			announce << " " << g.aux;
+			announce << " [" << g.aux << "]";
 		}
 		announce << "}\n";
 		copy_stack.pop();

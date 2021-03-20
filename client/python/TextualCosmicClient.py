@@ -11,6 +11,28 @@ import socket
 import select
 import re
 
+#Returns a human readable description of a card, event, alien power, etc.
+def get_description(item):
+    if item == 'Card Zap':
+        msg = '[Artifact card] Negates Cards. Play this card at any time to negate a flare or artifact card just as a player attempts to use it. The flare or artifact must then be discarded. [As any player] [During any turn phase]'
+    elif item == 'Cosmic Zap':
+        msg = '[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien\'s power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]'
+    elif item == 'Mobius Tubes':
+        msg = '[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners\' colonies. [Play as the offense only] [Play during the regroup phase only]'
+    elif item == 'Plague':
+        msg = '[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]'
+    elif item == 'Force Field':
+        msg = '[Artifact card] Stops Allies. Play after alliances are formed during an encounter. You may cancel the alliances of any or all players. Cancelled allies return their ships to any of their colonies. [As any player] [Play during the alliance phase only]'
+    elif item == 'Emotion Control':
+        msg = '[Artifact card] Alters Attack. Play after encounter cards are revealed to treat all attack cards played this encounter as negotiate cards. The main players must then attempt to make a deal. [As any player] [Play during the reveal phase only]'
+    elif item == 'Quash':
+        msg = '[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]'
+    elif item == 'Ionic Gas':
+        msg = '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
+    else:
+        msg = None
+    return msg
+
 class GuiPart(object):
     def __init__(self, master, queue, endCommand, socket):
         self.queue = queue
@@ -64,6 +86,7 @@ class GuiPart(object):
         self.stack = []
         self.stack_wrapper = StringVar(value=self.stack)
         self.stack_disp = Listbox(self.stack_info_frame, height=8, listvariable=self.stack_wrapper, selectmode='browse', width=40)
+        self.stack_disp.bind('<<ListboxSelect>>', lambda e: self.desc_stack_item(self.stack_disp.curselection(),self.stack))
         self.stack_scroll = ttk.Scrollbar(self.stack_info_frame, orient=HORIZONTAL, command=self.stack_disp.xview)
         self.stack_disp['xscrollcommand'] = self.stack_scroll.set
         self.stack_scroll.grid(column=0,row=1,sticky=(E,W))
@@ -454,7 +477,28 @@ class GuiPart(object):
                 canvas.tag_raise(ship_list[-2],ship_list[-1]) #Bring the text in front of the background
                 colorcount += 1
 
+    def desc_stack_item(self, current_selection, array):
+        if len(current_selection) != 1:
+            return
+        sel = current_selection[0]
+        stack_item = array[sel]
+        option_match = re.match('{[0-9]+: (.*) -> (.*)}',stack_item)
+        if option_match:
+            #player = option_match.group(1)
+            event = option_match.group(2)
+            if event.find('[') != -1: #This event has some auxiliary information
+                assert event.find(']'), "Error parsing game event from stack"
+                #aux = event[event.find('[')+1:event.find(']')]
+                event = event[:event.find('[')-1]
+            if get_description(event):
+                #Update the description box with this event
+                self.description_box['state'] = 'normal'
+                self.description_box.delete(1.0,'end')
+                self.description_box.insert('end',get_description(event)+'\n')
+                self.description_box['state'] = 'disabled'
+
     #The user clicked on a card in their hand so display what the card does in the description box
+    #TODO: Move the functionality that puts descriptions together into get_description
     def update_hand_info(self, current_selection, array):
         if len(current_selection) != 1: #The user should only be able to select one item at a time but this protects against the case where no item is selected
             return
@@ -465,7 +509,9 @@ class GuiPart(object):
         reinforcement_match = re.match('Reinforcement \+(.*)',card)
         def get_destiny_desc(color):
             return '[Destiny card] Have an encounter with the ' + color + ' player in his or her home system. However, if you are the ' + color + ' player, either: A) Have an encounter with any other player in your home system or B) Discard this card and draw again.'
-        if attack_match:
+        if get_description(card):
+            msg += get_description(card)
+        elif attack_match:
             msg += '[Encounter card] Opposed by attack: Higher total (ships + ' + attack_match.group(1) + ') wins. Opposed by Negotiate: Wins, but opponent collects compensation.'
         elif re.match('Negotiate',card):
             msg += '[Encounter card] Opposed by attack: Loses, but collects compensation. Opposed by Negotiate: Players have one minute to make a deal or lose three ships to the warp.'
@@ -473,22 +519,6 @@ class GuiPart(object):
             msg += '[Encounter card] Duplicates opponent\'s encounter card when revealed.'
         elif reinforcement_match:
             msg += '[Reinforcement card] Adds ' + reinforcement_match.group(1) + ' to either side\'s total. Play after encounter cards are revealed. [Play as a main player or ally only] [Play during the reveal phase only]'
-        elif re.match('Card Zap',card):
-            msg += '[Artifact card] Negates Cards. Play this card at any time to negate a flare or artifact card just as a player attempts to use it. The flare or artifact must then be discarded. [As any player] [During any turn phase]'
-        elif re.match('Cosmic Zap',card):
-            msg += '[Artifact card] Stops Power. Play this card at any time to cancel one *use* of any alien\'s power, including your own. That power may not be used again during the current encounter. [As any player] [During any turn phase]'
-        elif re.match('Mobius Tubes',card):
-            msg += '[Artifact card] Frees Ships. Play at the start of one of your encounters to free all ships from the warp. Freed ships may return to any of their owners\' colonies. [Play as the offense only] [Play during the regroup phase only]'
-        elif re.match('Plague',card):
-            msg += '[Artifact card] Harms Player. Play at the start of any encounter and choose a player. That player loses three ships of his or her choice to the warp (if possible) and must discard one card of each type that he or she has in hand (such as attack, negotiate, artifact, flare, etc.). [As any player] [Play during the regroup phase only]'
-        elif re.match('Force Field',card):
-            msg += '[Artifact card] Stops Allies. Play after alliances are formed during an encounter. You may cancel the alliances of any or all players. Cancelled allies return their ships to any of their colonies. [As any player] [Play during the alliance phase only]'
-        elif re.match('Emotion Control',card):
-            msg += '[Artifact card] Alters Attack. Play after encounter cards are revealed to treat all attack cards played this encounter as negotiate cards. The main players must then attempt to make a deal. [As any player] [Play during the reveal phase only]'
-        elif re.match('Quash',card):
-            msg += '[Artifact card] Kills Deal. Play after a deal is made successfully. Cancel the deal, and the dealing players suffer the penalties for a failed deal. [As any player] [Play during the resolution phase only]'
-        elif re.match('Ionic Gas',card):
-            msg += '[Artifact card] Stops Compensation and Rewards. Play after the winner of an encounter is determined. No compensation or defensive rewards may be collected this encounter. [As any player] [Play during the resolution phase only]'
         elif re.match('Flare: Tick-Tock',card):
             msg += '[Flare card]\nWild (if you are not Tick-Tock): Each time the discard pile is shuffled to create a new deck, you may immediately establish a colony on any one of your opponents\' home planets with up to four of your ships. [As any player] [During any turn phase]\nSuper (if you are Tick-Tock): Each time you win an encounter or make a deal, you may send one of your ships to the warp to discard a token from your alien sheet. This is in addition to any tokens you may discard through normal use of your power. [Main player only] [Play during the resolution phase only]'
         elif re.match('Flare: Human',card):
