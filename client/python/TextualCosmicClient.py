@@ -513,6 +513,14 @@ class GuiPart(object):
             flare_match = re.match('(Flare: .*) \(.*\)',event)
             if flare_match:
                 event = flare_match.group(1)
+            elif event == 'Alien Power':
+                player = option_match.group(1)
+                alien_desc = self.player_aliens[player][2]
+                self.description_box['state'] = 'normal'
+                self.description_box.delete(1.0,'end')
+                self.description_box.insert('end',alien_desc+'\n')
+                self.description_box['state'] = 'disabled'
+                return
             if get_description(event):
                 #Update the description box with this event
                 self.description_box['state'] = 'normal'
@@ -542,24 +550,6 @@ class GuiPart(object):
             msg += '[Encounter card] Duplicates opponent\'s encounter card when revealed.'
         elif reinforcement_match:
             msg += '[Reinforcement card] Adds ' + reinforcement_match.group(1) + ' to either side\'s total. Play after encounter cards are revealed. [Play as a main player or ally only] [Play during the reveal phase only]'
-        #elif re.match('Flare: Tick-Tock',card):
-        #    msg += '[Flare card]\nWild (if you are not Tick-Tock): Each time the discard pile is shuffled to create a new deck, you may immediately establish a colony on any one of your opponents\' home planets with up to four of your ships. [As any player] [During any turn phase]\nSuper (if you are Tick-Tock): Each time you win an encounter or make a deal, you may send one of your ships to the warp to discard a token from your alien sheet. This is in addition to any tokens you may discard through normal use of your power. [Main player only] [Play during the resolution phase only]'
-        #elif re.match('Flare: Human',card):
-        #    msg += '[Flare card]\nWild (if you are not the Human): As a main player, if your opponent is not the Human, you may use this flare after encounter cards are revealed to change your encounter card into an attack 42. Afterwards, give this flare to the Human. If the Human is not playing, discard this flare to use it. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Human): You may cause your power to add 8 to your side\'s total instead of 4. Also, you may discard this flare to zap your power. [Main player or ally only] [Play during the reveal phase only]'
-        #elif re.match('Flare: Remora',card):
-        #    msg += '[Flare card]\nWild (if you are not Remora): When another player uses a super or wild flare, you may draw a card from the deck. [As any player] [During any turn phase]\nSuper (if you are Remora): When another player gains a colony, you may either draw a card from the deck or retrieve a ship from the warp. If multiple players gain colonies at once, draw a card of retrieve a ship for each. [As any player] [During any turn phase]'
-        #elif re.match('Flare: Trader',card):
-        #    msg += '[Flare card]\nWild (if you are not the Trader): As a main player, before alliances are declared, you may draw one card at random from your opponent\'s hand and add it to your hand. You must then give your opponent one card of your choice (even the card you just drew) in return. [Main player only] [Play during the alliance phase only]\nSuper (if you are the Trader): You may use your power to trade hands with any player, not just your opponent. [Main player only] [Play during the planning phase only]'
-        #elif re.match('Flare: Sorcerer',card):
-        #    msg += '[Flare card]\nWild (if you are not the Sorcerer): When the Sorcerer is not a main player, before cards are selected during an encounter, you may force the main players to trade alien powers with each other. They keep their new powers after the encounter ends. After using this flare, give it to the Sorcerer. If the Sorcerer is not playing, discard this flare to use it. [As any player] [Play during the planning phase only]\nSuper (if you are the Sorcerer): You may use your power as an ally, switching the main players\' encounter cards. [Ally only] [Play during the planning phase only]'
-        #elif re.match('Flare: Virus',card):
-        #    msg += '[Flare card]\nWild (if you are not the Virus): As a main player, you may multiply the number of ships you have in the encounter by the number of ships alied with you instead of adding them. [Main player only] [Play during the reveal phase only]\nSuper (if you are the Virus): You may multiply the total of all ships on your side by your attack card when using your power, not just your own. [Main player only] [Play during the reveal phase only]'
-        #elif re.match('Flare: Spiff',card):
-        #    msg += '[Flare card]\nWild (if you are not Spiff): As the defense, when you lose an encounter, you may leave one of your ships on the planet instead of sending it to the warp. It coexists with the offensive ships. [Defense only] [Play during the resolution phase only]\nSuper (if you are Spiff): You may use your power to crash land if you lose by a total of 5 or more instead of 10. [Offense only] [Play during the resolution phase only]'
-        #elif re.match('Flare: Machine',card):
-        #    msg += '[Flare card]\nWild (if you are not the Machine): As the offense, you may always have a second encounter, even if you lost your first encounter or are out of encounter cards. If you have no encounter cards at the start of your second encounter, draw a new hand. [Offense only] [Play during the resolution phase only]\nSuper (if you are the Machine): During each of your regroup phases, you may draw the top card from the deck instead of retrieving a ship from the warp. [Offense only] [Play during the regroup phase only]'
-        #elif re.match('Flare: Warpish',card):
-        #    msg += '[Flare card]\nWild (if you are not Warpish): As a main player, after cards are revealed, you may add 1 to your side\'s total for each ship you have in the warp. [Main player only] [Play during the reveal phase only]\nSuper (if you are Warpish): As a main player, after cards are revealed, you may force your opponent to subtract 1 from his side\'s total for each ship he has in the warp. [Main player only] [Play during the reveal phase only]'
         elif re.match('Red',card):
             msg += get_destiny_desc('Red')
         elif re.match('Blue',card):
