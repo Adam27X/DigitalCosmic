@@ -358,7 +358,6 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	//FIXME: This couldn't respond to the sorcerer wild flare?
 	else if(g.event_type == GameEventType::CastFlare)
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)

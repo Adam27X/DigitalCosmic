@@ -1402,6 +1402,7 @@ void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare
 	}
 
 	GameEvent g(player,GameEventType::CastFlare);
+	resolve_game_event(g);
 }
 
 void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEvent &g)
