@@ -1283,14 +1283,23 @@ void GameState::resolve_sorcerer_wild_flare(const GameEvent &g)
 	}
 }
 
-//FIXME: Opponents should know which choice was made; ideally this information would be added to the GameEvent and accessible from the stack. For these super flares that enchance aliens the users need more details to begin with
-void GameState::setup_human_super_flare(const PlayerColors human)
+void GameState::setup_human_super_flare(GameEvent &g)
 {
+	const PlayerColors human = g.player;
+
 	std::string prompt("Which option would you prefer?\n");
 	std::vector<std::string> options;
 	options.push_back("Add 8 to your side's total instead of 4");
 	options.push_back("Discard this flare to zap your power");
 	assignments.human_super_flare_choice = prompt_player(human,prompt,options);
+	if(assignments.human_super_flare_choice == 0)
+	{
+		g.aux = "Human will add 8 to their side instead of 4";
+	}
+	else
+	{
+		g.aux = "Human will zap their own power by discarding their flare";
+	}
 }
 
 void GameState::resolve_human_super_flare(const PlayerColors human)
@@ -1480,7 +1489,7 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			else if(g.event_type == GameEventType::Flare_Human_Super)
 			{
 				g.callback_if_resolved = [this,g] () { this->resolve_human_super_flare(g.player); };
-				g.callback_if_action_taken = [this,play,g] () { cast_flare(g.player,play,true); this->setup_human_super_flare(g.player); };
+				g.callback_if_action_taken = [this,play,&g] () { cast_flare(g.player,play,true); this->setup_human_super_flare(g); };
 				//NOTE: No discard flare callback here as that's done conditionally based on the type of counter
 			}
 			else

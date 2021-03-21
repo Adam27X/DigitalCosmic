@@ -172,7 +172,7 @@ public:
 	void trade_ship_for_tick_tock_token(const PlayerColors c);
 	bool check_for_used_flare(const CosmicCardType c) const { return assignments.flares_used_this_turn.find(c) != assignments.flares_used_this_turn.end(); } //Returns true if the given flare was already used this turn
 	void insert_flare_used_this_turn(const CosmicCardType c) { assignments.flares_used_this_turn.insert(c); }
-	void setup_human_super_flare(const PlayerColors human);
+	void setup_human_super_flare(GameEvent &g);
 	void resolve_human_super_flare(const PlayerColors human);
 	void cast_flare(const PlayerColors player, const CosmicCardType flare, bool super);
 	void resolve_defender_reward(const PlayerColors c);
