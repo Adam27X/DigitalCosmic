@@ -901,7 +901,6 @@ std::string GameState::get_opponent_alien_name(const PlayerColors c) const
 //	 Once plague has resolved, shouldn't the Blue player be able to play Mobius Tubes? It's still the regroup phase!
 //	 More generally, if anything resolves the first time this function is called we need to call it again (what's tricky here is that we also have to be sure that we don't allow events to resolve twice, such as Alien powers...we may have to mark them as 'used')
 //TODO: Prompt players even when they have no options here? Slows down the game a bit but does a better job of keeping players aware of what's going on
-//	Additionally, the "None" option should probably read 'Proceed to the <next_phase> Phase' (or 'Proceed to the next encounter' for resolution)
 void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens_this_phase)
 {
 	std::vector<PlayerColors> player_order = get_player_order();
@@ -957,7 +956,9 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				}
 				options.push_back(opt.str());
 			}
-			options.push_back("None");
+			std::string none_option;
+			none_option.append("None (Proceed to the ").append(to_string(next_phase(state))).append(" phase)");
+			options.push_back(none_option);
 			unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
 
 			if(chosen_option != valid_plays.size()) //An action was taken

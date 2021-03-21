@@ -48,10 +48,54 @@ std::string to_string(const TurnPhase &t)
 		break;
 
 		default:
-			assert(0 && "Invalid Player role for Alien!");
+			assert(0 && "Invalid turn phase");
 		break;
 	}
 
 	return ret;
+}
+
+TurnPhase next_phase(const TurnPhase t)
+{
+	switch(t)
+	{
+		case TurnPhase::StartTurn:
+			return TurnPhase::Regroup;
+		break;
+
+		case TurnPhase::Regroup:
+			return TurnPhase::Destiny;
+		break;
+
+		case TurnPhase::Destiny:
+			return TurnPhase::Launch;
+		break;
+
+		case TurnPhase::Launch:
+			return TurnPhase::Alliance_before_selection; //Not perfect for printing because in this case we don't care about before/after selection
+		break;
+
+		case TurnPhase::Alliance_before_selection:
+		case TurnPhase::Alliance_after_selection:
+			return TurnPhase::Planning_before_selection;
+		break;
+
+		case TurnPhase::Planning_before_selection:
+		case TurnPhase::Planning_after_selection:
+			return TurnPhase::Reveal;
+		break;
+
+		case TurnPhase::Reveal:
+			return TurnPhase::Resolution;
+		break;
+
+		case TurnPhase::Resolution:
+			return TurnPhase::StartTurn;
+		break;
+
+		default:
+			assert(0 && "Invalid turn phase");
+		break;
+	}
 }
 

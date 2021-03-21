@@ -17,4 +17,5 @@ enum class TurnPhase
 };
 
 std::string to_string(const TurnPhase &t);
+TurnPhase next_phase(const TurnPhase t);
 

@@ -63,7 +63,6 @@ bool is_attack_card(const CosmicCardType c);
 class CosmicDeck
 {
 public:
-	//TODO: Support Flares
 	CosmicDeck();
 	void shuffle();
 	void dump() const;
