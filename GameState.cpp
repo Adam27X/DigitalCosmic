@@ -987,8 +987,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 					get_callbacks_for_cosmic_card(play,g);
 
 					//These super flares technically use their corresponding alien powers, so we need to mark them as used
-					//FIXME: Put these aliens into a std::set somewhere and reference that set via a function instead of typing them all out here. Reuse that function when recomputing valid_plays below
-					if(g.event_type == GameEventType::Flare_Human_Super || g.event_type == GameEventType::Flare_Trader_Super || g.event_type == GameEventType::Flare_Sorcerer_Super || g.event_type == GameEventType::Flare_Virus_Super)
+					if(enhances_alien_power(g.event_type))
 					{
 						used_aliens_this_phase.insert(current_player.color);
 					}
@@ -1016,7 +1015,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 							continue;
 						}
 						//If the player already used their alien power and their super flare enhances their alien power, they already gave up their opportunity to do so
-						if(super_flare && (*i == CosmicCardType::Flare_Human || *i == CosmicCardType::Flare_Trader || *i == CosmicCardType::Flare_Sorcerer || *i == CosmicCardType::Flare_Virus)  && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
+						if(super_flare && enhances_alien_power(to_game_event_type(*i,true)) && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
 						{
 							continue;
 						}

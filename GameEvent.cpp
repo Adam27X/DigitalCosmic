@@ -221,3 +221,9 @@ bool is_super_flare(const GameEventType g)
 	return (super_offset == this_offset);
 }
 
+//Returns true if this GameEvent is a super flare that builds upon the Alien's power. In that case using the super flare also uses their alien power
+bool enhances_alien_power(const GameEventType g)
+{
+	return (g == GameEventType::Flare_Human_Super || g == GameEventType::Flare_Trader_Super || g == GameEventType::Flare_Sorcerer_Super || g == GameEventType::Flare_Virus_Super);
+}
+

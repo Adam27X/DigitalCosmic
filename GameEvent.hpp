@@ -60,6 +60,7 @@ enum class GameEventType
 std::string to_string(const GameEventType &g);
 bool is_flare(const GameEventType g);
 bool is_super_flare(const GameEventType g);
+bool enchances_alien_power(const GameEventType g);
 
 class GameEvent
 {
