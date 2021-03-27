@@ -911,6 +911,12 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 	const std::string defense_alien_name = (assignments.get_defense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_defense()).alien->get_name();
 	while(satisfied_players < players.size())
 	{
+		//In this case the turn should end immediately
+		if(assignments.human_wins_encounter)
+		{
+			return;
+		}
+
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
 		const std::string opponent_alien_name = get_opponent_alien_name(current_player.color);
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
@@ -3471,7 +3477,6 @@ void GameState::apply_necromancy(const PlayerColors warpish)
 	server.broadcast_message(announce.str());
 }
 
-//FIXME: Should this be more immediate?
 void GameState::human_encounter_win_condition()
 {
 
@@ -3900,16 +3905,21 @@ void GameState::execute_turn()
 
 	check_for_game_events();
 
+	//If the Human was zapped, it must have been in response to a use of their power, which must have been during the reveal phase (even if using the Super flare). If that zap resolved then the human 'immediately' wins the encounter
+	//which I'll interpret as 'still during the reveal phase'. So we'll resolve the win now and finish the turn
+	if(assignments.human_wins_encounter)
+	{
+		resolve_human_encounter_win();
+		end_of_turn_clean_up();
+		return;
+	}
+
 	update_turn_phase(TurnPhase::Resolution);
 
 	//NOTE: It's easier to implement artifacts in a way that we check before game events before we carry out resolution tasks. If any future Aliens require different behavior we'll have to revisit this decision
 	check_for_game_events();
 
-	if(assignments.human_wins_encounter)
-	{
-		resolve_human_encounter_win();
-	}
-	else if(assignments.negotiating)
+	if(assignments.negotiating)
 	{
 		resolve_negotiation();
 	}
