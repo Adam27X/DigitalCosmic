@@ -6,6 +6,7 @@ add_executable(textualcosmic CosmicDeck.cpp CosmicServer.cpp DestinyDeck.cpp Gam
 
 add_subdirectory(Aliens)
 
+target_include_directories(textualcosmic PUBLIC include)
 target_link_libraries(textualcosmic PUBLIC Aliens)
 
 set(CMAKE_CXX_STANDARD 14)

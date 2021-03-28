@@ -8,27 +8,38 @@
 #include "Aliens.hpp"
 #include "CosmicServer.hpp"
 
+#include <tclap/CmdLine.h>
+
 int main(int argc, char *argv[])
 {
-	if(argc < 2)
-	{
-		std::cout << "Usage: " << argv[0] << " <number of players> [seed]\n";
-		return 1;
-	}
-	unsigned num_players;
+	unsigned num_players = 0;
 
-	//TODO: Use getopt or descore for parameters
-	//TODO: Have the server's listening port be a param here
-	if(argc == 2)
+	try
 	{
-		num_players = std::stoi(argv[1]);
-		std::srand(unsigned (std::time(0)));
+		std::string version = "0.1";
+		TCLAP::CmdLine cmd("Textual Cosmic",' ',version);
+
+		std::vector<unsigned> allowed_players = {3,4,5};
+		TCLAP::ValuesConstraint<unsigned> allowed_players_constraint(allowed_players);
+		TCLAP::ValueArg<unsigned> num_players_arg("n","num_players","Number of players for this game",true,3,&allowed_players_constraint);
+		cmd.add(num_players_arg);
+
+		TCLAP::ValueArg<unsigned> seed_arg("s","seed","Random seed used for shuffling and other random events (typically used for debug only)",false,(unsigned) std::time(0),"an unsigned integer");
+		cmd.add(seed_arg);
+
+		//TODO: Have the server's listening port be a param here
+		//Other param ideas: Ashwath's simultaneous ally selection, enforcing some mix of green/yellow/red aliens, banning or forcing certain aliens or flare cards, etc.
+
+		cmd.parse(argc,argv);
+
+		num_players = num_players_arg.getValue();
+		std::srand(seed_arg.getValue());
 	}
-	else
+	catch (TCLAP::ArgException &e)
 	{
-		num_players = std::stoi(argv[1]);
-		std::srand(std::stoi(argv[2]));
+		std::cerr << "Error: " << e.error() << " for arg " << e.argId() << std::endl;
 	}
+
 
 	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
 
