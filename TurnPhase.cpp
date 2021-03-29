@@ -76,11 +76,17 @@ TurnPhase next_phase(const TurnPhase t)
 		break;
 
 		case TurnPhase::Alliance_before_selection:
+			return TurnPhase::Alliance_after_selection;
+		break;
+
 		case TurnPhase::Alliance_after_selection:
 			return TurnPhase::Planning_before_selection;
 		break;
 
 		case TurnPhase::Planning_before_selection:
+			return TurnPhase::Planning_after_selection;
+		break;
+
 		case TurnPhase::Planning_after_selection:
 			return TurnPhase::Reveal;
 		break;

@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false)
+GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false), force_full_control(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -818,12 +818,12 @@ void GameState::plague_player()
 		std::stringstream prompt;
 		prompt << "The " << to_string(victim.color) << " player has the following flare cards. Choose one to discard.\n";
 		std::vector<std::string> options;
-		for(unsigned i=0; i<valid_reinforcements.size(); i++)
+		for(unsigned i=0; i<valid_flares.size(); i++)
 		{
-			options.push_back(to_string(valid_reinforcements[i]));
+			options.push_back(to_string(valid_flares[i]));
 		}
 		chosen_option = prompt_player(victim.color,prompt.str(),options);
-		CosmicCardType choice = valid_reinforcements[chosen_option];
+		CosmicCardType choice = valid_flares[chosen_option];
 		for(auto i=victim.hand_begin(),e=victim.hand_end();i!=e;++i)
 		{
 			if(*i == choice)
@@ -1053,6 +1053,20 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				}
 			}
 		}
+
+		//Try something closer to full control where players have to explicitly pass to the next turn phase
+		if(force_full_control && valid_plays.empty())
+		{
+			std::stringstream prompt;
+			prompt << "The " << to_string(current_player.color) << " player has the following valid plays to choose from:\n";
+			std::vector<std::string> options;
+			std::string none_option;
+			none_option.append("Proceed to the ").append(to_string(next_phase(state))).append(" phase");
+			options.push_back(none_option);
+			unsigned chosen_option = prompt_player(current_player.color,prompt.str(),options);
+			(void) chosen_option;
+		}
+
 		satisfied_players++;
 		current_player_index++;
 		if(current_player_index == players.size())
@@ -4611,6 +4625,17 @@ void GameState::resolve_game_event(const GameEvent g)
 		if(broke_from_inner_loop)
 		{
 			break;
+		}
+		if(force_full_control && valid_plays.empty())
+		{
+			std::stringstream prompt;
+			prompt << "The " << to_string(current_player.color) << " player has no valid responses to the " << to_string(g.event_type) << " action.\n";
+			std::vector<std::string> options;
+			std::stringstream opt;
+			opt << "Resolve " << to_string(g.event_type);
+			options.push_back(opt.str());
+			unsigned choice = prompt_player(current_player.color,prompt.str(),options);
+			(void) choice;
 		}
 	}
 

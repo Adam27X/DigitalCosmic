@@ -189,6 +189,7 @@ public:
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
 	DealParameters& get_deal_params() { return deal_params; }
+	void set_force_full_control() { force_full_control = true; }
 
 private:	
 	void shuffle_destiny_deck();
@@ -264,5 +265,6 @@ private:
 	bool machine_wild_continues_turn;
 	bool save_one_defensive_ship;
 	bool machine_drew_card_for_super;
+	bool force_full_control; //Force a Magic Arena like 'full control' mode for all players, involving more prompts and slightly slower gameplay
 };
 

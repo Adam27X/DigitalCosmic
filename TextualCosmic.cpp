@@ -13,6 +13,7 @@
 int main(int argc, char *argv[])
 {
 	unsigned num_players = 0;
+	bool full_control = false;
 
 	try
 	{
@@ -24,6 +25,9 @@ int main(int argc, char *argv[])
 		TCLAP::ValueArg<unsigned> num_players_arg("n","num_players","Number of players for this game",true,3,&allowed_players_constraint);
 		cmd.add(num_players_arg);
 
+		TCLAP::SwitchArg full_control_arg("f","full_control","Force full control for all players",false);
+		cmd.add(full_control_arg);
+
 		TCLAP::ValueArg<unsigned> seed_arg("s","seed","Random seed used for shuffling and other random events (typically used for debug only)",false,(unsigned) std::time(0),"an unsigned integer");
 		cmd.add(seed_arg);
 
@@ -33,6 +37,7 @@ int main(int argc, char *argv[])
 		cmd.parse(argc,argv);
 
 		num_players = num_players_arg.getValue();
+		full_control = full_control_arg.getValue();
 		std::srand(seed_arg.getValue());
 	}
 	catch (TCLAP::ArgException &e)
@@ -65,6 +70,11 @@ int main(int argc, char *argv[])
     	std::cout << "Textual Cosmic\n\n";
 	GameState game(num_players,server);
     	game.dump();
+
+	if(full_control)
+	{
+		game.set_force_full_control();
+	}
 
 	game.assign_aliens();
 	game.deal_starting_hands();
