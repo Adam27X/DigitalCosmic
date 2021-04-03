@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 {
 	unsigned num_players = 0;
 	bool full_control = false;
+	int listen_port = 3074;
 
 	try
 	{
@@ -31,7 +32,8 @@ int main(int argc, char *argv[])
 		TCLAP::ValueArg<unsigned> seed_arg("s","seed","Random seed used for shuffling and other random events (typically used for debug only)",false,(unsigned) std::time(0),"an unsigned integer");
 		cmd.add(seed_arg);
 
-		//TODO: Have the server's listening port be a param here
+		TCLAP::ValueArg<unsigned> listen_port_arg("l","listen_port","Server listening port for incoming connections",false,3074,"an unsigned integer"); //3074 is a commonly used port for games
+		cmd.add(listen_port_arg);
 		//Other param ideas: Ashwath's simultaneous ally selection, enforcing some mix of green/yellow/red aliens, banning or forcing certain aliens or flare cards, etc.
 
 		cmd.parse(argc,argv);
@@ -39,6 +41,7 @@ int main(int argc, char *argv[])
 		num_players = num_players_arg.getValue();
 		full_control = full_control_arg.getValue();
 		std::srand(seed_arg.getValue());
+		listen_port = listen_port_arg.getValue();
 	}
 	catch (TCLAP::ArgException &e)
 	{
@@ -49,7 +52,6 @@ int main(int argc, char *argv[])
 	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
 
 	//TODO: Add a password just for paranoia?
-	int listen_port = 3074; //Commonly used port for games
 	CosmicServer server(listen_port);
 
 	server.create_listening_socket();
@@ -57,6 +59,7 @@ int main(int argc, char *argv[])
 	server.bind_listening_socket();
 	server.set_linger_opts_for_listening_socket();
 	server.listen();
+	//TODO: Let players choose their alien color (and add a debug option that disables this feature for quicker iteration)
 	server.accept_client(PlayerColors::Red);
 	server.accept_client(PlayerColors::Blue);
 	if(num_players > 2)
