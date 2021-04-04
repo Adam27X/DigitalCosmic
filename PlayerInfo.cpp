@@ -570,7 +570,7 @@ bool PlayerInfo::can_use_flare(const CosmicCardType flare, bool super, const std
 	}
 }
 
-GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t)
+GameEvent PlayerInfo::can_use_alien_with_empty_stack(const TurnPhase t) const
 {
 	if(alien->check_for_game_event(current_role,t) && alien_enabled())
 	{

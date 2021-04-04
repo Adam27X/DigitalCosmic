@@ -69,7 +69,7 @@ public:
 	bool has_card(const CosmicCardType c) const;
 	void can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &vret);
 	void set_game_state(GameState *g);
-	GameEvent can_use_alien_with_empty_stack(const TurnPhase t);
+	GameEvent can_use_alien_with_empty_stack(const TurnPhase t) const;
 	bool alien_enabled() const;
 	const std::string get_alien_desc() const;
 	bool alien_revealed() const;
@@ -83,6 +83,8 @@ public:
 	void hand_push_back(const CosmicCardType c);
 	std::vector<CosmicCardType>::iterator hand_begin() { return hand.begin(); }
 	std::vector<CosmicCardType>::iterator hand_end() { return hand.end(); }
+	std::vector<CosmicCardType>::const_iterator hand_cbegin() const { return hand.cbegin(); }
+	std::vector<CosmicCardType>::const_iterator hand_cend() const { return hand.cend(); }
 	void hand_clear();
 	unsigned hand_size() const { return hand.size(); }
 	bool hand_empty() const { return hand.empty(); }

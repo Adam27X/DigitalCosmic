@@ -111,7 +111,6 @@ class GuiPart(object):
         self.stack_disp['xscrollcommand'] = self.stack_scroll.set
         self.stack_scroll.grid(column=0,row=1,sticky=(E,W))
         self.stack_disp.grid(column=0,row=0)
-        #TODO: On selection of items in the Listbox update the description box with info about the GameEvent
 
         #Player choices
         #TODO: Consider using a listbox instead if the number of options can ever be large. A listbox also fits in a specified area (possibly with a scrollbar)

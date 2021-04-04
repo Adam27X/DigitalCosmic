@@ -575,6 +575,7 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 {
 	for(unsigned ship_num=0; ship_num<num_ships; ship_num++)
 	{
+		//FIXME: The player could choose to have their allied ships or ships on the hyperspace gate lost instead of ships on their colonies
 		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(player,exclude_defensive_planet); //A list of planet colors and indices
 		if(!valid_colonies.size())
 		{
@@ -893,6 +894,43 @@ std::string GameState::get_opponent_alien_name(const PlayerColors c) const
 	return opponent_alien_name;
 }
 
+std::vector<GameEvent> GameState::get_valid_plays(const PlayerInfo &current_player, const std::set<PlayerColors> &used_aliens_this_phase, bool &alien_power_available)
+{
+	std::vector<GameEvent> valid_plays;
+	alien_power_available = false;
+	const std::string opponent_alien_name = get_opponent_alien_name(current_player.color);
+	const std::string offense_alien_name = (assignments.get_offense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_offense()).alien->get_name();
+	const std::string defense_alien_name = (assignments.get_defense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_defense()).alien->get_name();
+	for(auto i=current_player.hand_cbegin(),e=current_player.hand_cend(); i!=e; ++i)
+	{
+		bool super_flare = false;
+		if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
+		{
+			if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
+			{
+				continue;
+			}
+			//If the player already used their alien power and their super flare enhances their alien power, they already gave up their opportunity to do so
+			if(super_flare && enhances_alien_power(to_game_event_type(*i,true)) && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
+			{
+				continue;
+			}
+			GameEvent g(current_player.color,to_game_event_type(*i,super_flare));
+			valid_plays.push_back(g);
+		}
+	}
+
+	GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
+	if(alien_power.event_type != GameEventType::None && used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
+	{
+		assert(alien_power.event_type == GameEventType::AlienPower);
+		valid_plays.push_back(alien_power);
+		alien_power_available = true;
+	}
+
+	return valid_plays;
+}
+
 //NOTE:  
 //	 Consider the following scenario:
 //	 Blue player is offense during regroup and choose not to cast Mobius Tubes
@@ -907,8 +945,6 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 
 	unsigned satisfied_players = 0; //When all of the players decline to make a play (or have no play to make), we can move on
 	unsigned current_player_index = 0;
-	const std::string offense_alien_name = (assignments.get_offense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_offense()).alien->get_name();
-	const std::string defense_alien_name = (assignments.get_defense() == PlayerColors::Invalid) ? "" : get_player_const(assignments.get_defense()).alien->get_name();
 	while(satisfied_players < players.size())
 	{
 		//In this case the turn should end immediately
@@ -918,33 +954,10 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 		}
 
 		PlayerInfo &current_player = get_player(player_order[current_player_index]);
-		const std::string opponent_alien_name = get_opponent_alien_name(current_player.color);
+		bool alien_power_available;
+		bool alien_power_mandatory = current_player.alien->get_mandatory();
 		//Starting with the offense, check for valid plays (artifact cards or alien powers) based on the current TurnPhase
-		std::vector<GameEvent> valid_plays;
-		for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
-		{
-			bool super_flare = false;
-			if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
-			{
-				if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
-				{
-					continue;
-				}
-				GameEvent g(current_player.color,to_game_event_type(*i,super_flare));
-				valid_plays.push_back(g);
-			}
-		}
-
-		bool alien_power_available = false;
-		bool alien_power_mandatory = false;
-		GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
-		if(alien_power.event_type != GameEventType::None && used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
-		{
-			assert(alien_power.event_type == GameEventType::AlienPower);
-			valid_plays.push_back(alien_power);
-			alien_power_available = true;
-			alien_power_mandatory = current_player.alien->get_mandatory();
-		}
+		std::vector<GameEvent> valid_plays = get_valid_plays(current_player,used_aliens_this_phase,alien_power_available);
 
 		//List the valid plays and ask the player if they would like to do any. Note that if they choose one they can still play another
 		while(valid_plays.size())
@@ -1010,36 +1023,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 				resolve_game_event(g);
 
 				//Recalculate the set of valid plays since either the current play or a response to it could have changed it
-				//TODO: Move this calculation to a helper so we don't have a distinction betwen the initial calculation code and the recalculation code
-				valid_plays.clear();
-				for(auto i=current_player.hand_begin(),e=current_player.hand_end(); i!=e; ++i)
-				{
-					bool super_flare = false;
-					if(can_play_card_with_empty_stack(state,*i,current_player.current_role,current_player.alien_enabled(),current_player.alien->get_name(),opponent_alien_name,super_flare,offense_alien_name,defense_alien_name))
-					{
-						if(is_flare(*i) && (current_player.used_flare_this_turn || check_for_used_flare(*i))) //Player has a valid flare play but they've already played a flare or someone else played the same flare earlier
-						{
-							continue;
-						}
-						//If the player already used their alien power and their super flare enhances their alien power, they already gave up their opportunity to do so
-						if(super_flare && enhances_alien_power(to_game_event_type(*i,true)) && used_aliens_this_phase.find(current_player.color) != used_aliens_this_phase.end())
-						{
-							continue;
-						}
-						GameEvent g(current_player.color,to_game_event_type(*i,super_flare));
-						valid_plays.push_back(g);
-					}
-				}
-
-				if(used_aliens_this_phase.find(current_player.color) == used_aliens_this_phase.end())
-				{
-					GameEvent alien_power = current_player.can_use_alien_with_empty_stack(state);
-					if(alien_power.event_type != GameEventType::None)
-					{
-						assert(alien_power.event_type == GameEventType::AlienPower);
-						valid_plays.push_back(alien_power);
-					}
-				}
+				valid_plays = get_valid_plays(current_player,used_aliens_this_phase,alien_power_available);
 			}
 			else
 			{
