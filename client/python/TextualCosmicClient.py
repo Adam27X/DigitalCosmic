@@ -281,7 +281,6 @@ class GuiPart(object):
         self.connected = False
 
         #Create the deal window but hide it until it's needed
-        #TODO: Show time remaining before the deal fails
         self.deal_window = Toplevel(self.master)
         self.deal_window.withdraw()
         self.deal_window.title("Textual Cosmic -- Deal brokering")
@@ -369,6 +368,13 @@ class GuiPart(object):
         self.alien_option_2_frame.grid(column=1,row=0)
         self.alien_option_2_desc.grid(column=0,row=0)
         self.alien_option_2_button.grid(column=0,row=1)
+
+        #Window for when the game ends
+        self.game_over_window = Toplevel(self.master)
+        self.game_over_window.withdraw()
+        self.game_over_window.title("Textual Cosmic -- Game complete")
+        self.game_over_msg = StringVar()
+        self.game_over_label = Label(self.game_over_window, textvariable=self.game_over_msg)
 
     def set_up_main_window(self,*args):
         self.s0.connect((self.server_ip.get(),int(self.server_port.get())))
@@ -1070,6 +1076,12 @@ class GuiPart(object):
                 if msg.find('[deal_timer]') != -1:
                     tag_found = True
                     self.deal_timer.set(msg[12:]) #Remove the [deal_timer] tag but keep the rest
+                if msg.find('[game_over]') != -1:
+                    submsg_match = re.search('\[game_over\] (.*)',msg, re.DOTALL)
+                    assert submsg_match, "Failed to parse game over message!"
+                    self.game_over_msg.set(submsg_match.group(1))
+                    self.game_over_label.grid(row=0,column=0)
+                    self.game_over_window.state('normal')
                 if not tag_found:
                     #Update the server log
                     self.text['state'] = 'normal'

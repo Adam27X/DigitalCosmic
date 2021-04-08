@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false), force_full_control(false)
+GameState::GameState(unsigned nplayers, unsigned score, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false), force_full_control(false), winning_score(score)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -1106,19 +1106,25 @@ void GameState::update_player_scores()
 
 	//Check to see if anyone has won the game
 	bool game_over = false;
+	std::set<PlayerColors> winning_players;
 	for(auto i=players.begin(),e=players.end();i!=e;++i)
 	{
-		if(i->score >= 5)
+		if(i->score >= winning_score)
 		{
+			winning_players.insert(i->color);
 			game_over = true;
-			std::stringstream announce;
-			announce << "The " << to_string(i->color) << " player has won the game!\n";
-			server.broadcast_message(announce.str());
 		}
 	}
 
 	if(game_over)
 	{
+		std::stringstream announce;
+		announce << "[game_over] The following players have accumulated " << winning_score << " colonies and have won the game!\n";
+		for(auto i=winning_players.begin(),e=winning_players.end();i!=e;++i)
+		{
+			announce << to_string(*i) << "\n";
+		}
+		server.broadcast_message(announce.str());
 		dump();
 		std::exit(0);
 	}

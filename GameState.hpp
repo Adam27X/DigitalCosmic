@@ -123,7 +123,7 @@ public:
 class GameState
 {
 public:
-	GameState(unsigned nplayers, CosmicServer &serv);
+	GameState(unsigned nplayers, unsigned score, CosmicServer &serv);
 	void dump() const;
 	void dump_planets() const;
 	void dump_warp() const;
@@ -267,5 +267,6 @@ private:
 	bool save_one_defensive_ship;
 	bool machine_drew_card_for_super;
 	bool force_full_control; //Force a Magic Arena like 'full control' mode for all players, involving more prompts and slightly slower gameplay
+	unsigned winning_score;
 };
 

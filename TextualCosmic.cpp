@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 {
 	unsigned num_players = 0;
 	bool full_control = false;
+	unsigned winning_score = 5;
 	int listen_port = 3074;
 
 	try
@@ -29,6 +30,9 @@ int main(int argc, char *argv[])
 		TCLAP::SwitchArg full_control_arg("f","full_control","Force full control for all players",false);
 		cmd.add(full_control_arg);
 
+		TCLAP::ValueArg<unsigned> winning_score_arg("w","winning_score","Number of foreign colonies required to win the game",false,5,"A number from 1-8 (5 is default). Smaller numbers result in quicker games.");
+		cmd.add(winning_score_arg);
+
 		TCLAP::ValueArg<unsigned> seed_arg("s","seed","Random seed used for shuffling and other random events (typically used for debug only)",false,(unsigned) std::time(0),"an unsigned integer");
 		cmd.add(seed_arg);
 
@@ -40,6 +44,7 @@ int main(int argc, char *argv[])
 
 		num_players = num_players_arg.getValue();
 		full_control = full_control_arg.getValue();
+		winning_score = winning_score_arg.getValue();
 		std::srand(seed_arg.getValue());
 		listen_port = listen_port_arg.getValue();
 	}
@@ -71,7 +76,7 @@ int main(int argc, char *argv[])
 	server.close_listening_socket();
 
     	std::cout << "Textual Cosmic\n\n";
-	GameState game(num_players,server);
+	GameState game(num_players,winning_score,server);
     	game.dump();
 
 	if(full_control)
