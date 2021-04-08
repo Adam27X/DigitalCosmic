@@ -575,7 +575,6 @@ void GameState::lose_ships_to_warp(const PlayerColors player, const unsigned num
 {
 	for(unsigned ship_num=0; ship_num<num_ships; ship_num++)
 	{
-		//FIXME: The player could choose to have their allied ships or ships on the hyperspace gate lost instead of ships on their colonies
 		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(player,exclude_defensive_planet); //A list of planet colors and indices
 		if(!valid_colonies.size())
 		{
@@ -3988,7 +3987,6 @@ void GameState::swap_player_hands(const PlayerColors choosing_player, bool has_c
 	other_player.set_hand_data(tmp);
 }
 
-//FIXME: Don't ships on the hyperspace gate, defensive allies, etc. count for most (or all) use cases here too?
 std::vector< std::pair<PlayerColors,unsigned> > GameState::get_valid_colonies(const PlayerColors color, bool exclude_defensive_planet) const
 {
 	std::vector< std::pair<PlayerColors,unsigned> > valid_colonies; //A list of planet colors and indices
@@ -4304,6 +4302,7 @@ void GameState::establish_colony_on_opponent_planet(const PlayerColors c)
 	for(unsigned ship=0; ship<4; ship++)
 	{
 		//Have the player choose up to 4 ships from their valid colonies to establish the new colony
+		//FIXME: This is the one spot where the player could choose to send allied/hyperspace gate ships instead
 		std::vector< std::pair<PlayerColors,unsigned> > valid_colonies = get_valid_colonies(c); //Update this each loop in case the player decides to take their last ship from a different colony
 		if(!valid_colonies.size())
 		{

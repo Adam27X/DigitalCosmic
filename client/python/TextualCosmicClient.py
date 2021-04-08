@@ -343,6 +343,7 @@ class GuiPart(object):
         #Another window for accepting another player's proposed deal
         self.deal_acceptance_window = Toplevel(self.master)
         self.deal_acceptance_window.withdraw()
+        self.deal_acceptance_window.geometry('500x300')
         self.deal_acceptance_window.title("Textual Cosmic -- Deal proposal")
         self.deal_terms = StringVar()
         self.deal_terms_label = Label(self.deal_acceptance_window, textvariable=self.deal_terms)
