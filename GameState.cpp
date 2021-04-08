@@ -3521,10 +3521,11 @@ void GameState::update_tick_tock_tokens(unsigned tokens) const
 
 	if(tokens == 0)
 	{
-		message.str(std::string()); //Clear the stringstream
-		message << "[tick_tock_win_condition] Tick-Tock has run out of tokens and has won the game!\n";
-		server.broadcast_message(message.str());
-		std::exit(0); //TODO: A more graceful cleanup?
+		std::stringstream announce;
+		announce << "[game_over] Tick Tock has run out of tokens and has won the game!\n";
+		server.broadcast_message(announce.str());
+		dump();
+		std::exit(0);
 	}
 }
 

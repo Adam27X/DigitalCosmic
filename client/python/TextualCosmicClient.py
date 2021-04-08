@@ -623,7 +623,6 @@ class GuiPart(object):
                 print(msg)
                 #Process options if there are any
                 tag_found = False
-                #TODO: Do something neat with the [tick_tock_win_condition] tag
                 if msg.find('[needs_response]') != -1:
                     tag_found = True
                     if msg.find('[colony_response]') != -1: #The player needs to choose one of their colonies
