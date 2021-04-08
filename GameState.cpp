@@ -4300,12 +4300,6 @@ void GameState::establish_colony_on_opponent_planet(const PlayerColors c)
 	prompt << "[planet_response]\n";
 	unsigned chosen_option = prompt_player(c,prompt.str(),options);
 
-	if(chosen_option == (options.size()-1))
-	{
-		//The player chose to do nothing
-		return;
-	}
-
 	const std::pair<PlayerColors,unsigned> new_colony = option_values[chosen_option];
 	for(unsigned ship=0; ship<4; ship++)
 	{
