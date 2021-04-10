@@ -83,7 +83,7 @@ The server takes in various options to customize the game. The only required opt
 
 or similarly on Mac/Linux:
 
-`$ ./digitalcosmic.exe -n 4`
+`$ ./digitalcosmic -n 4`
 
 If you're on Windows and are using the prebuilt binary (and thus didn't have to build the source), you can also navigate to the digitalcosmic installation directory and then to the bin directory (for me this looks like C:\Program Files (x86)\digitalcosmic 0.02.1\bin). From that directory you can start the server directly from Windows Explorer by typing the following in the address bar:
 
