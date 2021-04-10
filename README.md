@@ -7,7 +7,7 @@ I started this project mostly as an interesting programming exercise. Cosmic Enc
 
 Cosmic Encounter technically already exists in a digital format on Tabletop Simulator. However, this project has slightly different goals from the Tabletop Simulator version of the game. Tabletop Simulator attempts to recreate the board game experience; it requires users to physically click and drag ships and cards to move them. While that design better reflects the experience of playing the game in person, DigitalCosmic instead prefers to exploit its digital nature by controlling the game logic directly. Because DigitalCosmic has direct knowledge of the game state, it can prompt players in the proper turn order for their actions. This design automatically resolves any disputes between players about turn phase ("are we in the Launch Phase or the Planning Phase right now? I want to play a card...") or turn order (e.g. two players both want to play a card at the same time, who gets to go first?). For the Tabletop Simulator version of the game, these decisions require human intervention and at times these decisions are error prone. This design philosophy was haveily inspired by Magic the Gathering: Arena.
 
-This game was initially called "DigitalCosmic" because it was entirely text based and didn't provide any sort of GUI. That turned out to be a bad idea since players routinely need to reference parts of the game state (how many ships are on a given planet, what does the warp look like, which player has which alien, etc.), which is inconvenient in a text format. The game now has a GUI that certainly isn't pretty, but is good enough to contain this information. At the moment completing the game logic and supporting additional aliens and game variants are considered a higher priority to making the game look prettier. That said, if you do come across a problem with the GUI I would certainly like to be made aware of it!
+This game was initially called "TextualCosmic" because it was entirely text based and didn't provide any sort of GUI. That turned out to be a bad idea since players routinely need to reference parts of the game state (how many ships are on a given planet, what does the warp look like, which player has which alien, etc.), which is inconvenient in text format. The game now has a GUI that certainly isn't pretty, but is good enough to contain this information. At the moment completing the game logic and supporting additional aliens and game variants are considered a higher priority to making the game look prettier. That said, if you do come across a problem with the GUI I would certainly like to be made aware of it!
 
 ## Setting up the game
 
@@ -15,7 +15,9 @@ DigitalCosmic uses a client-server model. To start a game someone hosts the serv
 
 ## Running the client
 
-Once the server is running, each player needs to run the client program and connect to it. The client program is a simple Python script and should work on Windows, Mac, or Linux systems. The client program depends on Python 3, Tcl, and Tk. I used Python 3.8.8 for most of my testing but any somewhat recent version of Python should work just fine and Tcl/Tk should be bundled with Python and/or exist on most Windows/Mac/Linux systems to begin with. Navigate to your installation of DigitalCosmic and from that directory run client/python/DigitalCosmicClient.py. A window should pop up with fields for the server IP address and port. The host of the server can provide you with this information or obtain it from resources such as whatismyip.com. The default server port is 3074 but the server host can choose to use a different port if they wish. Note that if all of the players are playing on the same local network then the server's local address (such as 192.168.x.y) will also work.
+Once the server is running, each player needs to run the client program and connect to it. The client program is a simple Python script and should work on Windows, Mac, or Linux systems. The client program depends on Python 3, Tcl, and Tk. I used Python 3.8.8 for most of my testing but any somewhat recent version of Python should work just fine and Tcl/Tk should be bundled with Python and/or exist on most Windows/Mac/Linux systems to begin with.
+
+Navigate to your installation of DigitalCosmic and from that directory run navigate to client/python and run DigitalCosmicClient.py. A window should pop up with fields for the server IP address and port. The host of the server can provide you with this information or obtain it from resources such as whatismyip.com. The default server port is 3074 but the server host can choose to use a different port if they wish. Note that if all of the players are playing on the same local network then the server's local address (such as 192.168.x.y) will also work.
 
 Once all of the players connect to the server the game GUI will populate and the server will start the game. Good luck!
 
@@ -36,6 +38,7 @@ There are a few ways to build the code from source on Windows. Using MinGW-w64 i
 Start by opening a powershell and navigating to this repository. Make a build directory and cd to it:
 
 `> mkdir build_win32`
+
 `> cd build_win32`
 
 Run CMake to create the build files for MinGW:
@@ -74,7 +77,7 @@ Proceed to __Runing the server__ for further instructions on how to start the ga
 
 ## Running the server
 
-The server takes in various options to customize the game. The only required option as of this writing is the number of players, passed via the `-n` or `--num_players` argument. So, to start a 4 player game you can do the following (Windows)
+The server takes in various options to customize the game. The only required option as of this writing is the number of players, passed via the `-n` or `--num_players` argument. So, to start a four player game you can do the following (Windows)
 
 `> .\digitalcosmic.exe -n 4`
 
