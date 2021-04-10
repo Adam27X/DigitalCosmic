@@ -1,11 +1,18 @@
 #pragma once
 
-#include <errno.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <string.h>
-#include <arpa/inet.h>
+#if defined(__unix__) || defined(__APPLE__)
+	#include <errno.h>
+	#include <unistd.h>
+	#include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <string.h>
+	#include <arpa/inet.h>
+#elif _WIN32
+	#include <winsock2.h>
+	#include <ws2tcpip.h>
+#else
+	#error Unexpected platform
+#endif
 
 #include <string>
 #include <map>
@@ -17,7 +24,7 @@ std::string find_local_ip_address();
 class CosmicServer
 {
 public:
-	CosmicServer(int listen_port) : m_listen_port(listen_port) { }
+	CosmicServer(int listen_port);
 
 	void create_listening_socket();
 	void init_server_addr();
@@ -35,8 +42,17 @@ public:
 private:
 	void check_error(int res, const std::string &context) const;
 	int m_listen_port;
+#ifdef _WIN32
+	SOCKET m_listen_socket;
+#else
 	int m_listen_socket;
+#endif
 	sockaddr_in m_server_addr;
 	sockaddr_in m_client_addr;
+
+#ifdef _WIN32
+	std::map<PlayerColors,SOCKET> m_client_socket_map;
+#else
 	std::map<PlayerColors,int> m_client_socket_map;
+#endif
 };

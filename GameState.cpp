@@ -3367,7 +3367,7 @@ void GameState::setup_reinforcements(GameEvent &g)
 {
 	const PlayerColors player = g.player;
 
-	bool player_is_offense;
+	bool player_is_offense = false;
 	if(player == assignments.get_offense() || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
 	{
 		player_is_offense = true;
@@ -3412,7 +3412,7 @@ void GameState::add_reinforcements(const GameEvent &g, const unsigned value, boo
 {
 	const PlayerColors player = g.player;
 
-	bool player_is_offense;
+	bool player_is_offense = false;
 	if(player == assignments.get_offense() || assignments.offensive_allies.find(player) != assignments.offensive_allies.end())
 	{
 		player_is_offense = true;

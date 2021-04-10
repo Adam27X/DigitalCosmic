@@ -15,6 +15,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 #Always build as debug for now?
 target_compile_options(textualcosmic PUBLIC -g -O3 -std=c++14 -Wall -pedantic)
 
+IF(WIN32)
+	target_link_libraries(textualcosmic PUBLIC ws2_32) #Winsock
+ENDIF()
+
 install(TARGETS textualcosmic DESTINATION bin)
 
 include(InstallRequiredSystemLibraries)

@@ -53,11 +53,10 @@ int main(int argc, char *argv[])
 		std::cerr << "Error: " << e.error() << " for arg " << e.argId() << std::endl;
 	}
 
-
-	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
-
 	//TODO: Add a password just for paranoia?
 	CosmicServer server(listen_port);
+	//For windows we need to call WSAStartup first, and this occurs in the CosmicServer ctor, so we call find_local_ip_address after the ctor call
+	std::cout << "Local IP address for server: " << find_local_ip_address() << "\n";
 
 	server.create_listening_socket();
 	server.init_server_addr();

@@ -109,6 +109,8 @@ bool AlienBase::check_encounter_role(const EncounterRole e) const
 			assert(0 && "Unexpected EncounterRole given to check_encounter_role!");
 		break;
 	}
+
+	return false;
 }
 
 //"Safe" function that won't be overriden
