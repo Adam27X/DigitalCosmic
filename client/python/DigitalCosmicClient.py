@@ -253,7 +253,7 @@ class GuiPart(object):
 
         #First, bring up the connection window
         self.conn = Toplevel(self.master)
-        self.conn.title("Textual Cosmic -- Connect to Server")
+        self.conn.title("Digital Cosmic -- Connect to Server")
 
         mainframe = ttk.Frame(self.conn, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky=(N,W,E,S))
@@ -283,7 +283,7 @@ class GuiPart(object):
         #Create the deal window but hide it until it's needed
         self.deal_window = Toplevel(self.master)
         self.deal_window.withdraw()
-        self.deal_window.title("Textual Cosmic -- Deal brokering")
+        self.deal_window.title("Digital Cosmic -- Deal brokering")
 
         self.deal_timer = StringVar()
         self.deal_timer_label = ttk.Label(self.deal_window, textvariable=self.deal_timer)
@@ -343,7 +343,7 @@ class GuiPart(object):
         self.deal_acceptance_window = Toplevel(self.master)
         self.deal_acceptance_window.withdraw()
         self.deal_acceptance_window.geometry('500x300')
-        self.deal_acceptance_window.title("Textual Cosmic -- Deal proposal")
+        self.deal_acceptance_window.title("Digital Cosmic -- Deal proposal")
         self.deal_terms = StringVar()
         self.deal_terms_label = Label(self.deal_acceptance_window, textvariable=self.deal_terms)
         self.deal_terms_label.grid(column=0, row=0)
@@ -355,7 +355,7 @@ class GuiPart(object):
         #Window at the start of the game used to choose between aliens
         self.alien_choice_window = Toplevel(self.master)
         self.alien_choice_window.withdraw()
-        self.alien_choice_window.title("Textual Cosmic -- Alien choice")
+        self.alien_choice_window.title("Digital Cosmic -- Alien choice")
         self.alien_option_1_frame = ttk.Labelframe(self.alien_choice_window, text='Option #1', padding="5 5 5 5")
         self.alien_option_1_desc = Text(self.alien_option_1_frame, state='disabled', width=80, height=15)
         self.alien_option_1_button = ttk.Button(self.alien_option_1_frame, text='Choose Option #1', command=lambda: self.alien_chosen(0))
@@ -372,7 +372,7 @@ class GuiPart(object):
         #Window for when the game ends
         self.game_over_window = Toplevel(self.master)
         self.game_over_window.withdraw()
-        self.game_over_window.title("Textual Cosmic -- Game complete")
+        self.game_over_window.title("Digital Cosmic -- Game complete")
         self.game_over_msg = StringVar()
         self.game_over_label = Label(self.game_over_window, textvariable=self.game_over_msg)
 
@@ -403,7 +403,7 @@ class GuiPart(object):
         self.alien_choice_window.destroy()
         self.send_message_to_server(str(choice))
         self.master.state('normal')
-        self.master.title("Textual Cosmic")
+        self.master.title("Digital Cosmic")
 
     def check_num_cards(self, offense_to_defense, new_value):
         #Ensure the new value is a number

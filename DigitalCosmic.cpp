@@ -3,7 +3,7 @@
 #include <ctime>
 #include <memory>
 
-#include "TextualCosmic.hpp"
+#include "DigitalCosmic.hpp"
 #include "AlienBase.hpp"
 #include "Aliens.hpp"
 #include "CosmicServer.hpp"
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 	try
 	{
 		std::string version = "0.1";
-		TCLAP::CmdLine cmd("Textual Cosmic",' ',version);
+		TCLAP::CmdLine cmd("Digital Cosmic",' ',version);
 
 		std::vector<unsigned> allowed_players = {3,4,5};
 		TCLAP::ValuesConstraint<unsigned> allowed_players_constraint(allowed_players);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 		server.accept_client(PlayerColors::Green);
 	server.close_listening_socket();
 
-    	std::cout << "Textual Cosmic\n\n";
+	std::cout << "Digital Cosmic\n\n";
 	GameState game(num_players,winning_score,server);
     	game.dump();
 
