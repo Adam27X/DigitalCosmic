@@ -17,6 +17,8 @@ int main(int argc, char *argv[])
 	unsigned winning_score = 5;
 	int listen_port = 3074;
 
+	//TODO: Add a filename string arg that allows the user to enter in a set of command line args line by line in a file
+	//	With that implemented we can supply some standardized input files for common game setups
 	try
 	{
 		std::string version = "0.1";
