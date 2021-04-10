@@ -1,4 +1,4 @@
 *.o
 *.swp
 build
-client/dep/cpptk-master.zip
+winbuild
