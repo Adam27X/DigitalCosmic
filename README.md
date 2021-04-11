@@ -93,7 +93,7 @@ Once the server is started it will wait for each player to connect via the clien
 
 ## Limitations and Future Work
 
-Currently the game only supports ten of its fifty Aliens. Implementing additional aliens is one of my highest priorities (in addition to making the game as accesible to others as possible). It turns out that implementing additional Aliens isn't so time consuming -- it's their corresponding flare cards that require more effort!
+Currently the game only supports ten of its fifty Aliens. Implementing additional aliens is one of my highest priorities (in addition to making the game as accessible to others as possible). It turns out that implementing additional Aliens isn't so time consuming -- it's their corresponding flare cards that require more effort!
 
 I've made no attempt to implement Tech Cards and don't consider them a high priority. Implementing some/all aspects of the expansions is a logical step to take once the base game is complete.
 
