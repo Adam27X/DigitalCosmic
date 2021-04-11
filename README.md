@@ -90,3 +90,11 @@ If you're on Windows and are using the prebuilt binary (and thus didn't have to 
 `digitalcosmic.exe -n 4`
 
 Once the server is started it will wait for each player to connect via the client program and then it will start the game. Good luck and please let me know if you run into issues!
+
+## Limitations and Future Work
+
+Currently the game only supports ten of its fifty Aliens. Implementing additional aliens is one of my highest priorities (in addition to making the game as accesible to others as possible). It turns out that implementing additional Aliens isn't so time consuming -- it's their corresponding flare cards that require more effort!
+
+I've made no attempt to implement Tech Cards and don't consider them a high priority. Implementing some/all aspects of the expansions is a logical step to take once the base game is complete.
+
+Please send your questions and comments to Adam27X@gmail.com or file an issue on Github if appropriate. I hope you enjoy the game!
