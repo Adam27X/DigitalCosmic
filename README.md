@@ -17,7 +17,9 @@ DigitalCosmic uses a client-server model. To start a game someone hosts the serv
 
 Once the server is running, each player needs to run the client program and connect to it. The client program is a simple Python script and should work on Windows, Mac, or Linux systems. The client program depends on Python 3, Tcl, and Tk. I used Python 3.8.8 for most of my testing but any somewhat recent version of Python should work just fine and Tcl/Tk should be bundled with Python and/or exist on most Windows/Mac/Linux systems to begin with.
 
-Navigate to your installation of DigitalCosmic and from that directory run navigate to client/python and run DigitalCosmicClient.py. A window should pop up with fields for the server IP address and port. The host of the server can provide you with this information or obtain it from resources such as whatismyip.com. The default server port is 3074 but the server host can choose to use a different port if they wish. Note that if all of the players are playing on the same local network then the server's local address (such as 192.168.x.y) will also work.
+On Windows an executable is supplied to try and remove these dependencies anyway. Look for DigitalCosmicClient.exe in the latest version in the Releases directory of this repository and run that program. Easy.
+
+Otherwise navigate to your installation of DigitalCosmic and from that directory run navigate to client/python and run DigitalCosmicClient.py. A window should pop up with fields for the server IP address and port. The host of the server can provide you with this information or obtain it from resources such as whatismyip.com. The default server port is 3074 but the server host can choose to use a different port if they wish. Note that if all of the players are playing on the same local network then the server's local address (such as 192.168.x.y) will also work.
 
 Once all of the players connect to the server the game GUI will populate and the server will start the game. Good luck!
 
