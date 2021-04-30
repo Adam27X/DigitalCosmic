@@ -15,7 +15,7 @@ bool is_only_digits(const std::string &s)
 	        return std::all_of(s.begin(),s.end(),::isdigit);
 }
 
-GameState::GameState(unsigned nplayers, unsigned score, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false), force_full_control(false), winning_score(score)
+GameState::GameState(unsigned nplayers, unsigned score, CosmicServer &serv) : num_players(nplayers), players(nplayers), destiny_deck(DestinyDeck(nplayers,[this] () { this->update_destiny_discard(); })), invalidate_next_callback(false), player_to_be_plagued(max_player_sentinel), is_second_encounter_for_offense(false), encounter_num(0), server(serv), warp([this] () { this->update_warp(); }), hyperspace_gate([this] () { this->update_hyperspace_gate(); }), defensive_ally_ships([this] () { this->update_defensive_ally_ships(); }), assignments([this] () { this->update_offense(); }, [this] () { this->update_defense(); }), cosmic_discard([this] () { this->update_cosmic_discard(); }), machine_continues_turn(false), machine_wild_continues_turn(false), save_one_defensive_ship(false), machine_drew_card_for_super(false), force_full_control(false), winning_score(score), oracle_used_power(false)
 {
 	assert(nplayers > 1 && nplayers < max_player_sentinel && "Invalid number of players!");
 	std::stringstream announce;
@@ -281,6 +281,10 @@ void GameState::assign_aliens()
 			else if(alien_choice.compare("Warpish") == 0)
 			{
 				aliens.push_back(std::make_unique<Warpish>());
+			}
+			else if(alien_choice.compare("Oracle") == 0)
+			{
+				aliens.push_back(std::make_unique<Oracle>());
 			}
 			else
 			{
@@ -3668,6 +3672,56 @@ void GameState::update_turn_phase(const TurnPhase phase)
 	server.broadcast_message(msg);
 }
 
+void GameState::forsee_opponent_encounter_card(const PlayerColors oracle)
+{
+	assert((assignments.get_offense() == oracle || assignments.get_defense() == oracle) && "Oracle must be a main player!");
+	bool oracle_on_offense = (oracle == assignments.get_offense());
+	PlayerInfo &opponent = oracle_on_offense ? get_player(assignments.get_defense()) : get_player(assignments.get_offense());
+
+	std::string prompt("Which encounter card would you like to play?\n");
+	std::vector<std::string> options;
+	for(auto i=opponent.hand_begin(),e=opponent.hand_end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			options.push_back(to_string(*i));
+		}
+	}
+	unsigned response = prompt_player(oracle_on_offense ? assignments.get_defense() : assignments.get_offense(),prompt,options);
+
+	unsigned option = 0;
+	for(auto i=opponent.hand_begin(),e=opponent.hand_end();i!=e;++i)
+	{
+		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		{
+			if(option == response)
+			{
+				if(oracle_on_offense)
+				{
+					assignments.defensive_encounter_card = *i;
+				}
+				else
+				{
+					assignments.offensive_encounter_card = *i;
+				}
+				cosmic_discard.push_back(*i); //NOTE: We don't need to use cards_to_be_discarded here because the whole purpose of that variable is to protect against other players knowing encounter cards before they should; here the card is immediately revealed
+				opponent.hand_erase(i);
+				break;
+			}
+			option++;
+		}
+	}
+
+	//Announce the opponent's card so all can see. The oracle will play their card normally
+	std::stringstream announce;
+	announce << "The ";
+	(oracle_on_offense) ? announce << "defense" : announce << "offense";
+	announce << " has encounter card: " << to_string(oracle_on_offense ? assignments.defensive_encounter_card : assignments.offensive_encounter_card) << "\n";
+	server.broadcast_message(announce.str());
+
+	oracle_used_power = true;
+}
+
 void GameState::evaluate_encounter_cards(const PlayerColors virus, const PlayerColors virus_wild_flare, bool virus_super_flare)
 {
 	std::stringstream announce;
@@ -3837,54 +3891,66 @@ void GameState::execute_turn()
 	std::string prompt("Which encounter card would you like to play?\n");
 	std::vector<std::string> options;
 	std::vector<CosmicCardType> cards_to_be_discarded;
-	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
-		{
-			options.push_back(to_string(*i));
-		}
-	}
-	unsigned response = prompt_player(assignments.get_offense(),prompt,options);
+	unsigned response;
+	unsigned option;
 
-	unsigned option = 0;
-	for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
+	bool oracle_forced_offense = oracle_used_power && defense.alien->get_name().compare("Oracle") == 0;
+	bool oracle_forced_defense = oracle_used_power && offense.alien->get_name().compare("Oracle") == 0;
+
+	if(!oracle_forced_offense)
 	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
 		{
-			if(option == response)
+			if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 			{
-				assignments.offensive_encounter_card = *i;
-				cards_to_be_discarded.push_back(*i);
-				offense.hand_erase(i);
-				break;
+				options.push_back(to_string(*i));
 			}
-			option++;
 		}
-	}
+		response = prompt_player(assignments.get_offense(),prompt,options);
 
-	options.clear();
-	for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+		option = 0;
+		for(auto i=offense.hand_begin(),e=offense.hand_end();i!=e;++i)
 		{
-			options.push_back(to_string(*i));
-		}
-	}
-	response = prompt_player(assignments.get_defense(),prompt,options);
-
-	option = 0;
-	for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
-	{
-		if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
-		{
-			if(option == response)
+			if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
 			{
-				assignments.defensive_encounter_card = *i;
-				cards_to_be_discarded.push_back(*i);
-				defense.hand_erase(i);
-				break;
+				if(option == response)
+				{
+					assignments.offensive_encounter_card = *i;
+					cards_to_be_discarded.push_back(*i);
+					offense.hand_erase(i);
+					break;
+				}
+				option++;
 			}
-			option++;
+		}
+	}
+
+	if(!oracle_forced_defense)
+	{
+		options.clear();
+		for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
+		{
+			if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+			{
+				options.push_back(to_string(*i));
+			}
+		}
+		response = prompt_player(assignments.get_defense(),prompt,options);
+
+		option = 0;
+		for(auto i=defense.hand_begin(),e=defense.hand_end();i!=e;++i)
+		{
+			if(static_cast<unsigned>(*i) <= static_cast<unsigned>(CosmicCardType::Morph))
+			{
+				if(option == response)
+				{
+					assignments.defensive_encounter_card = *i;
+					cards_to_be_discarded.push_back(*i);
+					defense.hand_erase(i);
+					break;
+				}
+				option++;
+			}
 		}
 	}
 
@@ -3953,6 +4019,7 @@ void GameState::end_of_turn_clean_up()
 
 	assignments.flares_used_this_turn.clear();
 	save_one_defensive_ship = false;
+	oracle_used_power = false;
 }
 
 void GameState::swap_encounter_cards()

@@ -185,6 +185,7 @@ public:
 	void execute_ship(const PlayerColors shadow, PlayerColors victim);
 	void apply_necromancy(const PlayerColors warpish); //Add 1 to warpish's total for each ship in the warp
 	void resolve_spiff_wild_flare() { save_one_defensive_ship = true; }
+	void forsee_opponent_encounter_card(const PlayerColors oracle);
 
 	void set_invalidate_next_callback(bool b) { invalidate_next_callback = b; }
 	void add_to_discard_pile(const CosmicCardType c) { cosmic_discard.push_back(c); }
@@ -268,5 +269,6 @@ private:
 	bool machine_drew_card_for_super;
 	bool force_full_control; //Force a Magic Arena like 'full control' mode for all players, involving more prompts and slightly slower gameplay
 	unsigned winning_score;
+	bool oracle_used_power;
 };
 
