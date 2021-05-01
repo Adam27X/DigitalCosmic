@@ -49,6 +49,7 @@ enum class CosmicCardType
 	Flare_Machine,
 	Flare_Shadow,
 	Flare_Warpish,
+	Flare_Oracle,
 	None
 };
 
@@ -64,6 +65,7 @@ class CosmicDeck
 {
 public:
 	CosmicDeck();
+	void add_flare_cards_and_shuffle(const std::vector<CosmicCardType> flares);
 	void shuffle();
 	void dump() const;
 	std::vector<CosmicCardType>::iterator begin() { return deck.begin(); }

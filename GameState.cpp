@@ -235,7 +235,8 @@ void GameState::assign_aliens()
 	assert(remaining_aliens.size() >= 2*players.size() && "Not enough aliens implemented to give each player a choice between two aliens!");
 
 	std::vector< std::unique_ptr<AlienBase> > aliens;
-	for(unsigned i=0; i<players.size(); i++)
+	std::vector<CosmicCardType> alien_flare_cards;
+	for(unsigned i=0; i<5; i++) //5 iterations where each grabs 2 aliens, giving us the 10 flares we need
 	{
 		const std::string &alien0 = remaining_aliens[2*i];
 		const std::string &alien1 = remaining_aliens[(2*i)+1];
@@ -245,46 +246,57 @@ void GameState::assign_aliens()
 			if(alien_choice.compare("TickTock") == 0)
 			{
 				aliens.push_back(std::make_unique<TickTock>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_TickTock);
 			}
 			else if(alien_choice.compare("Human") == 0)
 			{
 				aliens.push_back(std::make_unique<Human>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Human);
 			}
 			else if(alien_choice.compare("Remora") == 0)
 			{
 				aliens.push_back(std::make_unique<Remora>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Remora);
 			}
 			else if(alien_choice.compare("Trader") == 0)
 			{
 				aliens.push_back(std::make_unique<Trader>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Trader);
 			}
 			else if(alien_choice.compare("Sorcerer") == 0)
 			{
 				aliens.push_back(std::make_unique<Sorcerer>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Sorcerer);
 			}
 			else if(alien_choice.compare("Virus") == 0)
 			{
 				aliens.push_back(std::make_unique<Virus>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Virus);
 			}
 			else if(alien_choice.compare("Spiff") == 0)
 			{
 				aliens.push_back(std::make_unique<Spiff>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Spiff);
 			}
 			else if(alien_choice.compare("Machine") == 0)
 			{
 				aliens.push_back(std::make_unique<Machine>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Machine);
 			}
 			else if(alien_choice.compare("Shadow") == 0)
 			{
 				aliens.push_back(std::make_unique<Shadow>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Shadow);
 			}
 			else if(alien_choice.compare("Warpish") == 0)
 			{
 				aliens.push_back(std::make_unique<Warpish>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Warpish);
 			}
 			else if(alien_choice.compare("Oracle") == 0)
 			{
 				aliens.push_back(std::make_unique<Oracle>());
+				alien_flare_cards.push_back(CosmicCardType::Flare_Oracle);
 			}
 			else
 			{
@@ -292,10 +304,13 @@ void GameState::assign_aliens()
 			}
 		}
 
-		std::string prompt("[needs_response] [alien_options] Which of these aliens would you prefer to play as?\n");
-		prompt.append("0: ").append(aliens[2*i]->get_desc()).append("\n");
-		prompt.append("1: ").append(aliens[(2*i)+1]->get_desc()).append("\n");
-		server.send_message_to_client(players[i].color,prompt);
+		if(i < players.size())
+		{
+			std::string prompt("[needs_response] [alien_options] Which of these aliens would you prefer to play as?\n");
+			prompt.append("0: ").append(aliens[2*i]->get_desc()).append("\n");
+			prompt.append("1: ").append(aliens[(2*i)+1]->get_desc()).append("\n");
+			server.send_message_to_client(players[i].color,prompt);
+		}
 	}
 
 	//Wait for responses
@@ -338,6 +353,10 @@ void GameState::assign_aliens()
 			}
 		}
 	}
+
+	//Add the flare cards for the first ten aliens to the deck
+	cosmic_deck.add_flare_cards_and_shuffle(alien_flare_cards);
+	dump_cosmic_deck();
 }
 
 void GameState::dump_cosmic_deck() const
@@ -1410,6 +1429,85 @@ void GameState::resolve_warpish_super_flare(const PlayerColors warpish)
 	server.broadcast_message(announce.str());
 }
 
+void GameState::resolve_oracle_wild_flare()
+{
+	//Shuffle together the hands of both main players
+	PlayerInfo &offense = get_player(assignments.get_offense());
+	PlayerInfo &defense = get_player(assignments.get_defense());
+	const unsigned offense_hand_size = offense.hand_size();
+	const unsigned defense_hand_size = defense.hand_size();
+
+	bool found_oracle_flare = false;
+	bool offense_has_oracle_flare = false;
+	std::vector<CosmicCardType> combined_hand;
+	for(auto i=offense.hand_cbegin(),e=offense.hand_cend();i!=e;++i)
+	{
+		if(*i == CosmicCardType::Flare_Oracle)
+		{
+			found_oracle_flare = true;
+			offense_has_oracle_flare = true;
+		}
+		else
+		{
+			combined_hand.push_back(*i);
+		}
+	}
+	for(auto i=defense.hand_cbegin(),e=defense.hand_cend();i!=e;++i)
+	{
+		if(*i == CosmicCardType::Flare_Oracle)
+		{
+			found_oracle_flare = true;
+			offense_has_oracle_flare = false;
+		}
+		else
+		{
+			combined_hand.push_back(*i);
+		}
+	}
+
+	assert(found_oracle_flare && "Couldn't find oracle flare in either main player's hand when resolving it!");
+
+	offense.hand_clear();
+	defense.hand_clear();
+	std::random_shuffle(combined_hand.begin(),combined_hand.end());
+
+	if(offense_has_oracle_flare)
+	{
+		offense.hand_push_back(CosmicCardType::Flare_Oracle);
+		while(offense.hand_size() < offense_hand_size)
+		{
+			CosmicCardType c = *combined_hand.begin();
+			offense.hand_push_back(c);
+			combined_hand.erase(combined_hand.begin());
+		}
+		while(combined_hand.size())
+		{
+			CosmicCardType c = *combined_hand.begin();
+			defense.hand_push_back(c);
+			combined_hand.erase(combined_hand.begin());
+		}
+	}
+	else
+	{
+		defense.hand_push_back(CosmicCardType::Flare_Oracle);
+		while(defense.hand_size() < defense_hand_size)
+		{
+			CosmicCardType c = *combined_hand.begin();
+			defense.hand_push_back(c);
+			combined_hand.erase(combined_hand.begin());
+		}
+		while(combined_hand.size())
+		{
+			CosmicCardType c = *combined_hand.begin();
+			offense.hand_push_back(c);
+			combined_hand.erase(combined_hand.begin());
+		}
+	}
+
+	assert((offense_hand_size == offense.hand_size()) && "The offense didn't wind up with the same number of cards after the Oracle wild flare!");
+	assert((defense_hand_size == defense.hand_size()) && "The defense didn't wind up with the same number of cards after the Oracle wild flare!");
+}
+
 void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare, bool super)
 {
 	get_player(player).used_flare_this_turn = true;
@@ -1623,6 +1721,20 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 			else
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Warpish");
+			}
+		break;
+
+		case CosmicCardType::Flare_Oracle:
+			if(g.event_type == GameEventType::Flare_Oracle_Wild)
+			{
+				g.callback_if_resolved = [this] () { resolve_oracle_wild_flare(); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(false);
+			}
+			//NOTE: The Flare_Oracle_Super will likely not need to be accounted for here
+			else
+			{
+				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Oracle");
 			}
 		break;
 

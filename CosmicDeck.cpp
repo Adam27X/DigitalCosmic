@@ -179,6 +179,10 @@ std::string to_string(const CosmicCardType &c)
 			ret = "Flare: Warpish";
 		break;
 
+		case CosmicCardType::Flare_Oracle:
+			ret = "Flare: Oracle";
+		break;
+
 		default:
 			assert(0 && "Invalid Cosmic card type!");
 		break;
@@ -365,6 +369,19 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 			}
 		break;
 
+		case CosmicCardType::Flare_Oracle:
+			if(state == TurnPhase::Planning_before_selection && (role == EncounterRole::Offense || role == EncounterRole::Defense) && (alien_name.compare("Oracle") != 0 || !alien_enabled))
+			{
+				//Wild
+				return true;
+			}
+			//TODO: Ignore the super here and check for it within forsee_opponent_encounter_card?
+			else
+			{
+				return false;
+			}
+		break;
+
 		default:
 			//Encounter cards, reinforcement cards, and zaps cannot be played with an empty stack
 			//Quash can only be played in response to a deal
@@ -470,6 +487,17 @@ GameEventType to_game_event_type(const CosmicCardType c, bool super_flare)
 			}
 		break;
 
+		case CosmicCardType::Flare_Oracle:
+			if(super_flare)
+			{
+				return GameEventType::Flare_Oracle_Super;
+			}
+			else
+			{
+				return GameEventType::Flare_Oracle_Wild;
+			}
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected CosmicCardType passed to to_game_event()\n";
 			std::cerr << "Type: " << to_string(c) << "\n";
@@ -551,6 +579,11 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 			return CosmicCardType::Flare_Warpish;
 		break;
 
+		case GameEventType::Flare_Oracle_Wild:
+		case GameEventType::Flare_Oracle_Super:
+			return CosmicCardType::Flare_Oracle;
+		break;
+
 		default:
 			std::cerr << "Error: Unexpected GameEventType passed to to_cosmic_card_type()\n";
 			std::cerr << "Type: " << to_string(g) << "\n";
@@ -561,6 +594,7 @@ CosmicCardType to_cosmic_card_type(const GameEventType g)
 
 CosmicDeck::CosmicDeck()
 {
+	//Insert standard cards for now, flares will be inserted once aliens have been shuffled
 	deck.insert(deck.end(),1,CosmicCardType::Attack0);
 	deck.insert(deck.end(),1,CosmicCardType::Attack1);
 	deck.insert(deck.end(),4,CosmicCardType::Attack4);
@@ -592,18 +626,14 @@ CosmicDeck::CosmicDeck()
 	deck.insert(deck.end(),1,CosmicCardType::IonicGas);
 	deck.insert(deck.end(),1,CosmicCardType::Plague);
 	deck.insert(deck.end(),1,CosmicCardType::Quash);
+}
 
-	//Flares: TODO: Add in specific flares for each alien option provided to players (once we actually let players choose aliens)
-	deck.insert(deck.end(),1,CosmicCardType::Flare_TickTock);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Human);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Remora);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Trader);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Sorcerer);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Virus);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Spiff);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Machine);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Shadow);
-	deck.insert(deck.end(),1,CosmicCardType::Flare_Warpish);
+void CosmicDeck::add_flare_cards_and_shuffle(const std::vector<CosmicCardType> flares)
+{
+	for(auto i=flares.begin(),e=flares.end();i!=e;++i)
+	{
+		deck.push_back(*i);
+	}
 
 	shuffle();
 }

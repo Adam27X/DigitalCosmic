@@ -54,6 +54,8 @@ enum class GameEventType
 	Flare_Shadow_Super,
 	Flare_Warpish_Wild,
 	Flare_Warpish_Super,
+	Flare_Oracle_Wild,
+	Flare_Oracle_Super,
 	None
 };
 

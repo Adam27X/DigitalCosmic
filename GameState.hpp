@@ -242,6 +242,7 @@ private:
 	void resolve_shadow_wild_flare(const PlayerColors caster);
 	void resolve_warpish_wild_flare(const PlayerColors caster);
 	void resolve_warpish_super_flare(const PlayerColors warpish);
+	void resolve_oracle_wild_flare();
 	std::vector<GameEvent> get_valid_plays(const PlayerInfo &current_player, const std::set<PlayerColors> &used_aliens_this_phase, bool &alien_power_available);
 
 	unsigned num_players;

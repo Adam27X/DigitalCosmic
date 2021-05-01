@@ -163,6 +163,14 @@ std::string to_string(const GameEventType &g)
 			ret = "Flare: Warpish (Super)";
 		break;
 
+		case GameEventType::Flare_Oracle_Wild:
+			ret = "Flare: Oracle (Wild)";
+		break;
+
+		case GameEventType::Flare_Oracle_Super:
+			ret = "Flare: Oracle (Super)";
+		break;
+
 		case GameEventType::EncounterWin:
 			ret = "A player won an encounter";
 		break;
