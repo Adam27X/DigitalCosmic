@@ -375,7 +375,7 @@ bool can_play_card_with_empty_stack(const TurnPhase state, const CosmicCardType 
 				//Wild
 				return true;
 			}
-			//TODO: Ignore the super here and check for it within forsee_opponent_encounter_card?
+			//NOTE: Ignore the super here since we check for it explicitly within forsee_opponent_encounter_card
 			else
 			{
 				return false;

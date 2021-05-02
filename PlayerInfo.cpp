@@ -479,30 +479,6 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 			}
 		}
 	}
-	else if(g.event_type == GameEventType::Flare_Sorcerer_Super)
-	{
-		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
-		{
-			if(*i == CosmicCardType::CardZap)
-			{
-				//Flare is discarded and the alien power can no longer resolve as it can no longer be used as an ally
-				GameEvent ret = GameEvent(color,GameEventType::CardZap);
-				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->player_discard(g.player,to_cosmic_card_type(g.event_type)); };
-				const CosmicCardType c = *i;
-				ret.callback_if_action_taken = [this,c] { this->discard_card_callback(c); };
-				vret.push_back(ret);
-			}
-			else if(*i == CosmicCardType::CosmicZap)
-			{
-				//Sorcerer keeps the flare but nothing resolves this time
-				GameEvent ret = GameEvent(color,GameEventType::CosmicZap);
-				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->zap_alien(g.player); };
-				const CosmicCardType c = *i;
-				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
-				vret.push_back(ret);
-			}
-		}
-	}
 	else if(g.event_type == GameEventType::Flare_Virus_Super)
 	{
 		for(auto i=hand.begin(),e=hand.end();i!=e;++i)
@@ -534,7 +510,12 @@ void PlayerInfo::can_respond(TurnPhase t, GameEvent g, std::vector<GameEvent> &v
 		{
 			if(*i == CosmicCardType::CardZap)
 			{
-				add_card_zap_response(vret,*i);
+				//Can't use add_card_zap_response() here because it doesn't force the player to discard the flare -- in other uses the player will have already discarded the card being zapped on cast
+				GameEvent ret = GameEvent(color,GameEventType::CardZap);
+				ret.callback_if_resolved = [this,g] () { this->game->set_invalidate_next_callback(true); this->game->player_discard(g.player,to_cosmic_card_type(g.event_type)); }; //TODO: Can we safely call get_alien_resolution_callback here since it will be null for most aliens?
+				const CosmicCardType c = *i;
+				ret.callback_if_action_taken = [this,c] { discard_card_callback(c); };
+				vret.push_back(ret);
 			}
 			else if(*i == CosmicCardType::CosmicZap && is_super_flare(g.event_type))
 			{

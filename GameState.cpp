@@ -356,7 +356,6 @@ void GameState::assign_aliens()
 
 	//Add the flare cards for the first ten aliens to the deck
 	cosmic_deck.add_flare_cards_and_shuffle(alien_flare_cards);
-	dump_cosmic_deck();
 }
 
 void GameState::dump_cosmic_deck() const
@@ -970,7 +969,7 @@ void GameState::check_for_game_events_helper(std::set<PlayerColors> &used_aliens
 	while(satisfied_players < players.size())
 	{
 		//In this case the turn should end immediately
-		if(assignments.human_wins_encounter)
+		if(assignments.human_wins_encounter || assignments.oracle_ended_encounter)
 		{
 			return;
 		}
@@ -1508,6 +1507,50 @@ void GameState::resolve_oracle_wild_flare()
 	assert((defense_hand_size == defense.hand_size()) && "The defense didn't wind up with the same number of cards after the Oracle wild flare!");
 }
 
+void GameState::resolve_oracle_super_flare(const PlayerColors oracle)
+{
+	//Return the revealed card
+	bool oracle_on_offense = (oracle == assignments.get_offense());
+	PlayerInfo &opponent = oracle_on_offense ? get_player(assignments.get_defense()) : get_player(assignments.get_offense());
+	CosmicCardType revealed_card;
+	if(oracle_on_offense)
+	{
+		revealed_card = assignments.defensive_encounter_card;
+	}
+	else
+	{
+		revealed_card = assignments.offensive_encounter_card;
+	}
+	//Remove the card from the discard pile
+	bool revealed_card_found_in_discard = false;
+	for(auto i=cosmic_discard.begin(),e=cosmic_discard.end();i!=e;++i)
+	{
+		if(*i == revealed_card)
+		{
+			revealed_card_found_in_discard = true;
+			cosmic_discard.erase(i);
+			break;
+		}
+	}
+	assert(revealed_card_found_in_discard && "Tried to return the revealed card from discard but failed to find it there!");
+	//Give the card back to its owner
+	opponent.hand_push_back(revealed_card);
+
+	//Send ships back to their colonies
+	for(auto i=hyperspace_gate.begin(),e=hyperspace_gate.end();i!=e;++i)
+	{
+		move_ship_to_colony(get_player(*i),hyperspace_gate);
+	}
+	//Return ships for any defensive allies as well
+	for(auto i=defensive_ally_ships.begin(),e=defensive_ally_ships.end();i!=e;++i)
+	{
+		move_ship_to_colony(get_player(*i),defensive_ally_ships);
+	}
+
+	//End the turn as if the encounter was successful
+	assignments.oracle_ended_encounter = true;
+}
+
 void GameState::cast_flare(const PlayerColors player, const CosmicCardType flare, bool super)
 {
 	get_player(player).used_flare_this_turn = true;
@@ -1731,7 +1774,12 @@ void GameState::get_callbacks_for_cosmic_card(const CosmicCardType play, GameEve
 				g.callback_if_countered = discard_flare_callback;
 				g.callback_if_action_taken = cast_flare_callback(false);
 			}
-			//NOTE: The Flare_Oracle_Super will likely not need to be accounted for here
+			else if(g.event_type == GameEventType::Flare_Oracle_Super)
+			{
+				g.callback_if_resolved = [this,g] () { resolve_oracle_super_flare(g.player); };
+				g.callback_if_countered = discard_flare_callback;
+				g.callback_if_action_taken = cast_flare_callback(true);
+			}
 			else
 			{
 				assert(0 && "Invalid GameEventType for CosmicCardType::Flare_Oracle");
@@ -3832,6 +3880,25 @@ void GameState::forsee_opponent_encounter_card(const PlayerColors oracle)
 	server.broadcast_message(announce.str());
 
 	oracle_used_power = true;
+
+	//If the Oracle can use their Super flare then they have the option of ending the turn right now. The card misleadingly says "play continues as if a deal had been made", but the intent here is that the encounter was successful for the offense so they can have a second encounter. No deal-related effects should occur.
+	//The Super portion of the flare also says it should be played during the reveal phase but in this case the opponent reveals their card during the planning phase, so the planning phase is actually correct here.
+	PlayerInfo &oracle_info = oracle_on_offense ? get_player(assignments.get_offense()) : get_player(assignments.get_defense());
+	if(oracle_info.has_card(CosmicCardType::Flare_Oracle) && oracle_info.can_use_flare(CosmicCardType::Flare_Oracle,true,"Oracle")) //Can the Oracle use their super flare?
+	{
+		std::string prompt("Would you like to use the Oracle Super Flare to end the encounter?\n");
+		std::vector<std::string> options;
+		options.push_back("Y");
+		options.push_back("N");
+		unsigned response = prompt_player(oracle,prompt,options);
+
+		if(response == 0)
+		{
+			GameEvent g(oracle,GameEventType::Flare_Oracle_Super);
+			get_callbacks_for_cosmic_card(CosmicCardType::Flare_Oracle,g);
+			resolve_game_event(g);
+		}
+	}
 }
 
 void GameState::evaluate_encounter_cards(const PlayerColors virus, const PlayerColors virus_wild_flare, bool virus_super_flare)
@@ -3987,6 +4054,7 @@ void GameState::execute_turn()
 			move_ship_to_colony(get_player(*i),defensive_ally_ships);
 		}
 
+		end_of_turn_clean_up();
 		return;
 	}
 
@@ -3999,6 +4067,15 @@ void GameState::execute_turn()
 
 	//Before cards are selected effects can now resolve
 	check_for_game_events();
+
+	if(assignments.oracle_ended_encounter)
+	{
+		std::string announce("The Oracle's super flare has immediately ended the encounter!\n");
+		server.broadcast_message(announce);
+		assignments.successful_encounter = true;
+		end_of_turn_clean_up();
+		return;
+	}
 
 	std::string prompt("Which encounter card would you like to play?\n");
 	std::vector<std::string> options;

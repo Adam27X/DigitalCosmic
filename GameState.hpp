@@ -46,6 +46,7 @@ public:
 	std::set<CosmicCardType> flares_used_this_turn; //A given flare may only be used once per encounter by *any* player
 	int human_super_flare_choice; //-1 == invalid, 0 == add 8 instead of 4, 1 == zap power //TODO: Can we shove this into GameEvent itself?
 	bool crash_landing;
+	bool oracle_ended_encounter;
 
 	void set_offense(const PlayerColors c)
 	{
@@ -84,6 +85,7 @@ public:
 		human_super_flare_choice = -1;
 		flares_used_this_turn.clear();
 		crash_landing = false;
+		oracle_ended_encounter = false;
 	}
 
 private:
@@ -243,6 +245,7 @@ private:
 	void resolve_warpish_wild_flare(const PlayerColors caster);
 	void resolve_warpish_super_flare(const PlayerColors warpish);
 	void resolve_oracle_wild_flare();
+	void resolve_oracle_super_flare(const PlayerColors oracle);
 	std::vector<GameEvent> get_valid_plays(const PlayerInfo &current_player, const std::set<PlayerColors> &used_aliens_this_phase, bool &alien_power_available);
 
 	unsigned num_players;

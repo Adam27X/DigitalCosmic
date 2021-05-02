@@ -356,6 +356,7 @@ class GuiPart(object):
         self.deal_reject_button.grid(column=0, row=2)
 
         #Window at the start of the game used to choose between aliens
+        #FIXME: If this window is closed the entire application should close too
         self.alien_choice_window = Toplevel(self.master)
         self.alien_choice_window.withdraw()
         self.alien_choice_window.title("Digital Cosmic -- Alien choice")
